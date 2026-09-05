@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mater League</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pitch-dark: #0F2818;
+    --pitch-mid: #163625;
+    --pitch-line: #2F5C40;
+    --chalk: #F2EFE6;
+    --chalk-dim: #9FB3A6;
+    --gold: #E8B94D;
+    --loss-red: #C0604A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--pitch-dark);
+    color: var(--chalk);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+  }
+
+  h1, h2, .num {
+    font-family: 'Barlow Condensed', sans-serif;
+  }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* HERO */
+  header.hero {
+    padding: 64px 0 40px;
+    border-bottom: 1px solid var(--pitch-line);
+  }
+
+  .wordmark {
+    font-weight: 800;
+    font-size: clamp(2.6rem, 8vw, 4.2rem);
+    line-height: 0.95;
+    margin: 0;
+    letter-spacing: 0.5px;
+  }
+
+  .tagline {
+    color: var(--chalk-dim);
+    font-size: 1.05rem;
+    margin: 10px 0 28px;
+    max-width: 46ch;
+  }
+
+  .leader-strip {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    background: var(--pitch-mid);
+    border: 1px solid var(--pitch-line);
+    border-radius: 4px;
+    padding: 16px 20px;
+  }
+
+  .leader-strip .rank {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: var(--gold);
+  }
+
+  .leader-strip .who {
+    font-weight: 600;
+    font-size: 1.15rem;
+  }
+
+  .leader-strip .manager {
+    color: var(--chalk-dim);
+    font-size: 0.9rem;
+  }
+
+  .leader-strip .pts {
+    margin-left: auto;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .leader-strip .pts small {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: var(--chalk-dim);
+    display: block;
+    text-align: right;
+  }
+
+  /* SECTIONS */
+  section {
+    padding: 48px 0;
+    border-bottom: 1px solid var(--pitch-line);
+  }
+
+  section:last-of-type {
+    border-bottom: none;
+  }
+
+  h2 {
+    font-weight: 700;
+    font-size: 1.9rem;
+    margin: 0 0 22px;
+  }
+
+  /* STANDINGS TABLE */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  thead th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 0.8rem;
+    color: var(--chalk-dim);
+    padding: 0 8px 10px;
+    border-bottom: 1px solid var(--pitch-line);
+  }
+
+  thead th.num, tbody td.num {
+    text-align: center;
+  }
+
+  tbody td {
+    padding: 12px 8px;
+    border-bottom: 1px solid var(--pitch-mid);
+    font-size: 0.98rem;
+  }
+
+  tbody tr:first-child td {
+    color: var(--gold);
+  }
+
+  td.pos {
+    color: var(--chalk-dim);
+    width: 24px;
+  }
+
+  td.pts {
+    font-weight: 700;
+    text-align: center;
+  }
+
+  tbody tr:hover {
+    background: var(--pitch-mid);
+  }
+
+  /* RESULTS */
+  .matchweek-label {
+    color: var(--chalk-dim);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0 0 14px;
+  }
+
+  .fixture {
+    display: flex;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--pitch-mid);
+    gap: 12px;
+  }
+
+  .fixture:last-child { border-bottom: none; }
+
+  .fixture .team {
+    flex: 1;
+    font-size: 1rem;
+  }
+
+  .fixture .team.right {
+    text-align: right;
+  }
+
+  .fixture .score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    background: var(--pitch-mid);
+    border-radius: 4px;
+    padding: 4px 14px;
+    min-width: 64px;
+    text-align: center;
+  }
+
+  .fixture .winner {
+    color: var(--gold);
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 32px 0 60px;
+    color: var(--chalk-dim);
+    font-size: 0.85rem;
+  }
+
+  footer a {
+    color: var(--chalk-dim);
+  }
+
+  @media (max-width: 480px) {
+    .leader-strip { flex-wrap: wrap; }
+    .leader-strip .pts { margin-left: 0; }
+    thead th:nth-child(4), tbody td:nth-child(4) { display: none; } /* hide GD col on tiny screens */
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="hero">
+    <h1 class="wordmark">Mater League</h1>
+    <p class="tagline">Six managers, one table, and a group chat that never sleeps. Updated after every matchweek.</p>
+
+    <!-- EDIT ME: swap in your real league leader -->
+    <div class="leader-strip">
+      <span class="rank">1st</span>
+      <span>
+        <span class="who">Kicking Bagels FC</span><br>
+        <span class="manager">managed by Sam</span>
+      </span>
+      <span class="pts">42<small>PTS</small></span>
+    </div>
+  </header>
+
+  <!-- EDIT ME: replace with your real standings -->
+  <section id="standings">
+    <h2>Standings</h2>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Team</th>
+          <th class="num">P</th>
+          <th class="num">GD</th>
+          <th class="num">Pts</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="pos">1</td>
+          <td>Kicking Bagels FC</td>
+          <td class="num">6</td>
+          <td class="num">+11</td>
+          <td class="pts">42</td>
+        </tr>
+        <tr>
+          <td class="pos">2</td>
+          <td>Agüerooo!</td>
+          <td class="num">6</td>
+          <td class="num">+7</td>
+          <td class="pts">38</td>
+        </tr>
+        <tr>
+          <td class="pos">3</td>
+          <td>Sunday League Sinners</td>
+          <td class="num">6</td>
+          <td class="num">+3</td>
+          <td class="pts">33</td>
+        </tr>
+        <tr>
+          <td class="pos">4</td>
+          <td>Ctrl Alt Deleted</td>
+          <td class="num">6</td>
+          <td class="num">-1</td>
+          <td class="pts">27</td>
+        </tr>
+        <tr>
+          <td class="pos">5</td>
+          <td>Big Chelsea Energy</td>
+          <td class="num">6</td>
+          <td class="num">-6</td>
+          <td class="pts">21</td>
+        </tr>
+        <tr>
+          <td class="pos">6</td>
+          <td>Park the Bus Pass</td>
+          <td class="num">6</td>
+          <td class="num">-14</td>
+          <td class="pts">14</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- EDIT ME: replace with your real fixture results -->
+  <section id="results">
+    <h2>Recent Results</h2>
+    <p class="matchweek-label">Matchweek 6</p>
+
+    <div class="fixture">
+      <span class="team right winner">Kicking Bagels FC</span>
+      <span class="score">3&nbsp;–&nbsp;1</span>
+      <span class="team">Big Chelsea Energy</span>
+    </div>
+    <div class="fixture">
+      <span class="team right">Ctrl Alt Deleted</span>
+      <span class="score">2&nbsp;–&nbsp;2</span>
+      <span class="team">Sunday League Sinners</span>
+    </div>
+    <div class="fixture">
+      <span class="team right winner">Agüerooo!</span>
+      <span class="score">4&nbsp;–&nbsp;0</span>
+      <span class="team">Park the Bus Pass</span>
+    </div>
+  </section>
+
+  <footer>
+    <p>Mater League — running since 2026. Placeholder data shown above; edit the sections marked "EDIT ME" in index.html to add real teams and scores.</p>
+  </footer>
+
+</div>
+
+</body>
+</html>
