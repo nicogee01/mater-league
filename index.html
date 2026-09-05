@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --pitch-dark: #0F2818;
@@ -33,7 +34,7 @@
   }
 
   .wrap {
-    max-width: 760px;
+    max-width: 780px;
     margin: 0 auto;
     padding: 0 24px;
   }
@@ -92,6 +93,7 @@
     font-weight: 700;
     font-size: 1.8rem;
     font-variant-numeric: tabular-nums;
+    text-align: right;
   }
 
   .leader-strip .pts small {
@@ -117,6 +119,12 @@
     font-weight: 700;
     font-size: 1.9rem;
     margin: 0 0 22px;
+  }
+
+  .section-note {
+    color: var(--chalk-dim);
+    font-size: 0.9rem;
+    margin: -14px 0 24px;
   }
 
   /* STANDINGS TABLE */
@@ -159,17 +167,36 @@
     text-align: center;
   }
 
+  td.streak {
+    text-align: center;
+    font-weight: 600;
+  }
+
+  td.streak.w { color: var(--gold); }
+  td.streak.l { color: var(--loss-red); }
+
   tbody tr:hover {
     background: var(--pitch-mid);
   }
 
-  /* RESULTS */
+  .team-cell .manager {
+    display: block;
+    color: var(--chalk-dim);
+    font-size: 0.78rem;
+    font-weight: 400;
+  }
+
+  /* MATCHUPS */
   .matchweek-label {
     color: var(--chalk-dim);
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 1.5px;
-    margin: 0 0 14px;
+    margin: 32px 0 14px;
+  }
+
+  .matchweek-label:first-child {
+    margin-top: 0;
   }
 
   .fixture {
@@ -187,6 +214,12 @@
     font-size: 1rem;
   }
 
+  .fixture .team .manager {
+    display: block;
+    color: var(--chalk-dim);
+    font-size: 0.78rem;
+  }
+
   .fixture .team.right {
     text-align: right;
   }
@@ -198,12 +231,56 @@
     background: var(--pitch-mid);
     border-radius: 4px;
     padding: 4px 14px;
-    min-width: 64px;
+    min-width: 72px;
     text-align: center;
+    font-variant-numeric: tabular-nums;
   }
 
-  .fixture .winner {
+  .fixture .winner .team, .fixture .team.winner-name {
     color: var(--gold);
+  }
+
+  /* RECORDS */
+  .records-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  .record-card {
+    background: var(--pitch-mid);
+    border: 1px solid var(--pitch-line);
+    border-radius: 4px;
+    padding: 18px 20px;
+  }
+
+  .record-card .label {
+    color: var(--chalk-dim);
+    font-size: 0.78rem;
+    margin: 0 0 8px;
+  }
+
+  .record-card .stat {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.7rem;
+    color: var(--gold);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .record-card .detail {
+    margin: 6px 0 0;
+    font-size: 0.88rem;
+    color: var(--chalk);
+  }
+
+  .record-card .detail .manager {
+    color: var(--chalk-dim);
+  }
+
+  @media (max-width: 560px) {
+    .records-grid { grid-template-columns: 1fr; }
   }
 
   /* FOOTER */
@@ -213,14 +290,19 @@
     font-size: 0.85rem;
   }
 
-  footer a {
+  .loading, .load-error {
     color: var(--chalk-dim);
+    font-size: 0.95rem;
+  }
+
+  .load-error {
+    color: var(--loss-red);
   }
 
   @media (max-width: 480px) {
     .leader-strip { flex-wrap: wrap; }
     .leader-strip .pts { margin-left: 0; }
-    thead th:nth-child(4), tbody td:nth-child(4) { display: none; } /* hide GD col on tiny screens */
+    thead th:nth-child(4), tbody td:nth-child(4) { display: none; } /* hide streak col on tiny screens */
   }
 </style>
 </head>
@@ -230,20 +312,12 @@
 
   <header class="hero">
     <h1 class="wordmark">Mater League</h1>
-    <p class="tagline">Six managers, one table, and a group chat that never sleeps. Updated after every matchweek.</p>
-
-    <!-- EDIT ME: swap in your real league leader -->
-    <div class="leader-strip">
-      <span class="rank">1st</span>
-      <span>
-        <span class="who">Kicking Bagels FC</span><br>
-        <span class="manager">managed by Sam</span>
-      </span>
-      <span class="pts">42<small>PTS</small></span>
+    <p class="tagline">Eight managers, one table, and a group chat that never sleeps. Updated after every matchweek.</p>
+    <div class="leader-strip" id="leader-strip">
+      <span class="loading">Loading current leader…</span>
     </div>
   </header>
 
-  <!-- EDIT ME: replace with your real standings -->
   <section id="standings">
     <h2>Standings</h2>
     <table>
@@ -251,85 +325,222 @@
         <tr>
           <th></th>
           <th>Team</th>
-          <th class="num">P</th>
-          <th class="num">GD</th>
-          <th class="num">Pts</th>
+          <th class="num">Record</th>
+          <th class="num">Streak</th>
+          <th class="num">PF</th>
+          <th class="num">PA</th>
         </tr>
       </thead>
-      <tbody>
-        <tr>
-          <td class="pos">1</td>
-          <td>Kicking Bagels FC</td>
-          <td class="num">6</td>
-          <td class="num">+11</td>
-          <td class="pts">42</td>
-        </tr>
-        <tr>
-          <td class="pos">2</td>
-          <td>Agüerooo!</td>
-          <td class="num">6</td>
-          <td class="num">+7</td>
-          <td class="pts">38</td>
-        </tr>
-        <tr>
-          <td class="pos">3</td>
-          <td>Sunday League Sinners</td>
-          <td class="num">6</td>
-          <td class="num">+3</td>
-          <td class="pts">33</td>
-        </tr>
-        <tr>
-          <td class="pos">4</td>
-          <td>Ctrl Alt Deleted</td>
-          <td class="num">6</td>
-          <td class="num">-1</td>
-          <td class="pts">27</td>
-        </tr>
-        <tr>
-          <td class="pos">5</td>
-          <td>Big Chelsea Energy</td>
-          <td class="num">6</td>
-          <td class="num">-6</td>
-          <td class="pts">21</td>
-        </tr>
-        <tr>
-          <td class="pos">6</td>
-          <td>Park the Bus Pass</td>
-          <td class="num">6</td>
-          <td class="num">-14</td>
-          <td class="pts">14</td>
-        </tr>
+      <tbody id="standings-body">
+        <tr><td colspan="6" class="loading">Loading standings…</td></tr>
       </tbody>
     </table>
   </section>
 
-  <!-- EDIT ME: replace with your real fixture results -->
-  <section id="results">
-    <h2>Recent Results</h2>
-    <p class="matchweek-label">Matchweek 6</p>
+  <section id="matchups">
+    <h2>Matchups</h2>
+    <p class="section-note">Every head-to-head result this season, most recent week first.</p>
+    <div id="matchups-container">
+      <p class="loading">Loading matchups…</p>
+    </div>
+  </section>
 
-    <div class="fixture">
-      <span class="team right winner">Kicking Bagels FC</span>
-      <span class="score">3&nbsp;–&nbsp;1</span>
-      <span class="team">Big Chelsea Energy</span>
-    </div>
-    <div class="fixture">
-      <span class="team right">Ctrl Alt Deleted</span>
-      <span class="score">2&nbsp;–&nbsp;2</span>
-      <span class="team">Sunday League Sinners</span>
-    </div>
-    <div class="fixture">
-      <span class="team right winner">Agüerooo!</span>
-      <span class="score">4&nbsp;–&nbsp;0</span>
-      <span class="team">Park the Bus Pass</span>
+  <section id="records">
+    <h2>League Records</h2>
+    <p class="section-note">The numbers worth bragging about (or never living down).</p>
+    <div class="records-grid" id="records-grid">
+      <p class="loading">Crunching the numbers…</p>
     </div>
   </section>
 
   <footer>
-    <p>Mater League — running since 2026. Placeholder data shown above; edit the sections marked "EDIT ME" in index.html to add real teams and scores.</p>
+    <p>Mater League — running since 2026. Data pulled live from <code>league-data.xlsx</code>. To update results, edit that file and re-upload it to the repo — the site rebuilds everything from it automatically.</p>
   </footer>
 
 </div>
+
+<script>
+(async function () {
+  const DATA_FILE = 'league-data.xlsx';
+
+  function fmt(n) {
+    return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function showError(containerIds, message) {
+    containerIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `<p class="load-error">${message}</p>`;
+    });
+  }
+
+  try {
+    const res = await fetch(DATA_FILE);
+    if (!res.ok) throw new Error('file not found');
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+
+    const teamsRaw = XLSX.utils.sheet_to_json(wb.Sheets['Teams']);
+    const matchupsRaw = XLSX.utils.sheet_to_json(wb.Sheets['Matchups']);
+
+    if (!teamsRaw.length || !matchupsRaw.length) throw new Error('empty sheets');
+
+    // --- Build team lookup with running stats ---
+    const teams = {};
+    teamsRaw.forEach(t => {
+      teams[t.ID] = {
+        id: t.ID,
+        name: t.Team,
+        manager: t.Manager,
+        wins: 0, losses: 0, pf: 0, pa: 0,
+        games: [] // chronological W/L record, populated below
+      };
+    });
+
+    const matchups = matchupsRaw
+      .map(m => ({
+        winId: m.win_team_id,
+        lossId: m.loss_team_id,
+        winPts: Number(m.win_team_points),
+        lossPts: Number(m.loss_team_points),
+        week: Number(m.Week)
+      }))
+      .sort((a, b) => a.week - b.week);
+
+    matchups.forEach(m => {
+      const w = teams[m.winId], l = teams[m.lossId];
+      if (!w || !l) return;
+      w.wins++; w.pf += m.winPts; w.pa += m.lossPts;
+      l.losses++; l.pf += m.lossPts; l.pa += m.winPts;
+      w.games.push('W'); l.games.push('L');
+    });
+
+    function streaks(games) {
+      let maxW = 0, maxL = 0, curW = 0, curL = 0;
+      games.forEach(g => {
+        if (g === 'W') { curW++; curL = 0; maxW = Math.max(maxW, curW); }
+        else { curL++; curW = 0; maxL = Math.max(maxL, curL); }
+      });
+      let current = { type: null, len: 0 };
+      for (let i = games.length - 1; i >= 0; i--) {
+        if (i === games.length - 1) { current = { type: games[i], len: 1 }; }
+        else if (games[i] === current.type) { current.len++; }
+        else break;
+      }
+      return { maxW, maxL, current };
+    }
+
+    const teamList = Object.values(teams);
+    teamList.forEach(t => { t.streaks = streaks(t.games); });
+
+    // --- Standings, sorted by wins then points for ---
+    const standings = [...teamList].sort((a, b) => b.wins - a.wins || b.pf - a.pf);
+
+    const leaderStrip = document.getElementById('leader-strip');
+    if (standings.length) {
+      const leader = standings[0];
+      leaderStrip.innerHTML = `
+        <span class="rank">1st</span>
+        <span>
+          <span class="who">${leader.name}</span><br>
+          <span class="manager">managed by ${leader.manager}</span>
+        </span>
+        <span class="pts">${leader.wins}-${leader.losses}<small>RECORD</small></span>
+      `;
+    }
+
+    const standingsBody = document.getElementById('standings-body');
+    standingsBody.innerHTML = standings.map((t, i) => {
+      const s = t.streaks.current;
+      const streakLabel = s.len ? `${s.type}${s.len}` : '–';
+      const streakClass = s.type === 'W' ? 'w' : (s.type === 'L' ? 'l' : '');
+      return `
+        <tr>
+          <td class="pos">${i + 1}</td>
+          <td class="team-cell">${t.name}<span class="manager">${t.manager}</span></td>
+          <td class="num">${t.wins}-${t.losses}</td>
+          <td class="streak ${streakClass}">${streakLabel}</td>
+          <td class="num">${fmt(t.pf)}</td>
+          <td class="num">${fmt(t.pa)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    // --- Matchups grouped by week, most recent first ---
+    const weeks = [...new Set(matchups.map(m => m.week))].sort((a, b) => b - a);
+    const matchupsContainer = document.getElementById('matchups-container');
+    matchupsContainer.innerHTML = weeks.map(week => {
+      const rows = matchups.filter(m => m.week === week).map(m => {
+        const w = teams[m.winId], l = teams[m.lossId];
+        return `
+          <div class="fixture">
+            <span class="team right"><span class="winner-name">${w.name}</span><span class="manager">${w.manager}</span></span>
+            <span class="score">${fmt(m.winPts)} – ${fmt(m.lossPts)}</span>
+            <span class="team">${l.name}<span class="manager">${l.manager}</span></span>
+          </div>
+        `;
+      }).join('');
+      return `<p class="matchweek-label">Matchweek ${week}</p>${rows}`;
+    }).join('');
+
+    // --- League records ---
+    const blowout = [...matchups].sort((a, b) => (b.winPts - b.lossPts) - (a.winPts - a.lossPts))[0];
+    const closest = [...matchups].sort((a, b) => (a.winPts - a.lossPts) - (b.winPts - b.lossPts))[0];
+
+    let highScore = { pts: -Infinity };
+    matchups.forEach(m => {
+      if (m.winPts > highScore.pts) highScore = { pts: m.winPts, teamId: m.winId, week: m.week };
+      if (m.lossPts > highScore.pts) highScore = { pts: m.lossPts, teamId: m.lossId, week: m.week };
+    });
+
+    const bestWinStreakTeam = [...teamList].sort((a, b) => b.streaks.maxW - a.streaks.maxW)[0];
+    const worstLossStreakTeam = [...teamList].sort((a, b) => b.streaks.maxL - a.streaks.maxL)[0];
+
+    const records = [
+      {
+        label: 'Biggest Blowout',
+        stat: fmt(blowout.winPts - blowout.lossPts) + ' pts',
+        detail: `${teams[blowout.winId].name} <span class="manager">(${teams[blowout.winId].manager})</span> over ${teams[blowout.lossId].name} — Week ${blowout.week}`
+      },
+      {
+        label: 'Closest Game',
+        stat: fmt(closest.winPts - closest.lossPts) + ' pts',
+        detail: `${teams[closest.winId].name} edged ${teams[closest.lossId].name} — Week ${closest.week}`
+      },
+      {
+        label: 'Highest Score of the Season',
+        stat: fmt(highScore.pts) + ' pts',
+        detail: `${teams[highScore.teamId].name} <span class="manager">(${teams[highScore.teamId].manager})</span> — Week ${highScore.week}`
+      },
+      {
+        label: 'Longest Winning Streak',
+        stat: bestWinStreakTeam.streaks.maxW + ' games',
+        detail: `${bestWinStreakTeam.name} <span class="manager">(${bestWinStreakTeam.manager})</span>`
+      },
+      {
+        label: 'Longest Losing Streak',
+        stat: worstLossStreakTeam.streaks.maxL + ' games',
+        detail: `${worstLossStreakTeam.name} <span class="manager">(${worstLossStreakTeam.manager})</span>`
+      }
+    ];
+
+    document.getElementById('records-grid').innerHTML = records.map(r => `
+      <div class="record-card">
+        <p class="label">${r.label}</p>
+        <p class="stat">${r.stat}</p>
+        <p class="detail">${r.detail}</p>
+      </div>
+    `).join('');
+
+  } catch (err) {
+    console.error(err);
+    showError(
+      ['leader-strip', 'standings-body', 'matchups-container', 'records-grid'],
+      `Couldn't load ${DATA_FILE}. Make sure it's uploaded to the same folder as index.html.`
+    );
+  }
+})();
+</script>
 
 </body>
 </html>
