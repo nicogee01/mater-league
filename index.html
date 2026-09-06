@@ -86,51 +86,56 @@
     text-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
 
-  .leader-strip {
+  .hero-standings-preview {
     display: flex;
-    align-items: baseline;
-    gap: 14px;
+    flex-direction: column;
+    gap: 18px;
     background: rgba(15, 40, 20, 0.6);
     border: 1px solid rgba(255,255,255,0.25);
     border-radius: 4px;
-    padding: 16px 20px;
+    padding: 18px 20px;
   }
 
-  .leader-strip .rank {
+  .hsp-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0 0 8px;
+  }
+
+  .hsp-label.contenders { color: var(--gold); }
+  .hsp-label.relegation { color: var(--loss-red); }
+
+  .hsp-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 5px 0;
+  }
+
+  .hsp-row .rank {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
-    font-size: 1.8rem;
-    color: var(--gold);
+    color: var(--chalk-dim);
+    width: 16px;
   }
 
-  .leader-strip .who {
+  .hsp-row .who {
     font-weight: 600;
-    font-size: 1.15rem;
     color: var(--chalk);
   }
 
-  .leader-strip .manager {
+  .hsp-row .manager {
     color: var(--chalk-dim);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
   }
 
-
-  .leader-strip .pts {
+  .hsp-row .rec {
     margin-left: auto;
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
-    font-size: 1.8rem;
     font-variant-numeric: tabular-nums;
-    text-align: right;
-  }
-
-  .leader-strip .pts small {
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-    font-size: 0.75rem;
-    color: var(--chalk-dim);
-    display: block;
-    text-align: right;
+    color: var(--chalk);
   }
 
   /* SECTIONS */
@@ -520,6 +525,7 @@
   .tm-waivers {
     max-height: 220px;
     overflow-y: auto;
+    padding-right: 16px;
   }
 
   .tm-waiver-row {
@@ -544,6 +550,100 @@
     white-space: nowrap;
   }
 
+  /* VICTORY ROAD */
+  .victory-road {
+    text-align: center;
+    padding: 64px 0 56px;
+    background: radial-gradient(ellipse 500px 260px at 50% 0%, rgba(255,209,102,0.08), transparent 70%);
+  }
+
+  .vr-eyebrow {
+    color: var(--gold);
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin: 0 0 6px;
+  }
+
+  .vr-title {
+    font-size: 2.3rem;
+    letter-spacing: 1px;
+    margin: 0 0 10px;
+  }
+
+  .victory-road .section-note {
+    max-width: 46ch;
+    margin: -4px auto 32px;
+  }
+
+  .vr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    text-align: left;
+  }
+
+  .vr-col-label {
+    color: var(--chalk-dim);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0 0 14px;
+    text-align: center;
+  }
+
+  .vr-season {
+    background: linear-gradient(160deg, rgba(255,209,102,0.12), rgba(15,40,20,0.7));
+    border: 1px solid rgba(255,209,102,0.4);
+    border-radius: 6px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .vr-year {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    color: var(--chalk-dim);
+    letter-spacing: 1px;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+
+  .vr-trophy {
+    width: 48px;
+    height: 56px;
+    margin: 4px 0 10px;
+  }
+
+  .vr-champion {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--gold);
+    margin: 0;
+  }
+
+  .vr-runnerup {
+    color: var(--chalk-dim);
+    font-size: 0.85rem;
+    margin: 4px 0 12px;
+  }
+
+  .vr-status {
+    font-size: 0.72rem;
+    color: var(--chalk-dim);
+    border: 1px solid var(--pitch-line);
+    border-radius: 3px;
+    padding: 3px 10px;
+  }
+
+  @media (max-width: 560px) {
+    .vr-grid { grid-template-columns: 1fr; }
+  }
+
   .loading, .load-error {
     color: var(--chalk-dim);
     font-size: 0.95rem;
@@ -554,8 +654,6 @@
   }
 
   @media (max-width: 480px) {
-    .leader-strip { flex-wrap: wrap; }
-    .leader-strip .pts { margin-left: 0; }
     thead th:nth-child(4), tbody td:nth-child(4) { display: none; } /* hide streak col on tiny screens */
   }
 </style>
@@ -566,8 +664,8 @@
   <div class="hero-inner">
     <h1 class="wordmark">The Mater League</h1>
     <p class="tagline">Eight managers, one table, and a group chat that never sleeps. Updated after every matchweek.</p>
-    <div class="leader-strip" id="leader-strip">
-      <span class="loading">Loading current leader…</span>
+    <div class="hero-standings-preview" id="leader-strip">
+      <span class="loading">Loading standings…</span>
     </div>
   </div>
 </header>
@@ -615,6 +713,48 @@
     <p class="section-note">Two-legged knockout. Ties are decided on aggregate score once both legs are played.</p>
     <div class="bracket" id="bracket-container">
       <p class="loading">Loading bracket…</p>
+    </div>
+  </section>
+
+  <section id="victory-road" class="victory-road">
+    <p class="vr-eyebrow">Est. 2026</p>
+    <h2 class="vr-title">Victory Road</h2>
+    <p class="section-note">Every champion the league has crowned, and the cup winners who survived the knockout.</p>
+    <div class="vr-grid">
+      <div class="vr-column">
+        <p class="vr-col-label">Mater League Champions</p>
+        <div class="vr-season vr-current">
+          <span class="vr-year">2026</span>
+          <svg class="vr-trophy" viewBox="0 0 60 70" fill="none" stroke="#FFD166" stroke-width="3">
+            <path d="M 14 8 Q 14 34 30 34 Q 46 34 46 8 Z"/>
+            <path d="M 14 14 Q -4 14 -4 30 Q -4 46 14 42"/>
+            <path d="M 46 14 Q 64 14 64 30 Q 64 46 46 42"/>
+            <line x1="30" y1="34" x2="30" y2="52"/>
+            <path d="M 18 52 L 42 52 L 37 62 L 23 62 Z"/>
+            <rect x="12" y="62" width="36" height="6" rx="1.5"/>
+          </svg>
+          <p class="vr-champion">TBD</p>
+          <p class="vr-runnerup">Runner-up · TBD</p>
+          <span class="vr-status">Season in progress</span>
+        </div>
+      </div>
+      <div class="vr-column">
+        <p class="vr-col-label">Mater League Cup Champions</p>
+        <div class="vr-season vr-current">
+          <span class="vr-year">2026</span>
+          <svg class="vr-trophy" viewBox="0 0 60 70" fill="none" stroke="#FFD166" stroke-width="3">
+            <path d="M 14 8 Q 14 34 30 34 Q 46 34 46 8 Z"/>
+            <path d="M 14 14 Q -4 14 -4 30 Q -4 46 14 42"/>
+            <path d="M 46 14 Q 64 14 64 30 Q 64 46 46 42"/>
+            <line x1="30" y1="34" x2="30" y2="52"/>
+            <path d="M 18 52 L 42 52 L 37 62 L 23 62 Z"/>
+            <rect x="12" y="62" width="36" height="6" rx="1.5"/>
+          </svg>
+          <p class="vr-champion">TBD</p>
+          <p class="vr-runnerup">Runner-up · TBD</p>
+          <span class="vr-status">Bracket in progress</span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -753,14 +893,25 @@
 
     const leaderStrip = document.getElementById('leader-strip');
     if (standings.length) {
-      const leader = standings[0];
+      const top3 = standings.slice(0, 3);
+      const bottom2 = standings.slice(-2);
+      const row = (t, i, fromBottom) => `
+        <div class="hsp-row">
+          <span class="rank">${fromBottom ? standings.length - bottom2.length + i + 1 : i + 1}</span>
+          <span class="who">${t.name}</span>
+          <span class="manager">${t.manager}</span>
+          <span class="rec">${t.wins}-${t.losses}</span>
+        </div>
+      `;
       leaderStrip.innerHTML = `
-        <span class="rank">1st</span>
-        <span>
-          <span class="who">${leader.name}</span><br>
-          <span class="manager">managed by ${leader.manager}</span>
-        </span>
-        <span class="pts">${leader.wins}-${leader.losses}<small>RECORD</small></span>
+        <div>
+          <p class="hsp-label contenders">Title Contenders</p>
+          ${top3.map((t, i) => row(t, i, false)).join('')}
+        </div>
+        <div>
+          <p class="hsp-label relegation">Relegation Scrappers</p>
+          ${bottom2.map((t, i) => row(t, i, true)).join('')}
+        </div>
       `;
     }
 
