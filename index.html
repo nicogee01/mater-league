@@ -678,8 +678,10 @@
       const totalTeams = firstRoundTieCount * 2;
       const totalLevels = Math.log2(totalTeams);
 
+      // Pairings are drawn randomly each round, so future rounds can't be predicted from
+      // this round's bracket position. We only show real matchups once they're entered;
+      // rounds with no data yet get generic TBD slots (no assumed pairing).
       let globalMatchNum = 0;
-      let prevLevelTies = null; // array of {label, teamIds/null, winnerId, matchNum}
       const levels = [];
 
       for (let lvl = 0; lvl < totalLevels; lvl++) {
@@ -694,34 +696,16 @@
           });
           roundGroups.delete(realGroup[0]);
         } else {
-          // synthesize placeholder ties from previous level's winners
-          levelTies = [];
-          for (let i = 0; i < prevLevelTies.length; i += 2) {
+          levelTies = Array.from({ length: expectedCount }, () => {
             globalMatchNum++;
-            levelTies.push({
-              matchNum: globalMatchNum,
-              real: false,
-              slotA: prevLevelTies[i],
-              slotB: prevLevelTies[i + 1]
-            });
-          }
+            return { matchNum: globalMatchNum, real: false };
+          });
         }
 
         levels.push({ label: roundNameByCount[expectedCount] || `Round of ${expectedCount * 2}`, ties: levelTies });
-        prevLevelTies = levelTies;
       }
 
       function teamName(id) { return teams[id] ? teams[id].name : `Team ${id}`; }
-      function teamManager(id) { return teams[id] ? teams[id].manager : ''; }
-
-      function participantLabel(slot) {
-        if (!slot) return { name: 'TBD', manager: '', known: false };
-        if (slot.real) {
-          if (slot.complete) return { name: teamName(slot.winnerId), manager: teamManager(slot.winnerId), known: true };
-          return { name: `Winner of Match ${slot.matchNum}`, manager: '', known: false };
-        }
-        return { name: `Winner of Match ${slot.matchNum}`, manager: '', known: false };
-      }
 
       const bracketHtml = levels.map(level => {
         const tieCards = level.ties.map(tie => {
@@ -747,19 +731,17 @@
               </div>
             `;
           } else {
-            const pA = participantLabel(tie.slotA);
-            const pB = participantLabel(tie.slotB);
             return `
               <div class="tie-card">
                 <div class="tie-row tbd">
-                  <span class="tname">${pA.name}</span>
+                  <span class="tname">TBD</span>
                   <span class="tscore">–</span>
                 </div>
                 <div class="tie-row tbd">
-                  <span class="tname">${pB.name}</span>
+                  <span class="tname">TBD</span>
                   <span class="tscore">–</span>
                 </div>
-                <div class="tie-meta">Awaiting previous round</div>
+                <div class="tie-meta">Awaiting random draw</div>
               </div>
             `;
           }
