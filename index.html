@@ -290,6 +290,90 @@
     font-size: 0.85rem;
   }
 
+  /* CUP BRACKET */
+  .bracket {
+    display: flex;
+    align-items: stretch;
+    gap: 28px;
+    overflow-x: auto;
+    padding-bottom: 14px;
+  }
+
+  .bracket-round {
+    display: flex;
+    flex-direction: column;
+    min-width: 230px;
+    flex-shrink: 0;
+  }
+
+  .round-header {
+    color: var(--chalk-dim);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0 0 16px;
+  }
+
+  .round-ties {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    gap: 18px;
+  }
+
+  .tie-card {
+    background: var(--pitch-mid);
+    border: 1px solid var(--pitch-line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .tie-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    font-size: 0.92rem;
+  }
+
+  .tie-row + .tie-row {
+    border-top: 1px solid var(--pitch-line);
+  }
+
+  .tie-row .tname {
+    font-weight: 600;
+  }
+
+  .tie-row.tbd .tname {
+    color: var(--chalk-dim);
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  .tie-row.winner .tname {
+    color: var(--gold);
+  }
+
+  .tie-row .tscore {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tie-row.winner .tscore {
+    color: var(--gold);
+  }
+
+  .tie-meta {
+    padding: 8px 14px;
+    font-size: 0.74rem;
+    color: var(--chalk-dim);
+    background: rgba(0,0,0,0.12);
+  }
+
   .loading, .load-error {
     color: var(--chalk-dim);
     font-size: 0.95rem;
@@ -350,6 +434,14 @@
     <p class="section-note">The numbers worth bragging about (or never living down).</p>
     <div class="records-grid" id="records-grid">
       <p class="loading">Crunching the numbers…</p>
+    </div>
+  </section>
+
+  <section id="cup">
+    <h2>League Cup</h2>
+    <p class="section-note">Two-legged knockout. Ties are decided on aggregate score once both legs are played.</p>
+    <div class="bracket" id="bracket-container">
+      <p class="loading">Loading bracket…</p>
     </div>
   </section>
 
@@ -532,10 +624,164 @@
       </div>
     `).join('');
 
+    // --- Cup bracket (two-legged knockout) ---
+    const cupSheet = wb.Sheets['Cup'];
+    if (cupSheet) {
+      const cupRaw = XLSX.utils.sheet_to_json(cupSheet).map(r => ({
+        matchId: r.match_id,
+        aId: r.a_team_id,
+        bId: r.b_team_id,
+        aScore: Number(r.a_team_score),
+        bScore: Number(r.b_team_score),
+        round: String(r.Round),
+        leg: Number(r.Leg)
+      }));
+
+      // Group rows into ties by (Round, canonical team pair)
+      const tieMap = new Map();
+      cupRaw.forEach(row => {
+        const pairKey = row.round + ':' + [row.aId, row.bId].sort((a, b) => a - b).join('-');
+        if (!tieMap.has(pairKey)) {
+          tieMap.set(pairKey, { round: row.round, teamIds: [row.aId, row.bId].sort((a, b) => a - b), legs: [] });
+        }
+        tieMap.get(pairKey).legs.push(row);
+      });
+
+      const allTies = [...tieMap.values()].map(t => {
+        t.legs.sort((a, b) => a.leg - b.leg);
+        const agg = {};
+        t.teamIds.forEach(id => agg[id] = 0);
+        t.legs.forEach(l => { agg[l.aId] += l.aScore; agg[l.bId] += l.bScore; });
+        const legsPlayed = t.legs.length;
+        const complete = legsPlayed >= 2;
+        const [teamA, teamB] = t.teamIds;
+        const winnerId = complete ? (agg[teamA] > agg[teamB] ? teamA : (agg[teamB] > agg[teamA] ? teamB : null)) : null;
+        return {
+          round: t.round,
+          teamIds: t.teamIds,
+          legs: t.legs,
+          agg, legsPlayed, complete, winnerId,
+          orderKey: Math.min(...t.legs.map(l => l.matchId))
+        };
+      });
+
+      // Group real ties by their round label, so we can slot them into bracket levels by tie-count
+      const roundGroups = new Map();
+      allTies.forEach(t => {
+        if (!roundGroups.has(t.round)) roundGroups.set(t.round, []);
+        roundGroups.get(t.round).push(t);
+      });
+      roundGroups.forEach(list => list.sort((a, b) => a.orderKey - b.orderKey));
+
+      const roundNameByCount = { 8: 'Round of 16', 4: 'Quarterfinals', 2: 'Semifinals', 1: 'Final' };
+      const firstRoundTieCount = Math.max(...[...roundGroups.values()].map(l => l.length));
+      const totalTeams = firstRoundTieCount * 2;
+      const totalLevels = Math.log2(totalTeams);
+
+      let globalMatchNum = 0;
+      let prevLevelTies = null; // array of {label, teamIds/null, winnerId, matchNum}
+      const levels = [];
+
+      for (let lvl = 0; lvl < totalLevels; lvl++) {
+        const expectedCount = totalTeams / Math.pow(2, lvl + 1);
+        const realGroup = [...roundGroups.entries()].find(([label, list]) => list.length === expectedCount);
+        let levelTies;
+
+        if (realGroup) {
+          levelTies = realGroup[1].map(t => {
+            globalMatchNum++;
+            return { ...t, matchNum: globalMatchNum, real: true };
+          });
+          roundGroups.delete(realGroup[0]);
+        } else {
+          // synthesize placeholder ties from previous level's winners
+          levelTies = [];
+          for (let i = 0; i < prevLevelTies.length; i += 2) {
+            globalMatchNum++;
+            levelTies.push({
+              matchNum: globalMatchNum,
+              real: false,
+              slotA: prevLevelTies[i],
+              slotB: prevLevelTies[i + 1]
+            });
+          }
+        }
+
+        levels.push({ label: roundNameByCount[expectedCount] || `Round of ${expectedCount * 2}`, ties: levelTies });
+        prevLevelTies = levelTies;
+      }
+
+      function teamName(id) { return teams[id] ? teams[id].name : `Team ${id}`; }
+      function teamManager(id) { return teams[id] ? teams[id].manager : ''; }
+
+      function participantLabel(slot) {
+        if (!slot) return { name: 'TBD', manager: '', known: false };
+        if (slot.real) {
+          if (slot.complete) return { name: teamName(slot.winnerId), manager: teamManager(slot.winnerId), known: true };
+          return { name: `Winner of Match ${slot.matchNum}`, manager: '', known: false };
+        }
+        return { name: `Winner of Match ${slot.matchNum}`, manager: '', known: false };
+      }
+
+      const bracketHtml = levels.map(level => {
+        const tieCards = level.ties.map(tie => {
+          if (tie.real) {
+            const [teamA, teamB] = tie.teamIds;
+            const aWin = tie.complete && tie.winnerId === teamA;
+            const bWin = tie.complete && tie.winnerId === teamB;
+            const legLines = tie.legs.map(l => `Leg ${l.leg}: ${fmt(l.aScore)}–${fmt(l.bScore)}`).join(' · ');
+            const metaText = tie.complete
+              ? `Won on aggregate ${fmt(Math.max(tie.agg[teamA], tie.agg[teamB]))}–${fmt(Math.min(tie.agg[teamA], tie.agg[teamB]))} · ${legLines}`
+              : `${legLines} · Leg ${tie.legsPlayed + 1} pending`;
+            return `
+              <div class="tie-card">
+                <div class="tie-row ${aWin ? 'winner' : ''}">
+                  <span class="tname">${teamName(teamA)}</span>
+                  <span class="tscore">${fmt(tie.agg[teamA])}</span>
+                </div>
+                <div class="tie-row ${bWin ? 'winner' : ''}">
+                  <span class="tname">${teamName(teamB)}</span>
+                  <span class="tscore">${fmt(tie.agg[teamB])}</span>
+                </div>
+                <div class="tie-meta">${metaText}</div>
+              </div>
+            `;
+          } else {
+            const pA = participantLabel(tie.slotA);
+            const pB = participantLabel(tie.slotB);
+            return `
+              <div class="tie-card">
+                <div class="tie-row tbd">
+                  <span class="tname">${pA.name}</span>
+                  <span class="tscore">–</span>
+                </div>
+                <div class="tie-row tbd">
+                  <span class="tname">${pB.name}</span>
+                  <span class="tscore">–</span>
+                </div>
+                <div class="tie-meta">Awaiting previous round</div>
+              </div>
+            `;
+          }
+        }).join('');
+
+        return `
+          <div class="bracket-round">
+            <p class="round-header">${level.label}</p>
+            <div class="round-ties">${tieCards}</div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('bracket-container').innerHTML = bracketHtml;
+    } else {
+      document.getElementById('bracket-container').innerHTML = '<p class="section-note">No Cup tab found in the data file yet.</p>';
+    }
+
   } catch (err) {
     console.error(err);
     showError(
-      ['leader-strip', 'standings-body', 'matchups-container', 'records-grid'],
+      ['leader-strip', 'standings-body', 'matchups-container', 'records-grid', 'bracket-container'],
       `Couldn't load ${DATA_FILE}. Make sure it's uploaded to the same folder as index.html.`
     );
   }
