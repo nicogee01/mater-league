@@ -45,23 +45,24 @@
   header.hero {
     position: relative;
     overflow: hidden;
-    padding: 64px 24px 40px;
-    margin: 0 -24px;
+    width: 100%;
+    min-height: 100vh;
     border-bottom: 1px solid var(--pitch-line);
-    background: repeating-linear-gradient(100deg, var(--pitch-bright) 0px, var(--pitch-bright) 42px, var(--pitch-bright-2) 42px, var(--pitch-bright-2) 84px);
+    background-image: linear-gradient(to bottom, rgba(8,18,10,0.55) 0%, rgba(8,18,10,0.25) 45%, rgba(8,18,10,0.75) 100%), url('stadium.jpg');
+    background-size: cover;
+    background-position: center 70%;
+    display: flex;
+    align-items: flex-end;
+    padding: 24px;
+    box-sizing: border-box;
   }
 
   header.hero .hero-inner {
     position: relative;
+    width: 100%;
     max-width: 732px;
     margin: 0 auto;
-  }
-
-  header.hero .pitch-overlay {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    padding-bottom: 40px;
   }
 
   .wordmark {
@@ -559,45 +560,17 @@
 </head>
 <body>
 
-<div class="wrap">
-
-  <header class="hero">
-    <svg class="pitch-overlay" viewBox="0 0 780 340" preserveAspectRatio="none" style="opacity:0.35">
-      <rect x="20" y="20" width="740" height="300" fill="none" stroke="#FFFFFF" stroke-width="2"/>
-      <line x1="390" y1="20" x2="390" y2="320" stroke="#FFFFFF" stroke-width="2"/>
-      <circle cx="390" cy="170" r="55" fill="none" stroke="#FFFFFF" stroke-width="2"/>
-      <rect x="20" y="95" width="90" height="150" fill="none" stroke="#FFFFFF" stroke-width="2"/>
-      <rect x="670" y="95" width="90" height="150" fill="none" stroke="#FFFFFF" stroke-width="2"/>
-    </svg>
-    <svg class="pitch-overlay" viewBox="0 0 780 340" preserveAspectRatio="none" style="opacity:0.5">
-      <defs><g id="pl"><ellipse cx="0" cy="10" rx="8" ry="10" fill="#FFFFFF"/><circle cx="0" cy="-5" r="6" fill="#FFFFFF"/></g></defs>
-      <use href="#pl" x="50" y="170"/>
-      <use href="#pl" x="130" y="65"/><use href="#pl" x="130" y="135"/><use href="#pl" x="130" y="205"/><use href="#pl" x="130" y="275"/>
-      <use href="#pl" x="220" y="105"/><use href="#pl" x="220" y="170"/><use href="#pl" x="220" y="235"/>
-      <use href="#pl" x="310" y="105"/><use href="#pl" x="310" y="170"/><use href="#pl" x="310" y="235"/>
-      <use href="#pl" x="730" y="170"/>
-      <use href="#pl" x="650" y="65"/><use href="#pl" x="650" y="135"/><use href="#pl" x="650" y="205"/><use href="#pl" x="650" y="275"/>
-      <use href="#pl" x="560" y="105"/><use href="#pl" x="560" y="170"/><use href="#pl" x="560" y="235"/>
-      <use href="#pl" x="470" y="105"/><use href="#pl" x="470" y="170"/><use href="#pl" x="470" y="235"/>
-    </svg>
-    <svg class="pitch-overlay" viewBox="0 0 780 340" preserveAspectRatio="none" style="opacity:0.4">
-      <g transform="translate(390,170)" fill="none" stroke="#FFD166" stroke-width="2.5">
-        <path d="M -16 -30 Q -16 -5 0 -5 Q 16 -5 16 -30 Z"/>
-        <path d="M -16 -26 Q -30 -26 -30 -14 Q -30 -2 -16 -4"/>
-        <path d="M 16 -26 Q 30 -26 30 -14 Q 30 -2 16 -4"/>
-        <line x1="0" y1="-5" x2="0" y2="10"/>
-        <path d="M -10 10 L 10 10 L 7 20 L -7 20 Z"/>
-        <rect x="-14" y="20" width="28" height="6" rx="1"/>
-      </g>
-    </svg>
-    <div class="hero-inner">
-      <h1 class="wordmark">The Mater League</h1>
-      <p class="tagline">Eight managers, one table, and a group chat that never sleeps. Updated after every matchweek.</p>
-      <div class="leader-strip" id="leader-strip">
-        <span class="loading">Loading current leader…</span>
-      </div>
+<header class="hero">
+  <div class="hero-inner">
+    <h1 class="wordmark">The Mater League</h1>
+    <p class="tagline">Eight managers, one table, and a group chat that never sleeps. Updated after every matchweek.</p>
+    <div class="leader-strip" id="leader-strip">
+      <span class="loading">Loading current leader…</span>
     </div>
-  </header>
+  </div>
+</header>
+
+<div class="wrap">
 
   <section id="standings">
     <h2>Standings</h2>
