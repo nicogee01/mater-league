@@ -11,7 +11,7 @@
 <style>
   :root {
     --pitch-dark: #123821;
-    --pitch-mid: #1B4A2C;
+    --pitch-mid: rgba(27, 74, 44, 0.82);
     --pitch-line: #2F6B41;
     --chalk: #F3ECE0;
     --chalk-dim: #BFE3C8;
@@ -25,7 +25,12 @@
 
   body {
     margin: 0;
-    background: var(--pitch-dark);
+    background-color: var(--pitch-dark);
+    background-image: linear-gradient(rgba(8,18,10,0.62), rgba(8,18,10,0.62)), url('stadium.jpg');
+    background-size: cover;
+    background-position: center top;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--chalk);
     font-family: 'Inter', sans-serif;
     line-height: 1.5;
@@ -48,11 +53,8 @@
     width: 100%;
     min-height: 100vh;
     border-bottom: 1px solid var(--pitch-line);
-    background-image: linear-gradient(to bottom, rgba(8,18,10,0.55) 0%, rgba(8,18,10,0.25) 45%, rgba(8,18,10,0.75) 100%), url('stadium.jpg');
-    background-size: cover;
-    background-position: center 70%;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     padding: 24px;
     box-sizing: border-box;
   }
