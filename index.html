@@ -287,6 +287,39 @@
     gap: 14px;
   }
 
+  .section-intro {
+    width: 100%;
+    text-align: center;
+    padding: 64px 24px;
+    background: #0B1F3A;
+    border-top: 1px solid var(--pitch-line);
+    border-bottom: 1px solid var(--pitch-line);
+  }
+
+  .si-eyebrow {
+    color: var(--gold);
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+
+  .si-title {
+    font-family: 'Bungee', cursive;
+    font-weight: 400;
+    font-size: clamp(1.8rem, 6vw, 2.8rem);
+    color: var(--gold);
+    margin: 0 0 14px;
+    letter-spacing: 0.5px;
+  }
+
+  .si-tagline {
+    color: var(--chalk-dim);
+    font-size: 0.95rem;
+    max-width: 46ch;
+    margin: 0 auto;
+  }
+
   .chart-wrap {
     background: var(--pitch-mid);
     border: 1px solid var(--pitch-line);
@@ -753,18 +786,34 @@
     </div>
   </section>
 
+</div>
+
+<div class="section-intro">
+  <p class="si-eyebrow">Knockout</p>
+  <h2 class="si-title">The McQueen Cup</h2>
+  <p class="si-tagline">Will there be a Cinderella story, or a dominant domestic double? There's all to play for.</p>
+</div>
+
+<div class="wrap">
+
   <section id="cup">
-    <h2>League Cup</h2>
     <p class="section-note">Two-legged knockout. Ties are decided on aggregate score once both legs are played.</p>
     <div class="bracket" id="bracket-container">
       <p class="loading">Loading bracket…</p>
     </div>
   </section>
 
+</div>
+
+<div class="section-intro">
+  <p class="si-eyebrow">Hall of Fame</p>
+  <h2 class="si-title">Victory Road</h2>
+  <p class="si-tagline">Every champion the league has crowned, and the cup winners who survived the knockout.</p>
+</div>
+
+<div class="wrap">
+
   <section id="victory-road" class="victory-road">
-    <p class="vr-eyebrow">Est. 2026</p>
-    <h2 class="vr-title">Victory Road</h2>
-    <p class="section-note">Every champion the league has crowned, and the cup winners who survived the knockout.</p>
     <div class="vr-grid">
       <div class="vr-column">
         <p class="vr-col-label">Mater League Champions</p>
