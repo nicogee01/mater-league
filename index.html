@@ -81,8 +81,16 @@
   .tagline {
     color: #EAF6EC;
     font-size: 1.05rem;
-    margin: 12px 0 28px;
+    margin: 12px 0 6px;
     max-width: 46ch;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+
+  .tagline-sub {
+    color: #EAF6EC;
+    font-size: 0.85rem;
+    font-style: italic;
+    margin: 0 0 28px;
     text-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
 
@@ -663,7 +671,8 @@
 <header class="hero">
   <div class="hero-inner">
     <h1 class="wordmark">The Mater League</h1>
-    <p class="tagline">Eight managers, one table, and a group chat that never sleeps. Updated after every matchweek.</p>
+    <p class="tagline">A mix of brothers, long time friends, and pro clubs teammates battle it out over 38 weeks to decide who wins the coveted Mater League.</p>
+    <p class="tagline-sub">Updated after every match week.</p>
     <div class="hero-standings-preview" id="leader-strip">
       <span class="loading">Loading standings…</span>
     </div>
@@ -759,7 +768,7 @@
   </section>
 
   <footer>
-    <p>Mater League — running since 2026. Data pulled live from <code>league-data.xlsx</code>. To update results, edit that file and re-upload it to the repo — the site rebuilds everything from it automatically.</p>
+    <p>Mater League — running since 2026. Created by Pep Guardiola's successor, Nico.</p>
   </footer>
 
 </div>
@@ -804,6 +813,7 @@
         id: t.ID,
         name: t.Team,
         manager: t.Manager,
+        favoriteTeam: t.Favorite_Team || null,
         wins: 0, losses: 0, pf: 0, pa: 0,
         games: [] // chronological W/L record, populated below
       };
@@ -831,7 +841,8 @@
       if (!w || !l) return;
       w.wins++; w.pf += m.winPts; w.pa += m.lossPts;
       l.losses++; l.pf += m.lossPts; l.pa += m.winPts;
-      w.games.push('W'); l.games.push('L');
+      w.games.push({ week: m.week, result: 'W' });
+      l.games.push({ week: m.week, result: 'L' });
 
       // Home/away splits
       const homeTeam = teams[m.homeId], awayTeam = teams[m.awayId];
@@ -850,18 +861,21 @@
     });
 
     function streaks(games) {
-      let maxW = 0, maxL = 0, curW = 0, curL = 0;
+      // games: [{week, result}], already in chronological order
+      const runs = [];
       games.forEach(g => {
-        if (g === 'W') { curW++; curL = 0; maxW = Math.max(maxW, curW); }
-        else { curL++; curW = 0; maxL = Math.max(maxL, curL); }
+        const last = runs[runs.length - 1];
+        if (last && last.type === g.result) {
+          last.len++;
+          last.endWeek = g.week;
+        } else {
+          runs.push({ type: g.result, len: 1, startWeek: g.week, endWeek: g.week });
+        }
       });
-      let current = { type: null, len: 0 };
-      for (let i = games.length - 1; i >= 0; i--) {
-        if (i === games.length - 1) { current = { type: games[i], len: 1 }; }
-        else if (games[i] === current.type) { current.len++; }
-        else break;
-      }
-      return { maxW, maxL, current };
+      const maxW = Math.max(0, ...runs.filter(r => r.type === 'W').map(r => r.len));
+      const maxL = Math.max(0, ...runs.filter(r => r.type === 'L').map(r => r.len));
+      const current = runs.length ? { type: runs[runs.length - 1].type, len: runs[runs.length - 1].len } : { type: null, len: 0 };
+      return { runs, maxW, maxL, current };
     }
 
     const teamList = Object.values(teams);
@@ -951,44 +965,72 @@
       return `<p class="matchweek-label">Matchweek ${week}</p>${rows}`;
     }).join('');
 
-    // --- League records ---
-    const blowout = [...matchups].sort((a, b) => (b.winPts - b.lossPts) - (a.winPts - a.lossPts))[0];
-    const closest = [...matchups].sort((a, b) => (a.winPts - a.lossPts) - (b.winPts - b.lossPts))[0];
+    // --- League records (including ties) ---
+    const maxMargin = Math.max(...matchups.map(m => m.winPts - m.lossPts));
+    const blowoutTies = matchups.filter(m => (m.winPts - m.lossPts) === maxMargin);
 
-    let highScore = { pts: -Infinity };
+    const minMargin = Math.min(...matchups.map(m => m.winPts - m.lossPts));
+    const closestTies = matchups.filter(m => (m.winPts - m.lossPts) === minMargin);
+
+    const allScores = [];
     matchups.forEach(m => {
-      if (m.winPts > highScore.pts) highScore = { pts: m.winPts, teamId: m.winId, week: m.week };
-      if (m.lossPts > highScore.pts) highScore = { pts: m.lossPts, teamId: m.lossId, week: m.week };
+      allScores.push({ pts: m.winPts, teamId: m.winId, week: m.week });
+      allScores.push({ pts: m.lossPts, teamId: m.lossId, week: m.week });
     });
+    const maxScore = Math.max(...allScores.map(s => s.pts));
+    const highScoreTies = allScores.filter(s => s.pts === maxScore);
 
-    const bestWinStreakTeam = [...teamList].sort((a, b) => b.streaks.maxW - a.streaks.maxW)[0];
-    const worstLossStreakTeam = [...teamList].sort((a, b) => b.streaks.maxL - a.streaks.maxL)[0];
+    const overallMaxW = Math.max(...teamList.map(t => t.streaks.maxW));
+    const overallMaxL = Math.max(...teamList.map(t => t.streaks.maxL));
+    const winStreakTies = [];
+    teamList.forEach(t => t.streaks.runs.filter(r => r.type === 'W' && r.len === overallMaxW && overallMaxW > 0)
+      .forEach(r => winStreakTies.push({ team: t, run: r })));
+    const lossStreakTies = [];
+    teamList.forEach(t => t.streaks.runs.filter(r => r.type === 'L' && r.len === overallMaxL && overallMaxL > 0)
+      .forEach(r => lossStreakTies.push({ team: t, run: r })));
+
+    function weekRangeLabel(r) {
+      return r.startWeek === r.endWeek ? `Week ${r.startWeek}` : `Weeks ${r.startWeek}–${r.endWeek}`;
+    }
+    function joinLines(lines) {
+      return lines.join('<br>');
+    }
 
     const records = [
       {
         label: 'Biggest Blowout',
-        stat: fmt(blowout.winPts - blowout.lossPts) + ' pts',
-        detail: `${teams[blowout.winId].name} <span class="manager">(${teams[blowout.winId].manager})</span> over ${teams[blowout.lossId].name} — Week ${blowout.week}`
+        stat: fmt(maxMargin) + ' pts',
+        detail: joinLines(blowoutTies.map(m =>
+          `${teams[m.winId].name} <span class="manager">(${teams[m.winId].manager})</span> over ${teams[m.lossId].name} — Week ${m.week}`
+        ))
       },
       {
         label: 'Closest Game',
-        stat: fmt(closest.winPts - closest.lossPts) + ' pts',
-        detail: `${teams[closest.winId].name} edged ${teams[closest.lossId].name} — Week ${closest.week}`
+        stat: fmt(minMargin) + ' pts',
+        detail: joinLines(closestTies.map(m =>
+          `${teams[m.winId].name} edged ${teams[m.lossId].name} — Week ${m.week}`
+        ))
       },
       {
         label: 'Highest Score of the Season',
-        stat: fmt(highScore.pts) + ' pts',
-        detail: `${teams[highScore.teamId].name} <span class="manager">(${teams[highScore.teamId].manager})</span> — Week ${highScore.week}`
+        stat: fmt(maxScore) + ' pts',
+        detail: joinLines(highScoreTies.map(s =>
+          `${teams[s.teamId].name} <span class="manager">(${teams[s.teamId].manager})</span> — Week ${s.week}`
+        ))
       },
       {
         label: 'Longest Winning Streak',
-        stat: bestWinStreakTeam.streaks.maxW + ' games',
-        detail: `${bestWinStreakTeam.name} <span class="manager">(${bestWinStreakTeam.manager})</span>`
+        stat: overallMaxW + ' games',
+        detail: joinLines(winStreakTies.map(({ team, run }) =>
+          `${team.name} <span class="manager">(${team.manager})</span> — ${weekRangeLabel(run)}`
+        ))
       },
       {
         label: 'Longest Losing Streak',
-        stat: worstLossStreakTeam.streaks.maxL + ' games',
-        detail: `${worstLossStreakTeam.name} <span class="manager">(${worstLossStreakTeam.manager})</span>`
+        stat: overallMaxL + ' games',
+        detail: joinLines(lossStreakTies.map(({ team, run }) =>
+          `${team.name} <span class="manager">(${team.manager})</span> — ${weekRangeLabel(run)}`
+        ))
       }
     ];
 
@@ -1137,6 +1179,16 @@
     }
 
     // --- Team profile modal ---
+    const STADIUM_MAP = {
+      'manchester city': 'man_city_stadium.jpg',
+      'man city': 'man_city_stadium.jpg',
+      'arsenal': 'arsenal_stadium.png',
+      'west ham': 'west_ham_stadium.jpg',
+      'spurs': 'spurs_stadium.jpg',
+      'tottenham': 'spurs_stadium.jpg',
+      'chelsea': 'chelsea_stadium.jpg'
+    };
+
     function fmtDate(d) {
       if (!d) return '';
       const dt = new Date(d);
@@ -1147,6 +1199,16 @@
     function openTeamModal(teamId) {
       const t = teams[teamId];
       if (!t) return;
+
+      const card = document.getElementById('team-modal-card');
+      const stadiumFile = t.favoriteTeam ? STADIUM_MAP[String(t.favoriteTeam).trim().toLowerCase()] : null;
+      if (stadiumFile) {
+        card.style.backgroundImage = `linear-gradient(rgba(6,16,10,0.84), rgba(6,16,10,0.84)), url('PNGS/${stadiumFile}')`;
+        card.style.backgroundSize = 'cover';
+        card.style.backgroundPosition = 'center';
+      } else {
+        card.style.backgroundImage = 'none';
+      }
 
       const h2hRows = teamList
         .filter(opp => opp.id !== t.id)
