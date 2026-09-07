@@ -1206,12 +1206,28 @@
         aScore: Number(r.a_team_score),
         bScore: Number(r.b_team_score),
         round: String(r.Round),
-        leg: Number(r.Leg)
+        leg: Number(r.Leg),
+        week: r.League_week || null
       }));
+
+      const drawnRows = cupRaw.filter(r => Number.isFinite(r.aId) && Number.isFinite(r.bId));
+      const scheduleOnlyRows = cupRaw.filter(r => !(Number.isFinite(r.aId) && Number.isFinite(r.bId)));
+
+      // Build a week schedule for ties that haven't been drawn yet: Round -> Leg -> [weeks in match_id order]
+      const scheduleGroups = new Map();
+      scheduleOnlyRows.forEach(row => {
+        if (!scheduleGroups.has(row.round)) scheduleGroups.set(row.round, {});
+        const g = scheduleGroups.get(row.round);
+        if (!g[row.leg]) g[row.leg] = [];
+        g[row.leg].push({ matchId: row.matchId, week: row.week });
+      });
+      scheduleGroups.forEach(g => {
+        Object.keys(g).forEach(leg => g[leg].sort((a, b) => a.matchId - b.matchId));
+      });
 
       // Group rows into ties by (Round, canonical team pair)
       const tieMap = new Map();
-      cupRaw.forEach(row => {
+      drawnRows.forEach(row => {
         const pairKey = row.round + ':' + [row.aId, row.bId].sort((a, b) => a - b).join('-');
         if (!tieMap.has(pairKey)) {
           tieMap.set(pairKey, { round: row.round, teamIds: [row.aId, row.bId].sort((a, b) => a - b), legs: [] });
@@ -1269,9 +1285,25 @@
           });
           roundGroups.delete(realGroup[0]);
         } else {
-          levelTies = Array.from({ length: expectedCount }, () => {
+          // Look for a scheduled-but-undrawn round whose tie count matches this level
+          const schedEntry = [...scheduleGroups.entries()].find(([label, legs]) => {
+            const counts = Object.values(legs).map(arr => arr.length);
+            return counts.includes(expectedCount);
+          });
+          let schedLegs = null;
+          if (schedEntry) {
+            schedLegs = schedEntry[1];
+            scheduleGroups.delete(schedEntry[0]);
+          }
+          levelTies = Array.from({ length: expectedCount }, (_, i) => {
             globalMatchNum++;
-            return { matchNum: globalMatchNum, real: false };
+            const weeks = {};
+            if (schedLegs) {
+              Object.keys(schedLegs).forEach(leg => {
+                if (schedLegs[leg][i]) weeks[leg] = schedLegs[leg][i].week;
+              });
+            }
+            return { matchNum: globalMatchNum, real: false, weeks };
           });
         }
 
@@ -1304,6 +1336,9 @@
               </div>
             `;
           } else {
+            const weekLines = Object.keys(tie.weeks || {}).sort().map(leg =>
+              `Leg ${leg}${tie.weeks[leg] ? ' · ' + tie.weeks[leg] : ''}`
+            ).join(' · ');
             return `
               <div class="tie-card">
                 <div class="tie-row tbd">
@@ -1314,7 +1349,7 @@
                   <span class="tname">TBD</span>
                   <span class="tscore">–</span>
                 </div>
-                <div class="tie-meta">Awaiting random draw</div>
+                <div class="tie-meta">${weekLines || 'Awaiting random draw'}</div>
               </div>
             `;
           }
@@ -1393,6 +1428,7 @@
           <div class="tm-stat"><p class="label">Pts For</p><p class="value">${fmt(t.pf)}</p></div>
           <div class="tm-stat"><p class="label">Pts Against</p><p class="value">${fmt(t.pa)}</p></div>
           <div class="tm-stat"><p class="label">All-Play</p><p class="value">${t.allPlay.w}-${t.allPlay.l}${t.allPlay.t ? '-' + t.allPlay.t : ''}</p></div>
+          <div class="tm-stat"><p class="label">Std Dev</p><p class="value">${t.scoreStdDev !== null ? fmt(t.scoreStdDev) : '—'}</p></div>
         </div>
         <p class="tm-section-title">Head-to-Head</p>
         <table class="tm-h2h-table"><tbody>${h2hRows}</tbody></table>
