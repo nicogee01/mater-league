@@ -908,10 +908,13 @@
       .map(m => {
         const homeScore = Number(m.Home_team_points);
         const awayScore = Number(m.Away_team_points);
+        const homeBest = Number(m.Home_team_best_lineup);
+        const awayBest = Number(m.Away_team_best_lineup);
         return {
           homeId: m.home_team_id,
           awayId: m.away_team_id,
           homeScore, awayScore,
+          homeBest, awayBest,
           week: Number(m.Week),
           winId: homeScore >= awayScore ? m.home_team_id : m.away_team_id,
           lossId: homeScore >= awayScore ? m.away_team_id : m.home_team_id,
@@ -943,6 +946,27 @@
       if (!l.h2h[m.winId]) l.h2h[m.winId] = { w: 0, l: 0 };
       w.h2h[m.lossId].w++;
       l.h2h[m.winId].l++;
+
+      // Optimal-lineup tracking: actual vs best-possible score, and the hypothetical
+      // result if each team had started their best lineup against the opponent's actual score
+      if (!homeTeam.lineupGames) homeTeam.lineupGames = [];
+      if (!awayTeam.lineupGames) awayTeam.lineupGames = [];
+      if (Number.isFinite(m.homeBest)) {
+        homeTeam.lineupGames.push({
+          week: m.week, actual: m.homeScore, best: m.homeBest,
+          optimalResult: m.homeBest > m.awayScore ? 'W' : (m.homeBest < m.awayScore ? 'L' : 'T'),
+          actualResult: m.winId === m.homeId ? 'W' : 'L',
+          oppId: m.awayId
+        });
+      }
+      if (Number.isFinite(m.awayBest)) {
+        awayTeam.lineupGames.push({
+          week: m.week, actual: m.awayScore, best: m.awayBest,
+          optimalResult: m.awayBest > m.homeScore ? 'W' : (m.awayBest < m.homeScore ? 'L' : 'T'),
+          actualResult: m.winId === m.awayId ? 'W' : 'L',
+          oppId: m.homeId
+        });
+      }
     });
 
     function streaks(games) {
@@ -1013,6 +1037,21 @@
       t.recordTransfer = t.waivers.length
         ? [...t.waivers].sort((a, b) => b.faab - a.faab)[0]
         : null;
+    });
+
+    // --- Optimal lineup stats: actual vs best-possible, season totals ---
+    teamList.forEach(t => {
+      const games = t.lineupGames || [];
+      const sumActual = games.reduce((s, g) => s + g.actual, 0);
+      const sumBest = games.reduce((s, g) => s + g.best, 0);
+      t.lineupEfficiency = games.length && sumBest > 0 ? (sumActual / sumBest) * 100 : null;
+      t.benchPointsLeft = games.reduce((s, g) => s + (g.best - g.actual), 0);
+      t.optimalRecord = {
+        w: games.filter(g => g.optimalResult === 'W').length,
+        l: games.filter(g => g.optimalResult === 'L').length,
+        t: games.filter(g => g.optimalResult === 'T').length
+      };
+      t.robbedByBench = games.filter(g => g.actualResult === 'L' && g.optimalResult === 'W').length;
     });
 
     // --- Standings, sorted by wins then points for ---
@@ -1168,6 +1207,17 @@
       return lines.join('<br>');
     }
 
+    // --- Bench / optimal-lineup records ---
+    const allLineupGames = [];
+    teamList.forEach(t => (t.lineupGames || []).forEach(g => allLineupGames.push({ team: t, ...g })));
+    const maxBenchLoss = allLineupGames.length ? Math.max(...allLineupGames.map(g => g.best - g.actual)) : null;
+    const benchBlunderTies = maxBenchLoss !== null
+      ? allLineupGames.filter(g => Math.abs((g.best - g.actual) - maxBenchLoss) < 0.005)
+      : [];
+
+    const maxRobbed = teamList.length ? Math.max(...teamList.map(t => t.robbedByBench || 0)) : 0;
+    const robbedTies = maxRobbed > 0 ? teamList.filter(t => t.robbedByBench === maxRobbed) : [];
+
     const records = [
       {
         label: 'Biggest Blowout',
@@ -1234,6 +1284,20 @@
         detail: joinLines(lossStreakTies.map(({ team, run }) =>
           `${team.name} <span class="manager">(${team.manager})</span> — ${weekRangeLabel(run)}`
         ))
+      },
+      {
+        label: 'Costliest Bench Blunder',
+        stat: maxBenchLoss !== null ? fmt(maxBenchLoss) + ' pts left on bench' : '—',
+        detail: joinLines(benchBlunderTies.map(g =>
+          `${g.team.name} <span class="manager">(${g.team.manager})</span> scored ${fmt(g.actual)} but had ${fmt(g.best)} on the bench — Week ${g.week}`
+        ))
+      },
+      {
+        label: 'Robbed by the Bench',
+        stat: maxRobbed > 0 ? maxRobbed + (maxRobbed === 1 ? ' loss' : ' losses') + ' that should\u2019ve been wins' : '—',
+        detail: robbedTies.length
+          ? joinLines(robbedTies.map(t => `${t.name} <span class="manager">(${t.manager})</span>`))
+          : 'Nobody\u2019s lineup mistakes have cost them a win yet.'
       }
     ];
 
@@ -1478,6 +1542,9 @@
           <div class="tm-stat"><p class="label">Pts Against</p><p class="value">${fmt(t.pa)}</p></div>
           <div class="tm-stat"><p class="label">All-Play</p><p class="value">${t.allPlay.w}-${t.allPlay.l}${t.allPlay.t ? '-' + t.allPlay.t : ''}</p></div>
           <div class="tm-stat"><p class="label">Std Dev</p><p class="value">${t.scoreStdDev !== null ? fmt(t.scoreStdDev) : '—'}</p></div>
+          <div class="tm-stat"><p class="label">Lineup Efficiency</p><p class="value">${t.lineupEfficiency !== null ? t.lineupEfficiency.toFixed(1) + '%' : '—'}</p></div>
+          <div class="tm-stat"><p class="label">Bench Pts Left</p><p class="value">${fmt(t.benchPointsLeft || 0)}</p></div>
+          <div class="tm-stat"><p class="label">Optimal Record</p><p class="value">${t.optimalRecord.w}-${t.optimalRecord.l}${t.optimalRecord.t ? '-' + t.optimalRecord.t : ''}</p></div>
         </div>
         <p class="tm-section-title">Head-to-Head</p>
         <table class="tm-h2h-table"><tbody>${h2hRows}</tbody></table>
