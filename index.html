@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
   :root {
     --pitch-dark: #0B1F3A;
@@ -286,6 +287,13 @@
     gap: 14px;
   }
 
+  .chart-wrap {
+    background: var(--pitch-mid);
+    border: 1px solid var(--pitch-line);
+    border-radius: 6px;
+    padding: 20px 16px;
+  }
+
   .record-card {
     background: var(--pitch-mid);
     border: 1px solid var(--pitch-line);
@@ -556,6 +564,36 @@
     white-space: nowrap;
   }
 
+  .tm-record-transfer {
+    background: linear-gradient(160deg, rgba(244,197,66,0.14), rgba(20,42,68,0.6));
+    border: 1px solid rgba(244,197,66,0.4);
+    border-radius: 6px;
+    padding: 18px 20px;
+    text-align: center;
+  }
+
+  .tm-record-transfer .rt-player {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    margin: 0;
+    color: var(--chalk);
+  }
+
+  .tm-record-transfer .rt-date {
+    color: var(--chalk-dim);
+    font-size: 0.82rem;
+    margin: 4px 0 10px;
+  }
+
+  .tm-record-transfer .rt-faab {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: var(--gold);
+    margin: 0;
+  }
+
   /* VICTORY ROAD */
   .victory-road {
     text-align: center;
@@ -699,11 +737,11 @@
     </table>
   </section>
 
-  <section id="matchups">
-    <h2>Matchups</h2>
-    <p class="section-note">Every head-to-head result this season, most recent week first.</p>
-    <div id="matchups-container">
-      <p class="loading">Loading matchups…</p>
+  <section id="standings-chart">
+    <h2>Standings by Week</h2>
+    <p class="section-note">League position after each matchweek. Lower is better.</p>
+    <div class="chart-wrap">
+      <canvas id="standings-line-chart" height="260"></canvas>
     </div>
   </section>
 
@@ -839,8 +877,8 @@
       if (!w || !l) return;
       w.wins++; w.pf += m.winPts; w.pa += m.lossPts;
       l.losses++; l.pf += m.lossPts; l.pa += m.winPts;
-      w.games.push({ week: m.week, result: 'W' });
-      l.games.push({ week: m.week, result: 'L' });
+      w.games.push({ week: m.week, result: 'W', score: m.winPts });
+      l.games.push({ week: m.week, result: 'L', score: m.lossPts });
 
       // Home/away splits
       const homeTeam = teams[m.homeId], awayTeam = teams[m.awayId];
@@ -900,6 +938,34 @@
       t.waivers.sort((a, b) => new Date(b.date) - new Date(a.date));
     });
 
+    // --- All-Play record: each team's score vs every other team's score, every week ---
+    const weeklyScores = {};
+    teamList.forEach(t => {
+      t.games.forEach(g => {
+        if (!weeklyScores[g.week]) weeklyScores[g.week] = [];
+        weeklyScores[g.week].push({ teamId: t.id, score: g.score });
+      });
+    });
+    teamList.forEach(t => {
+      let apW = 0, apL = 0, apT = 0;
+      t.games.forEach(g => {
+        (weeklyScores[g.week] || []).forEach(entry => {
+          if (entry.teamId === t.id) return;
+          if (g.score > entry.score) apW++;
+          else if (g.score < entry.score) apL++;
+          else apT++;
+        });
+      });
+      t.allPlay = { w: apW, l: apL, t: apT };
+    });
+
+    // --- Each team's record transfer (their single highest-FAAB waiver pickup) ---
+    teamList.forEach(t => {
+      t.recordTransfer = t.waivers.length
+        ? [...t.waivers].sort((a, b) => b.faab - a.faab)[0]
+        : null;
+    });
+
     // --- Standings, sorted by wins then points for ---
     const standings = [...teamList].sort((a, b) => b.wins - a.wins || b.pf - a.pf);
 
@@ -944,26 +1010,62 @@
       `;
     }).join('');
 
-    // --- Matchups grouped by week, most recent first ---
-    const weeks = [...new Set(matchups.map(m => m.week))].sort((a, b) => b - a);
-    const matchupsContainer = document.getElementById('matchups-container');
-    matchupsContainer.innerHTML = weeks.map(week => {
-      const rows = matchups.filter(m => m.week === week).map(m => {
-        const w = teams[m.winId], l = teams[m.lossId];
-        const winTag = m.winId === m.homeId ? 'Home' : 'Away';
-        const lossTag = m.lossId === m.homeId ? 'Home' : 'Away';
-        return `
-          <div class="fixture">
-            <span class="team right"><span class="winner-name">${w.name}</span><span class="manager">${w.manager} · ${winTag}</span></span>
-            <span class="score">${fmt(m.winPts)} – ${fmt(m.lossPts)}</span>
-            <span class="team">${l.name}<span class="manager">${l.manager} · ${lossTag}</span></span>
-          </div>
-        `;
-      }).join('');
-      return `<p class="matchweek-label">Matchweek ${week}</p>${rows}`;
-    }).join('');
+    // --- Standings by week (cumulative rank after each matchweek) ---
+    const allWeeks = [...new Set(matchups.map(m => m.week))].sort((a, b) => a - b);
+    const rankHistory = {}; // teamId -> [rank at week1, rank at week2, ...]
+    teamList.forEach(t => rankHistory[t.id] = []);
 
-    // --- League records (including ties) ---
+    allWeeks.forEach(week => {
+      const cume = teamList.map(t => {
+        const gamesSoFar = t.games.filter(g => g.week <= week);
+        const w = gamesSoFar.filter(g => g.result === 'W').length;
+        const l = gamesSoFar.filter(g => g.result === 'L').length;
+        const pf = gamesSoFar.reduce((sum, g) => sum + g.score, 0);
+        return { id: t.id, w, pf };
+      }).sort((a, b) => b.w - a.w || b.pf - a.pf);
+      cume.forEach((c, i) => rankHistory[c.id].push(i + 1));
+    });
+
+    const chartColors = ['#F4C542', '#5B9BD5', '#E4574C', '#7ED957', '#B57EDC', '#FF9F45', '#4ECDC4', '#F26D9D'];
+    const canvasEl = document.getElementById('standings-line-chart');
+    if (canvasEl && allWeeks.length && window.Chart) {
+      new Chart(canvasEl.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: allWeeks.map(w => 'Wk ' + w),
+          datasets: teamList.map((t, i) => ({
+            label: t.name,
+            data: rankHistory[t.id],
+            borderColor: chartColors[i % chartColors.length],
+            backgroundColor: chartColors[i % chartColors.length],
+            tension: 0.25,
+            pointRadius: 3,
+            borderWidth: 2
+          }))
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#F2F5F8', font: { size: 11 } } }
+          },
+          scales: {
+            y: {
+              reverse: true,
+              min: 1,
+              max: teamList.length,
+              ticks: { stepSize: 1, color: '#9FB3C8' },
+              grid: { color: 'rgba(255,255,255,0.08)' }
+            },
+            x: {
+              ticks: { color: '#9FB3C8' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            }
+          }
+        }
+      });
+    } else if (canvasEl) {
+      canvasEl.replaceWith(Object.assign(document.createElement('p'), { className: 'section-note', textContent: 'No matchup weeks recorded yet.' }));
+    }
     const maxMargin = Math.max(...matchups.map(m => m.winPts - m.lossPts));
     const blowoutTies = matchups.filter(m => (m.winPts - m.lossPts) === maxMargin);
 
@@ -977,6 +1079,29 @@
     });
     const maxScore = Math.max(...allScores.map(s => s.pts));
     const highScoreTies = allScores.filter(s => s.pts === maxScore);
+
+    const minWinScore = Math.min(...matchups.map(m => m.winPts));
+    const lowWinTies = matchups.filter(m => m.winPts === minWinScore);
+
+    const matchTotal = m => m.winPts + m.lossPts;
+    const maxTotal = Math.max(...matchups.map(matchTotal));
+    const highTotalTies = matchups.filter(m => matchTotal(m) === maxTotal);
+    const minTotal = Math.min(...matchups.map(matchTotal));
+    const lowTotalTies = matchups.filter(m => matchTotal(m) === minTotal);
+
+    function stdDev(nums) {
+      const mean = nums.reduce((a, b) => a + b, 0) / nums.length;
+      const variance = nums.reduce((a, b) => a + (b - mean) ** 2, 0) / nums.length;
+      return Math.sqrt(variance);
+    }
+    teamList.forEach(t => {
+      t.scoreStdDev = t.games.length > 1 ? stdDev(t.games.map(g => g.score)) : null;
+    });
+    const teamsWithStdDev = teamList.filter(t => t.scoreStdDev !== null);
+    const maxStdDev = teamsWithStdDev.length ? Math.max(...teamsWithStdDev.map(t => t.scoreStdDev)) : null;
+    const minStdDev = teamsWithStdDev.length ? Math.min(...teamsWithStdDev.map(t => t.scoreStdDev)) : null;
+    const highStdDevTies = maxStdDev !== null ? teamsWithStdDev.filter(t => Math.abs(t.scoreStdDev - maxStdDev) < 0.005) : [];
+    const lowStdDevTies = minStdDev !== null ? teamsWithStdDev.filter(t => Math.abs(t.scoreStdDev - minStdDev) < 0.005) : [];
 
     const overallMaxW = Math.max(...teamList.map(t => t.streaks.maxW));
     const overallMaxL = Math.max(...teamList.map(t => t.streaks.maxL));
@@ -1015,6 +1140,37 @@
         detail: joinLines(highScoreTies.map(s =>
           `${teams[s.teamId].name} <span class="manager">(${teams[s.teamId].manager})</span> — Week ${s.week}`
         ))
+      },
+      {
+        label: 'Lowest Winning Score',
+        stat: fmt(minWinScore) + ' pts',
+        detail: joinLines(lowWinTies.map(m =>
+          `${teams[m.winId].name} <span class="manager">(${teams[m.winId].manager})</span> over ${teams[m.lossId].name} — Week ${m.week}`
+        ))
+      },
+      {
+        label: 'Highest Scoring Matchup',
+        stat: fmt(maxTotal) + ' combined pts',
+        detail: joinLines(highTotalTies.map(m =>
+          `${teams[m.winId].name} ${fmt(m.winPts)} – ${fmt(m.lossPts)} ${teams[m.lossId].name} — Week ${m.week}`
+        ))
+      },
+      {
+        label: 'Lowest Scoring Matchup',
+        stat: fmt(minTotal) + ' combined pts',
+        detail: joinLines(lowTotalTies.map(m =>
+          `${teams[m.winId].name} ${fmt(m.winPts)} – ${fmt(m.lossPts)} ${teams[m.lossId].name} — Week ${m.week}`
+        ))
+      },
+      {
+        label: 'Most Inconsistent Scorer',
+        stat: maxStdDev !== null ? fmt(maxStdDev) + ' std dev' : '—',
+        detail: joinLines(highStdDevTies.map(t => `${t.name} <span class="manager">(${t.manager})</span>`))
+      },
+      {
+        label: 'Most Consistent Scorer',
+        stat: minStdDev !== null ? fmt(minStdDev) + ' std dev' : '—',
+        detail: joinLines(lowStdDevTies.map(t => `${t.name} <span class="manager">(${t.manager})</span>`))
       },
       {
         label: 'Longest Winning Streak',
@@ -1090,8 +1246,9 @@
       roundGroups.forEach(list => list.sort((a, b) => a.orderKey - b.orderKey));
 
       const roundNameByCount = { 8: 'Round of 16', 4: 'Quarterfinals', 2: 'Semifinals', 1: 'Final' };
-      const firstRoundTieCount = Math.max(...[...roundGroups.values()].map(l => l.length));
-      const totalTeams = firstRoundTieCount * 2;
+      // Base bracket size on total league teams (not on Cup data) so the full bracket
+      // — including Round 1 — shows as TBD slots even before any cup matches are entered.
+      const totalTeams = teamList.length;
       const totalLevels = Math.log2(totalTeams);
 
       // Pairings are drawn randomly each round, so future rounds can't be predicted from
@@ -1216,13 +1373,14 @@
           return `<tr><td>${opp.name} <span class="manager">${opp.manager}</span></td><td class="record">${rec.w}-${rec.l}</td></tr>`;
         }).join('');
 
-      const waiverRows = t.waivers.length
-        ? t.waivers.map(w => `
-            <div class="tm-waiver-row">
-              <span>${w.player}<span class="wdate">${fmtDate(w.date)}</span></span>
-              <span class="faab">${w.faab} FAAB</span>
-            </div>
-          `).join('')
+      const recordTransferHtml = t.recordTransfer
+        ? `
+          <div class="tm-record-transfer">
+            <p class="rt-player">${t.recordTransfer.player}</p>
+            <p class="rt-date">${fmtDate(t.recordTransfer.date)}</p>
+            <p class="rt-faab">${t.recordTransfer.faab} FAAB</p>
+          </div>
+        `
         : '<p class="section-note">No waiver activity recorded.</p>';
 
       document.getElementById('team-modal-body').innerHTML = `
@@ -1234,11 +1392,12 @@
           <div class="tm-stat"><p class="label">Away</p><p class="value">${t.away.w}-${t.away.l}</p></div>
           <div class="tm-stat"><p class="label">Pts For</p><p class="value">${fmt(t.pf)}</p></div>
           <div class="tm-stat"><p class="label">Pts Against</p><p class="value">${fmt(t.pa)}</p></div>
+          <div class="tm-stat"><p class="label">All-Play</p><p class="value">${t.allPlay.w}-${t.allPlay.l}${t.allPlay.t ? '-' + t.allPlay.t : ''}</p></div>
         </div>
         <p class="tm-section-title">Head-to-Head</p>
         <table class="tm-h2h-table"><tbody>${h2hRows}</tbody></table>
-        <p class="tm-section-title">Waiver / Transaction History</p>
-        <div class="tm-waivers">${waiverRows}</div>
+        <p class="tm-section-title">Club Record Transfer</p>
+        ${recordTransferHtml}
       `;
       document.getElementById('team-modal-overlay').classList.add('open');
     }
@@ -1259,7 +1418,7 @@
   } catch (err) {
     console.error(err);
     showError(
-      ['leader-strip', 'standings-body', 'matchups-container', 'records-grid', 'bracket-container'],
+      ['leader-strip', 'standings-body', 'records-grid', 'bracket-container'],
       `Couldn't load ${DATA_FILE}. Make sure it's uploaded to the same folder as index.html.`
     );
   }
