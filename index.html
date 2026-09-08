@@ -597,6 +597,93 @@
     white-space: nowrap;
   }
 
+  .tm-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .form-guide {
+    display: flex;
+    gap: 4px;
+  }
+
+  .form-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .form-w { background: #4CAF50; }
+  .form-l { background: var(--loss-red); }
+
+  .tm-cup-badge-row {
+    margin: 10px 0 4px;
+  }
+
+  .cup-badge {
+    display: inline-block;
+    font-size: 0.78rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid;
+  }
+
+  .cup-won { color: var(--gold); border-color: rgba(244,197,66,0.5); background: rgba(244,197,66,0.1); }
+  .cup-lost { color: var(--loss-red); border-color: rgba(228,87,76,0.5); background: rgba(228,87,76,0.1); }
+  .cup-pending { color: var(--chalk); border-color: var(--pitch-line); background: rgba(255,255,255,0.05); }
+  .cup-tbd { color: var(--chalk-dim); border-color: var(--pitch-line); background: transparent; }
+
+  .tm-sparkline-wrap {
+    background: rgba(11,31,58,0.5);
+    border: 1px solid var(--pitch-line);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 20px;
+  }
+
+  .nc-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .nc-item {
+    flex: 1;
+    text-align: center;
+    border-radius: 6px;
+    padding: 12px 10px;
+    border: 1px solid;
+  }
+
+  .nc-nemesis { border-color: rgba(228,87,76,0.4); background: rgba(228,87,76,0.08); }
+  .nc-cupcake { border-color: rgba(244,197,66,0.4); background: rgba(244,197,66,0.08); }
+
+  .nc-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--chalk-dim);
+    margin: 0 0 4px;
+  }
+
+  .nc-team {
+    font-weight: 600;
+    margin: 0;
+    color: var(--chalk);
+  }
+
+  .nc-rec {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    margin: 2px 0 0;
+  }
+
+  .nc-nemesis .nc-rec { color: var(--loss-red); }
+  .nc-cupcake .nc-rec { color: var(--gold); }
+
   .tm-record-transfer {
     background: linear-gradient(160deg, rgba(244,197,66,0.14), rgba(20,42,68,0.6));
     border: 1px solid rgba(244,197,66,0.4);
@@ -1039,6 +1126,15 @@
         : null;
     });
 
+    // --- Nemesis (worst head-to-head record against) and Cupcake (best) ---
+    teamList.forEach(t => {
+      const opponents = Object.entries(t.h2h || {})
+        .map(([oppId, rec]) => ({ oppId: Number(oppId), w: rec.w, l: rec.l, diff: rec.w - rec.l, games: rec.w + rec.l }))
+        .filter(o => o.games > 0);
+      t.nemesis = opponents.length ? [...opponents].sort((a, b) => a.diff - b.diff || b.games - a.games)[0] : null;
+      t.cupcake = opponents.length ? [...opponents].sort((a, b) => b.diff - a.diff || b.games - a.games)[0] : null;
+    });
+
     // --- Optimal lineup stats: actual vs best-possible, season totals ---
     teamList.forEach(t => {
       const games = t.lineupGames || [];
@@ -1425,6 +1521,18 @@
 
       function teamName(id) { return teams[id] ? teams[id].name : `Team ${id}`; }
 
+      // --- Cup status per team, derived from the bracket levels just built ---
+      levels.forEach(level => {
+        level.ties.forEach(tie => {
+          if (!tie.real) return;
+          tie.teamIds.forEach(tid => {
+            const oppId = tie.teamIds.find(x => x !== tid);
+            const result = !tie.complete ? 'pending' : (tie.winnerId === tid ? 'won' : 'lost');
+            if (teams[tid]) teams[tid].cupStatus = { roundLabel: level.label, opponentId: oppId, result };
+          });
+        });
+      });
+
       const bracketHtml = levels.map(level => {
         const tieCards = level.ties.map(tie => {
           if (tie.real) {
@@ -1500,6 +1608,8 @@
       return dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
+    let teamSparklineChart = null;
+
     function openTeamModal(teamId) {
       const t = teams[teamId];
       if (!t) return;
@@ -1531,9 +1641,36 @@
         `
         : '<p class="section-note">No waiver activity recorded.</p>';
 
+      const formDots = t.games.slice(-5).map(g =>
+        `<span class="form-dot ${g.result === 'W' ? 'form-w' : 'form-l'}" title="${g.result === 'W' ? 'Win' : 'Loss'}, Week ${g.week}"></span>`
+      ).join('');
+
+      let cupBadgeHtml = '<span class="cup-badge cup-tbd">Not yet drawn</span>';
+      if (t.cupStatus) {
+        const oppName = t.cupStatus.opponentId ? teamName(t.cupStatus.opponentId) : 'TBD';
+        if (t.cupStatus.result === 'won') {
+          cupBadgeHtml = `<span class="cup-badge cup-won">Won ${t.cupStatus.roundLabel} vs ${oppName}</span>`;
+        } else if (t.cupStatus.result === 'lost') {
+          cupBadgeHtml = `<span class="cup-badge cup-lost">Eliminated in ${t.cupStatus.roundLabel} vs ${oppName}</span>`;
+        } else {
+          cupBadgeHtml = `<span class="cup-badge cup-pending">${t.cupStatus.roundLabel} vs ${oppName}</span>`;
+        }
+      }
+
+      const nemesisCupcakeHtml = (t.nemesis || t.cupcake) ? `
+        <div class="nc-row">
+          ${t.nemesis ? `<div class="nc-item nc-nemesis"><p class="nc-label">Nemesis</p><p class="nc-team">${teamName(t.nemesis.oppId)}</p><p class="nc-rec">${t.nemesis.w}-${t.nemesis.l}</p></div>` : ''}
+          ${t.cupcake ? `<div class="nc-item nc-cupcake"><p class="nc-label">Cupcake</p><p class="nc-team">${teamName(t.cupcake.oppId)}</p><p class="nc-rec">${t.cupcake.w}-${t.cupcake.l}</p></div>` : ''}
+        </div>
+      ` : '';
+
       document.getElementById('team-modal-body').innerHTML = `
-        <p class="tm-name">${t.name}</p>
+        <div class="tm-name-row">
+          <p class="tm-name">${t.name}</p>
+          <span class="form-guide">${formDots}</span>
+        </div>
         <p class="tm-manager">Managed by ${t.manager}</p>
+        <div class="tm-cup-badge-row">${cupBadgeHtml}</div>
         <div class="tm-stats-row">
           <div class="tm-stat"><p class="label">Overall</p><p class="value">${t.wins}-${t.losses}</p></div>
           <div class="tm-stat"><p class="label">Home</p><p class="value">${t.home.w}-${t.home.l}</p></div>
@@ -1546,12 +1683,39 @@
           <div class="tm-stat"><p class="label">Bench Pts Left</p><p class="value">${fmt(t.benchPointsLeft || 0)}</p></div>
           <div class="tm-stat"><p class="label">Optimal Record</p><p class="value">${t.optimalRecord.w}-${t.optimalRecord.l}${t.optimalRecord.t ? '-' + t.optimalRecord.t : ''}</p></div>
         </div>
+        <p class="tm-section-title">Season Sparkline</p>
+        <div class="tm-sparkline-wrap"><canvas id="team-sparkline-canvas" height="140"></canvas></div>
+        ${nemesisCupcakeHtml}
         <p class="tm-section-title">Head-to-Head</p>
         <table class="tm-h2h-table"><tbody>${h2hRows}</tbody></table>
         <p class="tm-section-title">Club Record Transfer</p>
         ${recordTransferHtml}
       `;
       document.getElementById('team-modal-overlay').classList.add('open');
+
+      if (teamSparklineChart) { teamSparklineChart.destroy(); teamSparklineChart = null; }
+      const lg = (t.lineupGames || []).slice().sort((a, b) => a.week - b.week);
+      const sparkCanvas = document.getElementById('team-sparkline-canvas');
+      if (lg.length && sparkCanvas && window.Chart) {
+        teamSparklineChart = new Chart(sparkCanvas.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: lg.map(g => 'Wk ' + g.week),
+            datasets: [
+              { label: 'Actual', data: lg.map(g => g.actual), borderColor: '#F4C542', backgroundColor: '#F4C542', tension: 0.25, pointRadius: 2, borderWidth: 2 },
+              { label: 'Best Possible', data: lg.map(g => g.best), borderColor: '#5B9BD5', backgroundColor: '#5B9BD5', borderDash: [4, 3], tension: 0.25, pointRadius: 2, borderWidth: 2 }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#F2F5F8', font: { size: 10 } } } },
+            scales: {
+              y: { ticks: { color: '#9FB3C8' }, grid: { color: 'rgba(255,255,255,0.06)' } },
+              x: { ticks: { color: '#9FB3C8', font: { size: 10 } }, grid: { display: false } }
+            }
+          }
+        });
+      }
     }
 
     function closeTeamModal() {
