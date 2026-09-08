@@ -514,35 +514,56 @@
     margin: 4px 0 24px;
   }
 
-  .tm-stats-row {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 28px;
-    flex-wrap: wrap;
-  }
-
-  .tm-stat {
-    background: var(--pitch-mid);
+  .tm-stat-groups {
+    background: rgba(11,31,58,0.5);
     border: 1px solid var(--pitch-line);
-    border-radius: 4px;
-    padding: 12px 16px;
-    flex: 1;
-    min-width: 110px;
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
   }
 
-  .tm-stat .label {
+  .tm-stat-group-label {
     color: var(--chalk-dim);
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 0 0 4px;
+    letter-spacing: 1.5px;
+    margin: 0 0 8px;
   }
 
-  .tm-stat .value {
+  .tm-stat-group-row {
+    display: flex;
+    margin-bottom: 18px;
+  }
+
+  .tm-stat-group-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .tm-stat-item {
+    flex: 1;
+    text-align: center;
+    padding: 0 6px;
+    border-right: 1px solid var(--pitch-line);
+  }
+
+  .tm-stat-item:last-child {
+    border-right: none;
+  }
+
+  .tm-stat-item .label {
+    color: var(--chalk-dim);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+  }
+
+  .tm-stat-item .value {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
-    font-size: 1.4rem;
+    font-size: 1.1rem;
     font-variant-numeric: tabular-nums;
+    margin: 2px 0 0;
   }
 
   .tm-section-title {
@@ -1671,17 +1692,26 @@
         </div>
         <p class="tm-manager">Managed by ${t.manager}</p>
         <div class="tm-cup-badge-row">${cupBadgeHtml}</div>
-        <div class="tm-stats-row">
-          <div class="tm-stat"><p class="label">Overall</p><p class="value">${t.wins}-${t.losses}</p></div>
-          <div class="tm-stat"><p class="label">Home</p><p class="value">${t.home.w}-${t.home.l}</p></div>
-          <div class="tm-stat"><p class="label">Away</p><p class="value">${t.away.w}-${t.away.l}</p></div>
-          <div class="tm-stat"><p class="label">Pts For</p><p class="value">${fmt(t.pf)}</p></div>
-          <div class="tm-stat"><p class="label">Pts Against</p><p class="value">${fmt(t.pa)}</p></div>
-          <div class="tm-stat"><p class="label">All-Play</p><p class="value">${t.allPlay.w}-${t.allPlay.l}${t.allPlay.t ? '-' + t.allPlay.t : ''}</p></div>
-          <div class="tm-stat"><p class="label">Std Dev</p><p class="value">${t.scoreStdDev !== null ? fmt(t.scoreStdDev) : '—'}</p></div>
-          <div class="tm-stat"><p class="label">Lineup Efficiency</p><p class="value">${t.lineupEfficiency !== null ? t.lineupEfficiency.toFixed(1) + '%' : '—'}</p></div>
-          <div class="tm-stat"><p class="label">Bench Pts Left</p><p class="value">${fmt(t.benchPointsLeft || 0)}</p></div>
-          <div class="tm-stat"><p class="label">Optimal Record</p><p class="value">${t.optimalRecord.w}-${t.optimalRecord.l}${t.optimalRecord.t ? '-' + t.optimalRecord.t : ''}</p></div>
+        <div class="tm-stat-groups">
+          <p class="tm-stat-group-label">Record</p>
+          <div class="tm-stat-group-row">
+            <div class="tm-stat-item"><p class="label">Overall</p><p class="value">${t.wins}-${t.losses}</p></div>
+            <div class="tm-stat-item"><p class="label">Home</p><p class="value">${t.home.w}-${t.home.l}</p></div>
+            <div class="tm-stat-item"><p class="label">Away</p><p class="value">${t.away.w}-${t.away.l}</p></div>
+            <div class="tm-stat-item"><p class="label">All-Play</p><p class="value">${t.allPlay.w}-${t.allPlay.l}${t.allPlay.t ? '-' + t.allPlay.t : ''}</p></div>
+          </div>
+          <p class="tm-stat-group-label">Scoring</p>
+          <div class="tm-stat-group-row">
+            <div class="tm-stat-item"><p class="label">Pts For</p><p class="value">${fmt(t.pf)}</p></div>
+            <div class="tm-stat-item"><p class="label">Pts Against</p><p class="value">${fmt(t.pa)}</p></div>
+            <div class="tm-stat-item"><p class="label">Std Dev</p><p class="value">${t.scoreStdDev !== null ? fmt(t.scoreStdDev) : '—'}</p></div>
+          </div>
+          <p class="tm-stat-group-label">Lineup Management</p>
+          <div class="tm-stat-group-row">
+            <div class="tm-stat-item"><p class="label">Efficiency</p><p class="value">${t.lineupEfficiency !== null ? t.lineupEfficiency.toFixed(1) + '%' : '—'}</p></div>
+            <div class="tm-stat-item"><p class="label">Bench Left</p><p class="value">${fmt(t.benchPointsLeft || 0)}</p></div>
+            <div class="tm-stat-item"><p class="label">Optimal Rec.</p><p class="value">${t.optimalRecord.w}-${t.optimalRecord.l}${t.optimalRecord.t ? '-' + t.optimalRecord.t : ''}</p></div>
+          </div>
         </div>
         <p class="tm-section-title">Season Sparkline</p>
         <div class="tm-sparkline-wrap"><canvas id="team-sparkline-canvas" height="140"></canvas></div>
