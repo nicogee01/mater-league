@@ -201,9 +201,9 @@
 
   try {
     const [leagueRes, rostersRes, usersRes] = await Promise.all([
-      fetch(`${API}/league/${LEAGUE_ID}`),
-      fetch(`${API}/league/${LEAGUE_ID}/rosters`),
-      fetch(`${API}/league/${LEAGUE_ID}/users`)
+      fetch(`${API}/league/${LEAGUE_ID}`, { cache: 'no-store' }),
+      fetch(`${API}/league/${LEAGUE_ID}/rosters`, { cache: 'no-store' }),
+      fetch(`${API}/league/${LEAGUE_ID}/users`, { cache: 'no-store' })
     ]);
 
     if (!leagueRes.ok || !rostersRes.ok || !usersRes.ok) {
