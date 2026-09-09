@@ -51,6 +51,50 @@
     margin: 0;
   }
 
+  .week-select-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    padding: 24px 0 4px;
+    flex-wrap: wrap;
+  }
+
+  .week-select-row label {
+    color: var(--chalk-dim);
+    font-size: 0.9rem;
+  }
+
+  .week-select-row select {
+    background: var(--navy-mid);
+    color: var(--chalk);
+    border: 1px solid var(--navy-line);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 0.9rem;
+  }
+
+  .roster-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .roster-card .team-total {
+    color: var(--gold);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    white-space: nowrap;
+  }
+
+  .player-chip .pt-score {
+    color: var(--gold);
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+
   main {
     padding: 40px 0 80px;
   }
@@ -151,6 +195,12 @@
 </header>
 
 <div class="wrap">
+  <div class="week-select-row">
+    <label for="week-select">Show scores for:</label>
+    <select id="week-select">
+      <option value="">Season view (no scores)</option>
+    </select>
+  </div>
   <main>
     <div id="content">
       <p class="status">Loading rosters…</p>
@@ -200,10 +250,11 @@
   }
 
   try {
-    const [leagueRes, rostersRes, usersRes] = await Promise.all([
+    const [leagueRes, rostersRes, usersRes, stateRes] = await Promise.all([
       fetch(`${API}/league/${LEAGUE_ID}`, { cache: 'no-store' }),
       fetch(`${API}/league/${LEAGUE_ID}/rosters`, { cache: 'no-store' }),
-      fetch(`${API}/league/${LEAGUE_ID}/users`, { cache: 'no-store' })
+      fetch(`${API}/league/${LEAGUE_ID}/users`, { cache: 'no-store' }),
+      fetch(`${API}/state/${SPORT}`, { cache: 'no-store' })
     ]);
 
     if (!leagueRes.ok || !rostersRes.ok || !usersRes.ok) {
@@ -214,9 +265,25 @@
     const rosters = await rostersRes.json();
     const users = await usersRes.json();
     const allPlayers = await getAllPlayers();
+    const state = stateRes.ok ? await stateRes.json() : null;
+    const currentWeek = state && state.week ? state.week : 1;
+    const season = league.season || (state && state.season) || String(new Date().getFullYear());
+    const scoringSettings = league.scoring_settings || {};
 
     if (league && league.name) {
       document.getElementById('league-title').textContent = league.name;
+    }
+
+    function fantasyPointsFor(pid, statsForWeek) {
+      const line = statsForWeek ? statsForWeek[pid] : null;
+      if (!line) return null;
+      let total = 0;
+      Object.keys(line).forEach(key => {
+        if (key.startsWith('pos_') && scoringSettings[key] !== undefined) {
+          total += Number(line[key]) * Number(scoringSettings[key]);
+        }
+      });
+      return total;
     }
 
     const usersById = {};
@@ -241,46 +308,88 @@
       return { name, team: p.team || 'FA', pos: p.position || '' };
     }
 
-    const cardsHtml = rosters.map(roster => {
-      const starterSet = new Set(roster.starters || []);
-      const allIds = roster.players || [];
+    // statsForWeek: null for season view, or the raw stats object for a chosen week (keyed by player_id)
+    function render(statsForWeek) {
+      const cardsHtml = rosters.map(roster => {
+        const starterSet = new Set(roster.starters || []);
+        const allIds = roster.players || [];
 
-      const groups = {};
-      allIds.forEach(pid => {
-        const info = playerLabel(pid);
-        const isStarter = starterSet.has(pid);
-        const groupKey = isStarter ? (info.pos || 'FLEX') : 'BN';
-        if (!groups[groupKey]) groups[groupKey] = [];
-        groups[groupKey].push({ ...info, isStarter, pid });
-      });
+        let teamTotal = 0;
+        let anyScored = false;
 
-      const orderedKeys = [...POSITION_ORDER.filter(k => groups[k]), ...Object.keys(groups).filter(k => !POSITION_ORDER.includes(k))];
+        const groups = {};
+        allIds.forEach(pid => {
+          const info = playerLabel(pid);
+          const isStarter = starterSet.has(pid);
+          const groupKey = isStarter ? (info.pos || 'FLEX') : 'BN';
+          const pts = statsForWeek ? fantasyPointsFor(pid, statsForWeek) : null;
+          if (isStarter && pts !== null) { teamTotal += pts; anyScored = true; }
+          if (!groups[groupKey]) groups[groupKey] = [];
+          groups[groupKey].push({ ...info, isStarter, pid, pts });
+        });
 
-      const groupsHtml = orderedKeys.map(key => {
-        const label = key === 'BN' ? 'Bench' : key;
-        const chips = groups[key].map(p => `
-          <span class="player-chip ${p.isStarter ? 'starter' : ''}">
-            ${p.name} <span class="club-team">${p.team}</span>
-          </span>
-        `).join('');
+        const orderedKeys = [...POSITION_ORDER.filter(k => groups[k]), ...Object.keys(groups).filter(k => !POSITION_ORDER.includes(k))];
+
+        const groupsHtml = orderedKeys.map(key => {
+          const label = key === 'BN' ? 'Bench' : key;
+          const chips = groups[key].map(p => `
+            <span class="player-chip ${p.isStarter ? 'starter' : ''}">
+              ${p.name} <span class="club-team">${p.team}</span>
+              ${p.pts !== undefined && p.pts !== null ? `<span class="pt-score">${Number(p.pts).toFixed(1)}</span>` : ''}
+            </span>
+          `).join('');
+          return `
+            <div class="position-group">
+              <p class="position-label">${label}</p>
+              <div class="player-list">${chips}</div>
+            </div>
+          `;
+        }).join('');
+
         return `
-          <div class="position-group">
-            <p class="position-label">${label}</p>
-            <div class="player-list">${chips}</div>
+          <div class="roster-card">
+            <div class="roster-card-header">
+              <p class="team-name">${teamNameFor(roster)}</p>
+              ${anyScored ? `<span class="team-total">${teamTotal.toFixed(1)} pts</span>` : ''}
+            </div>
+            <p class="manager-name">Managed by ${managerNameFor(roster)}</p>
+            ${groupsHtml || '<p class="position-label">No players on roster yet</p>'}
           </div>
         `;
       }).join('');
 
-      return `
-        <div class="roster-card">
-          <p class="team-name">${teamNameFor(roster)}</p>
-          <p class="manager-name">Managed by ${managerNameFor(roster)}</p>
-          ${groupsHtml || '<p class="position-label">No players on roster yet</p>'}
-        </div>
-      `;
-    }).join('');
+      document.getElementById('content').innerHTML = `<div class="roster-grid">${cardsHtml}</div>`;
+    }
 
-    document.getElementById('content').innerHTML = `<div class="roster-grid">${cardsHtml}</div>`;
+    // Populate the week selector (only weeks that have started, so we don't show empty future weeks)
+    const weekSelect = document.getElementById('week-select');
+    for (let w = 1; w <= currentWeek; w++) {
+      const opt = document.createElement('option');
+      opt.value = String(w);
+      opt.textContent = `Week ${w}`;
+      weekSelect.appendChild(opt);
+    }
+
+    const statsCache = {};
+    async function loadWeek(week) {
+      if (!week) { render(null); return; }
+      if (!statsCache[week]) {
+        document.getElementById('content').innerHTML = '<p class="status">Loading week scores…</p>';
+        const res = await fetch(`${API}/stats/${SPORT}/regular/${season}/${week}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Couldn't load Week ${week} stats`);
+        statsCache[week] = await res.json();
+      }
+      render(statsCache[week]);
+    }
+
+    weekSelect.addEventListener('change', (e) => {
+      loadWeek(e.target.value ? Number(e.target.value) : null).catch(err => {
+        console.error(err);
+        setContentError(err.message);
+      });
+    });
+
+    render(null);
 
   } catch (err) {
     console.error(err);
