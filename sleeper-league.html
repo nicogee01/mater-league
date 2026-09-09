@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mater League — Rosters</title>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-dark: #0B1F3A;
+    --navy-mid: rgba(20, 42, 68, 0.82);
+    --navy-line: #2A4A6E;
+    --chalk: #F2F5F8;
+    --chalk-dim: #9FB3C8;
+    --gold: #F4C542;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--navy-dark);
+    color: var(--chalk);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+  }
+
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  header {
+    text-align: center;
+    padding: 56px 20px 36px;
+    border-bottom: 1px solid var(--navy-line);
+  }
+
+  .wordmark {
+    font-family: 'Bungee', cursive;
+    font-weight: 400;
+    font-size: clamp(1.8rem, 6vw, 2.6rem);
+    color: var(--gold);
+    margin: 0 0 10px;
+  }
+
+  .subtitle {
+    color: var(--chalk-dim);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  main {
+    padding: 40px 0 80px;
+  }
+
+  .status {
+    text-align: center;
+    color: var(--chalk-dim);
+    padding: 40px 0;
+  }
+
+  .status.error {
+    color: #E4574C;
+  }
+
+  .roster-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .roster-card {
+    background: var(--navy-mid);
+    border: 1px solid var(--navy-line);
+    border-radius: 8px;
+    padding: 20px 22px;
+  }
+
+  .roster-card .team-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    margin: 0;
+    color: var(--gold);
+  }
+
+  .roster-card .manager-name {
+    color: var(--chalk-dim);
+    font-size: 0.85rem;
+    margin: 2px 0 16px;
+  }
+
+  .position-group {
+    margin-bottom: 12px;
+  }
+
+  .position-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .position-label {
+    color: var(--chalk-dim);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0 0 6px;
+  }
+
+  .player-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .player-chip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--navy-line);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .player-chip.starter {
+    border-color: rgba(244,197,66,0.5);
+    background: rgba(244,197,66,0.08);
+  }
+
+  .player-chip .nfl-team {
+    color: var(--chalk-dim);
+    font-size: 0.75rem;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--chalk-dim);
+    font-size: 0.82rem;
+    padding: 24px 0 50px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="wordmark" id="league-title">Mater League</p>
+  <p class="subtitle" id="league-subtitle">Rosters — powered live by Sleeper</p>
+</header>
+
+<div class="wrap">
+  <main>
+    <div id="content">
+      <p class="status">Loading rosters…</p>
+    </div>
+  </main>
+</div>
+
+<footer>
+  <p>Live roster data from Sleeper. Refresh the page any time to see the latest.</p>
+</footer>
+
+<script>
+(async function () {
+  const LEAGUE_ID = '1390750210698780672';
+  const API = 'https://api.sleeper.app/v1';
+  const PLAYERS_CACHE_KEY = 'sleeper_players_nfl_cache';
+  const PLAYERS_CACHE_TS_KEY = 'sleeper_players_nfl_cache_ts';
+  const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours, per Sleeper's own guidance
+
+  const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'K', 'DEF', 'BN'];
+
+  function setContentError(message) {
+    document.getElementById('content').innerHTML = `<p class="status error">${message}</p>`;
+  }
+
+  async function getAllPlayers() {
+    try {
+      const cachedTs = localStorage.getItem(PLAYERS_CACHE_TS_KEY);
+      const cached = localStorage.getItem(PLAYERS_CACHE_KEY);
+      if (cached && cachedTs && (Date.now() - Number(cachedTs) < CACHE_MAX_AGE_MS)) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {
+      // localStorage unavailable or corrupted cache — fall through to a fresh fetch
+    }
+    const res = await fetch(`${API}/players/nfl`);
+    if (!res.ok) throw new Error('Failed to load player database');
+    const data = await res.json();
+    try {
+      localStorage.setItem(PLAYERS_CACHE_KEY, JSON.stringify(data));
+      localStorage.setItem(PLAYERS_CACHE_TS_KEY, String(Date.now()));
+    } catch (e) {
+      // Storage quota or privacy mode — safe to ignore, we just won't cache this time
+    }
+    return data;
+  }
+
+  try {
+    const [leagueRes, rostersRes, usersRes] = await Promise.all([
+      fetch(`${API}/league/${LEAGUE_ID}`),
+      fetch(`${API}/league/${LEAGUE_ID}/rosters`),
+      fetch(`${API}/league/${LEAGUE_ID}/users`)
+    ]);
+
+    if (!leagueRes.ok || !rostersRes.ok || !usersRes.ok) {
+      throw new Error('Could not reach the Sleeper API. Double check the league ID.');
+    }
+
+    const league = await leagueRes.json();
+    const rosters = await rostersRes.json();
+    const users = await usersRes.json();
+    const allPlayers = await getAllPlayers();
+
+    if (league && league.name) {
+      document.getElementById('league-title').textContent = league.name;
+    }
+
+    const usersById = {};
+    users.forEach(u => { usersById[u.user_id] = u; });
+
+    function teamNameFor(roster) {
+      const u = usersById[roster.owner_id];
+      if (u && u.metadata && u.metadata.team_name) return u.metadata.team_name;
+      if (u) return u.display_name + "'s Team";
+      return 'Unknown Team';
+    }
+
+    function managerNameFor(roster) {
+      const u = usersById[roster.owner_id];
+      return u ? u.display_name : 'Unknown Manager';
+    }
+
+    function playerLabel(pid) {
+      const p = allPlayers[pid];
+      if (!p) return { name: `Player ${pid}`, team: '', pos: '' };
+      const name = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || pid;
+      return { name, team: p.team || 'FA', pos: p.position || '' };
+    }
+
+    const cardsHtml = rosters.map(roster => {
+      const starterSet = new Set(roster.starters || []);
+      const allIds = roster.players || [];
+
+      const groups = {};
+      allIds.forEach(pid => {
+        const info = playerLabel(pid);
+        const isStarter = starterSet.has(pid);
+        const groupKey = isStarter ? (info.pos || 'FLEX') : 'BN';
+        if (!groups[groupKey]) groups[groupKey] = [];
+        groups[groupKey].push({ ...info, isStarter, pid });
+      });
+
+      const orderedKeys = [...POSITION_ORDER.filter(k => groups[k]), ...Object.keys(groups).filter(k => !POSITION_ORDER.includes(k))];
+
+      const groupsHtml = orderedKeys.map(key => {
+        const label = key === 'BN' ? 'Bench' : key;
+        const chips = groups[key].map(p => `
+          <span class="player-chip ${p.isStarter ? 'starter' : ''}">
+            ${p.name} <span class="nfl-team">${p.team}</span>
+          </span>
+        `).join('');
+        return `
+          <div class="position-group">
+            <p class="position-label">${label}</p>
+            <div class="player-list">${chips}</div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="roster-card">
+          <p class="team-name">${teamNameFor(roster)}</p>
+          <p class="manager-name">Managed by ${managerNameFor(roster)}</p>
+          ${groupsHtml || '<p class="position-label">No players on roster yet</p>'}
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('content').innerHTML = `<div class="roster-grid">${cardsHtml}</div>`;
+
+  } catch (err) {
+    console.error(err);
+    setContentError(`Couldn't load league data: ${err.message}`);
+  }
+})();
+</script>
+
+</body>
+</html>
