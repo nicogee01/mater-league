@@ -130,7 +130,7 @@
     background: rgba(244,197,66,0.08);
   }
 
-  .player-chip .nfl-team {
+  .player-chip .club-team {
     color: var(--chalk-dim);
     font-size: 0.75rem;
   }
@@ -165,12 +165,13 @@
 <script>
 (async function () {
   const LEAGUE_ID = '1390750210698780672';
+  const SPORT = 'clubsoccer:epl';
   const API = 'https://api.sleeper.app/v1';
-  const PLAYERS_CACHE_KEY = 'sleeper_players_nfl_cache';
-  const PLAYERS_CACHE_TS_KEY = 'sleeper_players_nfl_cache_ts';
+  const PLAYERS_CACHE_KEY = 'sleeper_players_' + SPORT.replace(':', '_') + '_cache';
+  const PLAYERS_CACHE_TS_KEY = PLAYERS_CACHE_KEY + '_ts';
   const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours, per Sleeper's own guidance
 
-  const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'K', 'DEF', 'BN'];
+  const POSITION_ORDER = ['GK', 'DEF', 'MID', 'FWD', 'BN'];
 
   function setContentError(message) {
     document.getElementById('content').innerHTML = `<p class="status error">${message}</p>`;
@@ -186,7 +187,7 @@
     } catch (e) {
       // localStorage unavailable or corrupted cache — fall through to a fresh fetch
     }
-    const res = await fetch(`${API}/players/nfl`);
+    const res = await fetch(`${API}/players/${SPORT}`);
     if (!res.ok) throw new Error('Failed to load player database');
     const data = await res.json();
     try {
@@ -259,7 +260,7 @@
         const label = key === 'BN' ? 'Bench' : key;
         const chips = groups[key].map(p => `
           <span class="player-chip ${p.isStarter ? 'starter' : ''}">
-            ${p.name} <span class="nfl-team">${p.team}</span>
+            ${p.name} <span class="club-team">${p.team}</span>
           </span>
         `).join('');
         return `
