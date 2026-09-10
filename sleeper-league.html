@@ -250,10 +250,12 @@
     return data;
   }
 
-  // Weekly roster override: an optional starters.xlsx (Week, Manager, Player, Starter columns).
+  // Weekly roster override: an optional starters.xlsx (Week, Manager, PlayerID, Starter columns).
   // Starter is 1 or 0. This is the FULL roster for that week (starters + bench) — recording
   // bench players explicitly matters because a player later dropped from the roster would
   // otherwise vanish from the live roster.players list and be invisible in past weeks.
+  // Uses Sleeper's own player_id directly (see the player-lookup tool) rather than matching
+  // by name, since name matching breaks on accents/spelling variations.
   // Falls back to Sleeper's current live roster/lineup for any week/manager not covered.
   async function loadStartersOverride() {
     try {
@@ -263,16 +265,16 @@
       const wb = XLSX.read(buf, { type: 'array' });
       const sheetName = wb.SheetNames[0];
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
-      const map = {}; // map[week][managerLower] = [{ name, isStarter }, ...]
+      const map = {}; // map[week][managerLower] = [{ pid, isStarter }, ...]
       rows.forEach(r => {
         const week = Number(r.Week);
         const manager = String(r.Manager || '').trim().toLowerCase();
-        const player = String(r.Player || '').trim();
-        if (!week || !manager || !player) return;
+        const pid = String(r.Player_ID || r.PlayerID || '').trim();
+        if (!week || !manager || !pid) return;
         const isStarter = Number(r.Starter) === 1;
         if (!map[week]) map[week] = {};
         if (!map[week][manager]) map[week][manager] = [];
-        map[week][manager].push({ name: player, isStarter });
+        map[week][manager].push({ pid, isStarter });
       });
       return map;
     } catch (e) {
@@ -340,15 +342,6 @@
       return { name, team: p.team || 'FA', pos: p.position || '' };
     }
 
-    // Reverse lookup so we can score players from the override file even if they've
-    // since been dropped and no longer appear in anyone's current roster.players list.
-    const pidByName = {};
-    Object.keys(allPlayers).forEach(pid => {
-      const info = playerLabel(pid);
-      const key = info.name.trim().toLowerCase();
-      if (key && !pidByName[key]) pidByName[key] = pid;
-    });
-
     // statsForWeek: null for season view, or the raw stats object for a chosen week (keyed by player_id)
     // weekNum: the selected week number (needed to look up the roster override), or null for season view
     function render(statsForWeek, weekNum) {
@@ -361,11 +354,11 @@
         // roster if we have one for this week, otherwise the live current roster.
         let playerEntries;
         if (overrideForWeek) {
-          playerEntries = overrideForWeek.map(entry => {
-            const pid = pidByName[entry.name.trim().toLowerCase()];
-            const info = pid ? playerLabel(pid) : { name: entry.name, team: '', pos: '' };
-            return { pid, info, isStarter: entry.isStarter };
-          });
+          playerEntries = overrideForWeek.map(entry => ({
+            pid: entry.pid,
+            info: playerLabel(entry.pid),
+            isStarter: entry.isStarter
+          }));
         } else {
           playerEntries = (roster.players || []).map(pid => ({
             pid, info: playerLabel(pid), isStarter: liveStarterSet.has(pid)
