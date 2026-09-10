@@ -317,14 +317,62 @@
       return { name, team: p.team || 'FA', pos: p.position || '', optaId: p.opta_id || null };
     }
 
-    // Player photos: pulled directly via Sleeper's own opta_id field, using Opta's
-    // image CDN (found by inspecting a real player photo on goal.com, which uses the
-    // same opta_id in its URLs — cdn.sportfeeds.io). This is a direct 1:1 ID match,
-    // no name-guessing or disambiguation needed, so it's far more reliable than the
-    // earlier Wikipedia name-search approach. Falls back to initials if a player has
-    // no opta_id on file, or if the image genuinely doesn't exist for them.
-    function playerPhotoUrl(optaId) {
-      return `https://cdn.sportfeeds.io/sdl/images/person/head/large/${optaId}.png?quality=60&auto=webp&format=pjpg`;
+    // Player photos: looked up via Wikipedia. We tried a direct ID-based CDN approach
+    // using Sleeper's opta_id, but confirmed that Opta's ID doesn't reliably match the
+    // actual photo file's ID on that CDN (worked for some players, 404'd for others
+    // with no way to predict which) — so that approach isn't trustworthy at scale.
+    //
+    // Wikipedia search is more reliable in practice: we search with "footballer"
+    // appended to the player's name (as given by Sleeper, which may lack accents),
+    // then fetch the thumbnail of whatever page that search resolves to. This is
+    // deliberately NOT a direct page-title lookup — searching handles missing
+    // diacritics gracefully (e.g. "Odegaard footballer" still finds "Martin
+    // Ødegaard"), and also avoids the "Gabriel" mononym problem (a bare name lookup
+    // can resolve to something completely unrelated, like the Bible angel Gabriel,
+    // instead of the footballer). Results are cached in the browser for 30 days so
+    // repeat visits don't re-query Wikipedia every time.
+    const WIKI_CACHE_PREFIX = 'wiki_player_photo_';
+    const WIKI_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+    function getCachedPhoto(name) {
+      try {
+        const raw = localStorage.getItem(WIKI_CACHE_PREFIX + name);
+        if (!raw) return undefined;
+        const entry = JSON.parse(raw);
+        if (Date.now() - entry.ts > WIKI_CACHE_MAX_AGE_MS) return undefined;
+        return entry.thumb; // may be null (cached "no photo found")
+      } catch (e) {
+        return undefined;
+      }
+    }
+
+    function setCachedPhoto(name, thumb) {
+      try {
+        localStorage.setItem(WIKI_CACHE_PREFIX + name, JSON.stringify({ thumb, ts: Date.now() }));
+      } catch (e) {}
+    }
+
+    async function lookupPlayerPhoto(name) {
+      const cached = getCachedPhoto(name);
+      if (cached !== undefined) return cached;
+
+      try {
+        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(name + ' footballer')}&format=json&origin=*`;
+        const searchRes = await fetch(searchUrl);
+        const searchData = await searchRes.json();
+        const top = searchData.query && searchData.query.search && searchData.query.search[0];
+        if (!top) { setCachedPhoto(name, null); return null; }
+
+        const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(top.title)}`;
+        const summaryRes = await fetch(summaryUrl);
+        if (!summaryRes.ok) { setCachedPhoto(name, null); return null; }
+        const summaryData = await summaryRes.json();
+        const thumb = (summaryData.thumbnail && summaryData.thumbnail.source) || null;
+        setCachedPhoto(name, thumb);
+        return thumb;
+      } catch (e) {
+        return null; // don't cache network errors — worth retrying next visit
+      }
     }
 
     const cardsHtml = rosters.map(roster => {
@@ -342,14 +390,9 @@
           `;
         }).join('');
 
-        const photoHtml = info.optaId
-          ? `<img class="player-photo" src="${playerPhotoUrl(info.optaId)}" alt=""
-                 onerror="this.outerHTML='<div class=&quot;player-photo-fallback&quot;>${initials(info.name)}</div>'" />`
-          : `<div class="player-photo-fallback">${initials(info.name)}</div>`;
-
         return `
           <div class="player-row">
-            ${photoHtml}
+            <div class="player-photo-fallback" id="photo-${pid}">${initials(info.name)}</div>
             <div class="player-info">
               <div class="player-name">${info.name}</div>
               <div class="player-meta">${info.pos}${info.team ? ' · ' + info.team : ''}</div>
@@ -369,6 +412,34 @@
     }).join('');
 
     document.getElementById('content').innerHTML = `<div class="team-grid">${cardsHtml}</div>`;
+
+    // Now that the page has rendered instantly with initials placeholders, kick off
+    // photo lookups in the background and swap each one in as it resolves. Dedupes
+    // by player name so we only ever look up each unique player once per page load.
+    const uniquePlayers = new Map(); // name -> [pid, pid, ...] (usually just one, but be safe)
+    rosters.forEach(roster => {
+      (roster.players || []).forEach(pid => {
+        const info = playerInfo(pid);
+        if (!uniquePlayers.has(info.name)) uniquePlayers.set(info.name, []);
+        uniquePlayers.get(info.name).push(pid);
+      });
+    });
+
+    uniquePlayers.forEach((pids, name) => {
+      lookupPlayerPhoto(name).then(thumb => {
+        if (!thumb) return;
+        pids.forEach(pid => {
+          const el = document.getElementById(`photo-${pid}`);
+          if (!el) return;
+          const img = document.createElement('img');
+          img.className = 'player-photo';
+          img.src = thumb;
+          img.alt = '';
+          img.onerror = () => { /* leave the initials fallback in place */ };
+          el.replaceWith(img);
+        });
+      });
+    });
 
   } catch (err) {
     console.error(err);
