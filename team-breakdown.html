@@ -312,15 +312,19 @@
 
     function playerInfo(pid) {
       const p = allPlayers[pid];
-      if (!p) return { name: `Player ${pid}`, team: '', pos: '' };
+      if (!p) return { name: `Player ${pid}`, team: '', pos: '', optaId: null };
       const name = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || pid;
-      return { name, team: p.team || 'FA', pos: p.position || '' };
+      return { name, team: p.team || 'FA', pos: p.position || '', optaId: p.opta_id || null };
     }
 
-    // Best-effort guess at Sleeper's soccer player photo URL, following their known
-    // NFL pattern. Not confirmed for clubsoccer — falls back to initials if it 404s.
-    function playerPhotoUrl(pid) {
-      return `https://sleepercdn.com/content/${SPORT}/players/${pid}.jpg`;
+    // Player photos: pulled directly via Sleeper's own opta_id field, using Opta's
+    // image CDN (found by inspecting a real player photo on goal.com, which uses the
+    // same opta_id in its URLs — cdn.sportfeeds.io). This is a direct 1:1 ID match,
+    // no name-guessing or disambiguation needed, so it's far more reliable than the
+    // earlier Wikipedia name-search approach. Falls back to initials if a player has
+    // no opta_id on file, or if the image genuinely doesn't exist for them.
+    function playerPhotoUrl(optaId) {
+      return `https://cdn.sportfeeds.io/sdl/images/person/head/large/${optaId}.png?quality=60&auto=webp&format=pjpg`;
     }
 
     const cardsHtml = rosters.map(roster => {
@@ -338,10 +342,14 @@
           `;
         }).join('');
 
+        const photoHtml = info.optaId
+          ? `<img class="player-photo" src="${playerPhotoUrl(info.optaId)}" alt=""
+                 onerror="this.outerHTML='<div class=&quot;player-photo-fallback&quot;>${initials(info.name)}</div>'" />`
+          : `<div class="player-photo-fallback">${initials(info.name)}</div>`;
+
         return `
           <div class="player-row">
-            <img class="player-photo" src="${playerPhotoUrl(pid)}" alt=""
-                 onerror="this.outerHTML='<div class=&quot;player-photo-fallback&quot;>${initials(info.name)}</div>'" />
+            ${photoHtml}
             <div class="player-info">
               <div class="player-name">${info.name}</div>
               <div class="player-meta">${info.pos}${info.team ? ' · ' + info.team : ''}</div>
