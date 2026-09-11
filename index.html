@@ -330,29 +330,32 @@
   .record-card {
     background: var(--pitch-mid);
     border: 1px solid var(--pitch-line);
-    border-radius: 4px;
-    padding: 18px 20px;
+    border-radius: 6px;
+    padding: 12px 13px;
   }
 
   .record-card .label {
     color: var(--chalk-dim);
-    font-size: 0.78rem;
-    margin: 0 0 8px;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 5px;
   }
 
   .record-card .stat {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
-    font-size: 1.7rem;
+    font-size: 1.3rem;
     color: var(--gold);
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
   }
 
   .record-card .detail {
-    margin: 6px 0 0;
-    font-size: 0.88rem;
+    margin: 4px 0 0;
+    font-size: 0.72rem;
     color: var(--chalk);
+    line-height: 1.4;
   }
 
   .record-card .detail .manager {
@@ -360,7 +363,11 @@
   }
 
   @media (max-width: 560px) {
-    .records-grid { grid-template-columns: 1fr; }
+    .records-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .record-card { padding: 10px 11px; }
+    .record-card .stat { font-size: 1.1rem; }
+    .record-card .label { font-size: 0.62rem; }
+    .record-card .detail { font-size: 0.66rem; }
   }
 
   /* FOOTER */
@@ -713,10 +720,75 @@
     margin: 0 0 10px;
   }
 
+  .tm-formation-label {
+    color: var(--chalk-dim);
+    font-size: 0.78rem;
+    margin: -6px 0 12px;
+  }
+
+  .tm-pitch-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto 20px;
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--pitch-line);
+    background-image: repeating-linear-gradient(0deg, #1c5c34 0px, #1c5c34 34px, #1a5530 34px, #1a5530 68px);
+  }
+
+  .tm-pitch-lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .tm-pitch-player {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 52px;
+  }
+
+  .tm-pitch-photo {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    background-color: var(--navy-dark, #0B1F3A);
+    background-size: cover;
+    background-position: center 15%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.65rem;
+    color: var(--chalk);
+  }
+
+  .tm-pitch-player-name {
+    margin-top: 2px;
+    font-size: 0.55rem;
+    font-weight: 600;
+    color: var(--chalk);
+    background: rgba(11,31,58,0.75);
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    max-width: 54px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .tm-roster-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(66px, 1fr));
+    gap: 7px;
     margin-bottom: 20px;
   }
 
@@ -724,8 +796,8 @@
     position: relative;
     width: 100%;
     aspect-ratio: 11 / 16;
-    border: 1.5px solid var(--gold);
-    border-radius: 8px;
+    border: 1px solid var(--gold);
+    border-radius: 6px;
     overflow: hidden;
     background-color: var(--pitch-line);
     background-size: cover;
@@ -740,12 +812,12 @@
 
   .tm-player-card-fallback {
     position: absolute;
-    top: 12%;
+    top: 10%;
     left: 50%;
     transform: translateX(-50%);
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
-    font-size: 1.3rem;
+    font-size: 0.95rem;
     color: rgba(255,255,255,0.2);
   }
 
@@ -754,7 +826,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    padding: 6px 5px 7px;
+    padding: 4px 3px 5px;
     z-index: 2;
   }
 
@@ -763,7 +835,7 @@
     color: var(--gold);
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
-    font-size: 0.68rem;
+    font-size: 0.56rem;
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -773,7 +845,7 @@
   .tm-player-card-meta {
     text-align: center;
     color: var(--chalk-dim);
-    font-size: 0.55rem;
+    font-size: 0.46rem;
     margin: 1px 0 0;
     white-space: nowrap;
     overflow: hidden;
@@ -1169,6 +1241,18 @@ async function lookupPlayerPhoto(name) {
   }
 }
 
+function pitchLinesSvg() {
+  return `
+    <svg class="tm-pitch-lines" viewBox="0 0 300 450" preserveAspectRatio="none" style="opacity:0.4">
+      <rect x="10" y="10" width="280" height="430" fill="none" stroke="#fff" stroke-width="2"/>
+      <line x1="10" y1="225" x2="290" y2="225" stroke="#fff" stroke-width="2"/>
+      <circle cx="150" cy="225" r="40" fill="none" stroke="#fff" stroke-width="2"/>
+      <rect x="70" y="10" width="160" height="55" fill="none" stroke="#fff" stroke-width="2"/>
+      <rect x="70" y="385" width="160" height="55" fill="none" stroke="#fff" stroke-width="2"/>
+    </svg>
+  `;
+}
+
 function buildRosterSectionHtml(teamObj) {
   const roster = sleeperRosterFor(teamObj.sleeperHandle);
   if (!roster) {
@@ -1176,10 +1260,34 @@ function buildRosterSectionHtml(teamObj) {
   }
   const starterSet = new Set(roster.starters || []);
   const allIds = roster.players || [];
-  const starters = allIds.filter(pid => starterSet.has(pid));
-  const bench = allIds.filter(pid => !starterSet.has(pid));
+  const starterIds = allIds.filter(pid => starterSet.has(pid));
+  const benchIds = allIds.filter(pid => !starterSet.has(pid));
 
-  function cardsFor(ids) {
+  // Group starters by position for the formation view
+  const groups = { GK: [], DEF: [], MID: [], FWD: [] };
+  starterIds.forEach(pid => {
+    const info = sleeperPlayerInfo(pid);
+    const key = groups[info.pos] ? info.pos : 'MID';
+    groups[key].push({ pid, info });
+  });
+  const formationLabel = `${groups.DEF.length}-${groups.MID.length}-${groups.FWD.length}`;
+  const rowY = { FWD: 15, MID: 45, DEF: 72, GK: 92 };
+
+  let formationPlayersHtml = '';
+  Object.keys(groups).forEach(posKey => {
+    const row = groups[posKey];
+    row.forEach((entry, i) => {
+      const xPct = ((i + 1) / (row.length + 1)) * 100;
+      formationPlayersHtml += `
+        <div class="tm-pitch-player" style="left:${xPct}%; top:${rowY[posKey]}%;">
+          <div class="tm-pitch-photo" id="tm-roster-card-${entry.pid}">${initials(entry.info.name)}</div>
+          <div class="tm-pitch-player-name">${entry.info.name.split(' ').slice(-1)[0]}</div>
+        </div>
+      `;
+    });
+  });
+
+  function benchCardsFor(ids) {
     return ids.map(pid => {
       const info = sleeperPlayerInfo(pid);
       return `
@@ -1197,9 +1305,13 @@ function buildRosterSectionHtml(teamObj) {
 
   return `
     <p class="tm-roster-subhead">Starters</p>
-    <div class="tm-roster-grid">${cardsFor(starters) || '<p class="section-note">No starters set.</p>'}</div>
+    <p class="tm-formation-label">Formation: ${formationLabel}</p>
+    <div class="tm-pitch-wrap">
+      ${pitchLinesSvg()}
+      ${formationPlayersHtml || ''}
+    </div>
     <p class="tm-roster-subhead">Bench</p>
-    <div class="tm-roster-grid">${cardsFor(bench) || '<p class="section-note">No bench players.</p>'}</div>
+    <div class="tm-roster-grid">${benchCardsFor(benchIds) || '<p class="section-note">No bench players.</p>'}</div>
   `;
 }
 
@@ -1216,8 +1328,12 @@ function loadRosterPhotos(teamObj) {
       const testImg = new Image();
       testImg.onload = () => {
         el.style.backgroundImage = `url('${thumb}')`;
+        // Bench cards have a separate fallback child element to hide...
         const fallback = el.querySelector('.tm-player-card-fallback');
         if (fallback) fallback.style.display = 'none';
+        // ...while pitch-formation photo circles hold their initials as direct
+        // text content on the element itself, so clear that instead
+        if (el.classList.contains('tm-pitch-photo')) el.textContent = '';
       };
       testImg.src = thumb;
     });
