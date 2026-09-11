@@ -40,7 +40,7 @@
   }
 
   .wrap {
-    max-width: 780px;
+    max-width: 1120px;
     margin: 0 auto;
     padding: 0 24px;
   }
@@ -360,6 +360,10 @@
 
   .record-card .detail .manager {
     color: var(--chalk-dim);
+  }
+
+  @media (min-width: 900px) {
+    .records-grid { grid-template-columns: repeat(4, 1fr); }
   }
 
   @media (max-width: 560px) {
@@ -751,105 +755,107 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 52px;
+    width: 56px;
   }
 
-  .tm-pitch-photo {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    border: 2px solid var(--gold);
-    background-color: var(--navy-dark, #0B1F3A);
+  .tm-pitch-card {
+    position: relative;
+    width: 52px;
+    aspect-ratio: 3 / 4;
+    border: 1.5px solid var(--gold);
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: var(--pitch-line);
     background-size: cover;
-    background-position: center 15%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background-position: center 18%;
+  }
+
+  .tm-pitch-card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(11,31,58,0.05) 0%, rgba(11,31,58,0.25) 45%, rgba(11,31,58,0.95) 100%);
+  }
+
+  .tm-pitch-card-fallback {
+    position: absolute;
+    top: 8%;
+    left: 50%;
+    transform: translateX(-50%);
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
-    font-size: 0.65rem;
-    color: var(--chalk);
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.22);
+  }
+
+  .tm-pitch-card-proj {
+    position: absolute;
+    bottom: 2px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: var(--gold);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.62rem;
+    z-index: 2;
   }
 
   .tm-pitch-player-name {
     margin-top: 2px;
-    font-size: 0.55rem;
+    font-size: 0.53rem;
     font-weight: 600;
     color: var(--chalk);
     background: rgba(11,31,58,0.75);
     padding: 1px 4px;
     border-radius: 3px;
     white-space: nowrap;
+    max-width: 58px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tm-bench-row {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .tm-bench-item {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 54px;
+  }
+
+  .tm-bench-photo {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold);
+    background-color: var(--pitch-line);
+    background-size: cover;
+    background-position: center 18%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.7rem;
+    color: var(--chalk);
+  }
+
+  .tm-bench-name {
+    margin-top: 3px;
+    font-size: 0.55rem;
+    color: var(--chalk-dim);
+    white-space: nowrap;
     max-width: 54px;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .tm-roster-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(66px, 1fr));
-    gap: 7px;
-    margin-bottom: 20px;
-  }
-
-  .tm-player-card {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 11 / 16;
-    border: 1px solid var(--gold);
-    border-radius: 6px;
-    overflow: hidden;
-    background-color: var(--pitch-line);
-    background-size: cover;
-    background-position: center 20%;
-  }
-
-  .tm-player-card-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(11,31,58,0.05) 0%, rgba(11,31,58,0.2) 45%, rgba(11,31,58,0.95) 100%);
-  }
-
-  .tm-player-card-fallback {
-    position: absolute;
-    top: 10%;
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: rgba(255,255,255,0.2);
-  }
-
-  .tm-player-card-bottom {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 4px 3px 5px;
-    z-index: 2;
-  }
-
-  .tm-player-card-name {
     text-align: center;
-    color: var(--gold);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 0.56rem;
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .tm-player-card-meta {
-    text-align: center;
-    color: var(--chalk-dim);
-    font-size: 0.46rem;
-    margin: 1px 0 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .tm-record-transfer {
@@ -1126,7 +1132,7 @@
 // Sleeper handle (the `display_name` column in the Teams sheet). Runs in
 // parallel with the main site and never blocks or breaks it if Sleeper is
 // unreachable — the Roster section just won't populate for that team.
-const sleeperState = { rosters: null, usersByHandle: null, players: null, ready: false };
+const sleeperState = { rosters: null, usersByHandle: null, players: null, statsByWeek: null, scoringSettings: null, ready: false };
 
 (async function loadSleeperData() {
   const LEAGUE_ID = '1390750210698780672';
@@ -1153,14 +1159,18 @@ const sleeperState = { rosters: null, usersByHandle: null, players: null, ready:
   }
 
   try {
-    const [rostersRes, usersRes, players] = await Promise.all([
+    const [rostersRes, usersRes, players, leagueRes, stateRes] = await Promise.all([
       fetch(`${API}/league/${LEAGUE_ID}/rosters`, { cache: 'no-store' }),
       fetch(`${API}/league/${LEAGUE_ID}/users`, { cache: 'no-store' }),
-      getAllPlayers()
+      getAllPlayers(),
+      fetch(`${API}/league/${LEAGUE_ID}`, { cache: 'no-store' }),
+      fetch(`${API}/state/${SPORT}`, { cache: 'no-store' })
     ]);
     if (!rostersRes.ok || !usersRes.ok) throw new Error('Sleeper league fetch failed');
     const rosters = await rostersRes.json();
     const users = await usersRes.json();
+    const league = leagueRes.ok ? await leagueRes.json() : {};
+    const state = stateRes.ok ? await stateRes.json() : {};
 
     const usersById = {};
     users.forEach(u => { usersById[u.user_id] = u; });
@@ -1168,10 +1178,28 @@ const sleeperState = { rosters: null, usersByHandle: null, players: null, ready:
     const usersByHandle = {};
     users.forEach(u => { usersByHandle[u.display_name.trim().toLowerCase()] = u; });
 
+    // Fetch stats for every already-scored week, used to compute season-average
+    // and per-90 projections for the roster cards.
+    const season = league.season || state.season || String(new Date().getFullYear());
+    const lastScoredWeek = state.last_scored_leg || Math.max(0, (state.week || 1) - 1);
+    const statsByWeek = {};
+    if (lastScoredWeek > 0) {
+      await Promise.all(Array.from({ length: lastScoredWeek }, (_, i) => i + 1).map(async (w) => {
+        try {
+          const res = await fetch(`${API}/stats/${SPORT}/regular/${season}/${w}`, { cache: 'no-store' });
+          statsByWeek[w] = res.ok ? await res.json() : {};
+        } catch (e) {
+          statsByWeek[w] = {};
+        }
+      }));
+    }
+
     sleeperState.rosters = rosters;
     sleeperState.usersById = usersById;
     sleeperState.usersByHandle = usersByHandle;
     sleeperState.players = players;
+    sleeperState.statsByWeek = statsByWeek;
+    sleeperState.scoringSettings = league.scoring_settings || {};
     sleeperState.ready = true;
   } catch (e) {
     console.warn('Sleeper roster data unavailable:', e.message);
@@ -1193,6 +1221,34 @@ function sleeperPlayerInfo(pid) {
   if (!p) return { name: `Player ${pid}`, team: '', pos: '' };
   const name = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || pid;
   return { name, team: p.team || 'FA', pos: SLEEPER_POS_MAP[p.position] || p.position || '' };
+}
+
+// Season-average points projection, using per-90-minutes normalization when we
+// have minutes-played data (so a rotation player isn't judged on their full-90
+// rate — e.g. a sub who scored 6pts in 20 minutes projects higher per-90 than
+// their raw average suggests). Falls back to a plain average when minutes
+// aren't available for this player.
+function projectionFor(pid) {
+  if (!sleeperState.statsByWeek || !sleeperState.scoringSettings) return null;
+  let totalPts = 0, totalMin = 0, games = 0;
+  Object.values(sleeperState.statsByWeek).forEach(weekStats => {
+    const line = weekStats[pid];
+    if (!line) return;
+    let pts = 0;
+    Object.keys(line).forEach(key => {
+      if (key.startsWith('pos_') && sleeperState.scoringSettings[key] !== undefined) {
+        pts += Number(line[key]) * Number(sleeperState.scoringSettings[key]);
+      }
+    });
+    totalPts += pts;
+    totalMin += Number(line.min) || 0;
+    games++;
+  });
+  if (games === 0) return null;
+  if (totalMin > 0) {
+    return { value: (totalPts / totalMin) * 90, per90: true };
+  }
+  return { value: totalPts / games, per90: false };
 }
 
 function initials(name) {
@@ -1253,6 +1309,11 @@ function pitchLinesSvg() {
   `;
 }
 
+function fmtProjection(proj) {
+  if (!proj) return '';
+  return `${proj.value.toFixed(1)}${proj.per90 ? '/90' : ''}`;
+}
+
 function buildRosterSectionHtml(teamObj) {
   const roster = sleeperRosterFor(teamObj.sleeperHandle);
   if (!roster) {
@@ -1278,40 +1339,39 @@ function buildRosterSectionHtml(teamObj) {
     const row = groups[posKey];
     row.forEach((entry, i) => {
       const xPct = ((i + 1) / (row.length + 1)) * 100;
+      const proj = projectionFor(entry.pid);
       formationPlayersHtml += `
         <div class="tm-pitch-player" style="left:${xPct}%; top:${rowY[posKey]}%;">
-          <div class="tm-pitch-photo" id="tm-roster-card-${entry.pid}">${initials(entry.info.name)}</div>
+          <div class="tm-pitch-card" id="tm-roster-card-${entry.pid}">
+            <div class="tm-pitch-card-fallback">${initials(entry.info.name)}</div>
+            <div class="tm-pitch-card-overlay"></div>
+            ${proj ? `<div class="tm-pitch-card-proj">${fmtProjection(proj)}</div>` : ''}
+          </div>
           <div class="tm-pitch-player-name">${entry.info.name.split(' ').slice(-1)[0]}</div>
         </div>
       `;
     });
   });
 
-  function benchCardsFor(ids) {
-    return ids.map(pid => {
-      const info = sleeperPlayerInfo(pid);
-      return `
-        <div class="tm-player-card" id="tm-roster-card-${pid}">
-          <div class="tm-player-card-fallback">${initials(info.name)}</div>
-          <div class="tm-player-card-overlay"></div>
-          <div class="tm-player-card-bottom">
-            <p class="tm-player-card-name">${info.name}</p>
-            <p class="tm-player-card-meta">${info.pos}${info.team ? ' · ' + info.team : ''}</p>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
+  const benchHtml = benchIds.map(pid => {
+    const info = sleeperPlayerInfo(pid);
+    return `
+      <div class="tm-bench-item">
+        <div class="tm-bench-photo" id="tm-roster-card-${pid}">${initials(info.name)}</div>
+        <div class="tm-bench-name">${info.name.split(' ').slice(-1)[0]}</div>
+      </div>
+    `;
+  }).join('');
 
   return `
     <p class="tm-roster-subhead">Starters</p>
-    <p class="tm-formation-label">Formation: ${formationLabel}</p>
+    <p class="tm-formation-label">Formation: ${formationLabel} · gold number is projected points</p>
     <div class="tm-pitch-wrap">
       ${pitchLinesSvg()}
       ${formationPlayersHtml || ''}
     </div>
     <p class="tm-roster-subhead">Bench</p>
-    <div class="tm-roster-grid">${benchCardsFor(benchIds) || '<p class="section-note">No bench players.</p>'}</div>
+    <div class="tm-bench-row">${benchHtml || '<p class="section-note">No bench players.</p>'}</div>
   `;
 }
 
@@ -1328,12 +1388,11 @@ function loadRosterPhotos(teamObj) {
       const testImg = new Image();
       testImg.onload = () => {
         el.style.backgroundImage = `url('${thumb}')`;
-        // Bench cards have a separate fallback child element to hide...
-        const fallback = el.querySelector('.tm-player-card-fallback');
+        // Both card types hold their initials as direct text content on the
+        // element itself (tm-pitch-card also has a separate fallback child)
+        const fallback = el.querySelector('.tm-pitch-card-fallback');
         if (fallback) fallback.style.display = 'none';
-        // ...while pitch-formation photo circles hold their initials as direct
-        // text content on the element itself, so clear that instead
-        if (el.classList.contains('tm-pitch-photo')) el.textContent = '';
+        if (el.classList.contains('tm-bench-photo')) el.textContent = '';
       };
       testImg.src = thumb;
     });
