@@ -705,6 +705,81 @@
   .nc-nemesis .nc-rec { color: var(--loss-red); }
   .nc-cupcake .nc-rec { color: var(--gold); }
 
+  .tm-roster-subhead {
+    color: var(--chalk-dim);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0 0 10px;
+  }
+
+  .tm-roster-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .tm-player-card {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 11 / 16;
+    border: 1.5px solid var(--gold);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--pitch-line);
+    background-size: cover;
+    background-position: center 20%;
+  }
+
+  .tm-player-card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(11,31,58,0.05) 0%, rgba(11,31,58,0.2) 45%, rgba(11,31,58,0.95) 100%);
+  }
+
+  .tm-player-card-fallback {
+    position: absolute;
+    top: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: rgba(255,255,255,0.2);
+  }
+
+  .tm-player-card-bottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 6px 5px 7px;
+    z-index: 2;
+  }
+
+  .tm-player-card-name {
+    text-align: center;
+    color: var(--gold);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.68rem;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tm-player-card-meta {
+    text-align: center;
+    color: var(--chalk-dim);
+    font-size: 0.55rem;
+    margin: 1px 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .tm-record-transfer {
     background: linear-gradient(160deg, rgba(244,197,66,0.14), rgba(20,42,68,0.6));
     border: 1px solid rgba(244,197,66,0.4);
@@ -974,6 +1049,183 @@
 </div>
 
 <script>
+// --- Sleeper live roster integration (independent of the Excel data above) ---
+// Fetches current starters/bench for each team, matched via each manager's
+// Sleeper handle (the `display_name` column in the Teams sheet). Runs in
+// parallel with the main site and never blocks or breaks it if Sleeper is
+// unreachable — the Roster section just won't populate for that team.
+const sleeperState = { rosters: null, usersByHandle: null, players: null, ready: false };
+
+(async function loadSleeperData() {
+  const LEAGUE_ID = '1390750210698780672';
+  const SPORT = 'clubsoccer:epl';
+  const API = 'https://api.sleeper.app/v1';
+
+  async function getAllPlayers() {
+    const CACHE_KEY = 'sleeper_players_' + SPORT.replace(':', '_') + '_cache';
+    const CACHE_TS_KEY = CACHE_KEY + '_ts';
+    const MAX_AGE = 24 * 60 * 60 * 1000;
+    try {
+      const ts = localStorage.getItem(CACHE_TS_KEY);
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached && ts && (Date.now() - Number(ts) < MAX_AGE)) return JSON.parse(cached);
+    } catch (e) {}
+    const res = await fetch(`${API}/players/${SPORT}`);
+    if (!res.ok) throw new Error('players fetch failed');
+    const data = await res.json();
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      localStorage.setItem(CACHE_TS_KEY, String(Date.now()));
+    } catch (e) {}
+    return data;
+  }
+
+  try {
+    const [rostersRes, usersRes, players] = await Promise.all([
+      fetch(`${API}/league/${LEAGUE_ID}/rosters`, { cache: 'no-store' }),
+      fetch(`${API}/league/${LEAGUE_ID}/users`, { cache: 'no-store' }),
+      getAllPlayers()
+    ]);
+    if (!rostersRes.ok || !usersRes.ok) throw new Error('Sleeper league fetch failed');
+    const rosters = await rostersRes.json();
+    const users = await usersRes.json();
+
+    const usersById = {};
+    users.forEach(u => { usersById[u.user_id] = u; });
+
+    const usersByHandle = {};
+    users.forEach(u => { usersByHandle[u.display_name.trim().toLowerCase()] = u; });
+
+    sleeperState.rosters = rosters;
+    sleeperState.usersById = usersById;
+    sleeperState.usersByHandle = usersByHandle;
+    sleeperState.players = players;
+    sleeperState.ready = true;
+  } catch (e) {
+    console.warn('Sleeper roster data unavailable:', e.message);
+  }
+})();
+
+// Sleeper's real position codes are single letters (plus GK) — map to readable labels
+const SLEEPER_POS_MAP = { GK: 'GK', D: 'DEF', DEF: 'DEF', M: 'MID', MID: 'MID', F: 'FWD', FWD: 'FWD' };
+
+function sleeperRosterFor(handle) {
+  if (!sleeperState.ready || !handle) return null;
+  const user = sleeperState.usersByHandle[String(handle).trim().toLowerCase()];
+  if (!user) return null;
+  return sleeperState.rosters.find(r => r.owner_id === user.user_id) || null;
+}
+
+function sleeperPlayerInfo(pid) {
+  const p = sleeperState.players ? sleeperState.players[pid] : null;
+  if (!p) return { name: `Player ${pid}`, team: '', pos: '' };
+  const name = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || pid;
+  return { name, team: p.team || 'FA', pos: SLEEPER_POS_MAP[p.position] || p.position || '' };
+}
+
+function initials(name) {
+  return name.split(' ').map(p => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+}
+
+// Wikipedia photo lookup with caching (found results cached longer than misses,
+// since a player currently missing a page might get one added at any time)
+const WIKI_CACHE_PREFIX = 'wiki_player_photo_';
+const WIKI_CACHE_MAX_AGE_FOUND_MS = 30 * 24 * 60 * 60 * 1000;
+const WIKI_CACHE_MAX_AGE_MISS_MS = 3 * 24 * 60 * 60 * 1000;
+
+function getCachedPhoto(name) {
+  try {
+    const raw = localStorage.getItem(WIKI_CACHE_PREFIX + name);
+    if (!raw) return undefined;
+    const entry = JSON.parse(raw);
+    const maxAge = entry.thumb ? WIKI_CACHE_MAX_AGE_FOUND_MS : WIKI_CACHE_MAX_AGE_MISS_MS;
+    if (Date.now() - entry.ts > maxAge) return undefined;
+    return entry.thumb;
+  } catch (e) { return undefined; }
+}
+
+function setCachedPhoto(name, thumb) {
+  try { localStorage.setItem(WIKI_CACHE_PREFIX + name, JSON.stringify({ thumb, ts: Date.now() })); } catch (e) {}
+}
+
+async function lookupPlayerPhoto(name) {
+  const cached = getCachedPhoto(name);
+  if (cached !== undefined) return cached;
+  try {
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(name + ' footballer')}&format=json&origin=*`;
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
+    const top = searchData.query && searchData.query.search && searchData.query.search[0];
+    if (!top) { setCachedPhoto(name, null); return null; }
+    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(top.title)}`;
+    const summaryRes = await fetch(summaryUrl);
+    if (!summaryRes.ok) { setCachedPhoto(name, null); return null; }
+    const summaryData = await summaryRes.json();
+    const thumb = (summaryData.thumbnail && summaryData.thumbnail.source) || null;
+    setCachedPhoto(name, thumb);
+    return thumb;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildRosterSectionHtml(teamObj) {
+  const roster = sleeperRosterFor(teamObj.sleeperHandle);
+  if (!roster) {
+    return '<p class="section-note">Live roster unavailable for this team right now.</p>';
+  }
+  const starterSet = new Set(roster.starters || []);
+  const allIds = roster.players || [];
+  const starters = allIds.filter(pid => starterSet.has(pid));
+  const bench = allIds.filter(pid => !starterSet.has(pid));
+
+  function cardsFor(ids) {
+    return ids.map(pid => {
+      const info = sleeperPlayerInfo(pid);
+      return `
+        <div class="tm-player-card" id="tm-roster-card-${pid}">
+          <div class="tm-player-card-fallback">${initials(info.name)}</div>
+          <div class="tm-player-card-overlay"></div>
+          <div class="tm-player-card-bottom">
+            <p class="tm-player-card-name">${info.name}</p>
+            <p class="tm-player-card-meta">${info.pos}${info.team ? ' · ' + info.team : ''}</p>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  return `
+    <p class="tm-roster-subhead">Starters</p>
+    <div class="tm-roster-grid">${cardsFor(starters) || '<p class="section-note">No starters set.</p>'}</div>
+    <p class="tm-roster-subhead">Bench</p>
+    <div class="tm-roster-grid">${cardsFor(bench) || '<p class="section-note">No bench players.</p>'}</div>
+  `;
+}
+
+function loadRosterPhotos(teamObj) {
+  const roster = sleeperRosterFor(teamObj.sleeperHandle);
+  if (!roster) return;
+  const ids = roster.players || [];
+  ids.forEach(pid => {
+    const info = sleeperPlayerInfo(pid);
+    lookupPlayerPhoto(info.name).then(thumb => {
+      if (!thumb) return;
+      const el = document.getElementById(`tm-roster-card-${pid}`);
+      if (!el) return;
+      const testImg = new Image();
+      testImg.onload = () => {
+        el.style.backgroundImage = `url('${thumb}')`;
+        const fallback = el.querySelector('.tm-player-card-fallback');
+        if (fallback) fallback.style.display = 'none';
+      };
+      testImg.src = thumb;
+    });
+  });
+}
+</script>
+
+<script>
 (async function () {
   const DATA_FILE = 'league-data.xlsx';
 
@@ -1007,6 +1259,7 @@
         name: t.Team,
         manager: t.Manager,
         favoriteTeam: t.Favorite_Team || null,
+        sleeperHandle: t.display_name || null,
         wins: 0, losses: 0, pf: 0, pa: 0,
         games: [] // chronological W/L record, populated below
       };
@@ -1716,12 +1969,15 @@
         <p class="tm-section-title">Season Sparkline</p>
         <div class="tm-sparkline-wrap"><canvas id="team-sparkline-canvas" height="140"></canvas></div>
         ${nemesisCupcakeHtml}
+        <p class="tm-section-title">Roster</p>
+        ${buildRosterSectionHtml(t)}
         <p class="tm-section-title">Head-to-Head</p>
         <table class="tm-h2h-table"><tbody>${h2hRows}</tbody></table>
         <p class="tm-section-title">Club Record Transfer</p>
         ${recordTransferHtml}
       `;
       document.getElementById('team-modal-overlay').classList.add('open');
+      loadRosterPhotos(t);
 
       if (teamSparklineChart) { teamSparklineChart.destroy(); teamSparklineChart = null; }
       const lg = (t.lineupGames || []).slice().sort((a, b) => a.week - b.week);
