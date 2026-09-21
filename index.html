@@ -45,20 +45,47 @@
     position: relative;
     overflow: hidden;
     width: 100%;
-    min-height: 100vh;
     border-bottom: 1px solid var(--pitch-line);
-    display: flex;
-    align-items: center;
-    padding: 24px;
+    padding: 28px 24px;
     box-sizing: border-box;
   }
 
   header.hero .hero-inner {
     position: relative;
     width: 100%;
-    max-width: 732px;
+    max-width: 1280px;
     margin: 0 auto;
-    padding-bottom: 40px;
+  }
+
+  .hero-top-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 4px;
+  }
+
+  .hero-logo {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: var(--pitch-mid);
+    border: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .hero-title-stack .wordmark {
+    margin: 0;
+    font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+  }
+
+  .hero-title-stack .hero-subtitle {
+    margin: 2px 0 0;
+    color: var(--chalk-dim);
+    font-size: 0.85rem;
   }
 
   .wordmark {
@@ -169,6 +196,24 @@
     width: 100%;
     border-collapse: collapse;
     font-variant-numeric: tabular-nums;
+  }
+
+  thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  thead th.sortable:hover {
+    color: var(--chalk);
+  }
+
+  thead th.sortable.active {
+    color: var(--gold);
+  }
+
+  thead th.sortable .sort-arrow {
+    font-size: 0.6rem;
+    margin-left: 3px;
   }
 
   thead th {
@@ -1059,7 +1104,6 @@
   }
 
   @media (max-width: 480px) {
-    thead th:nth-child(4), tbody td:nth-child(4) { display: none; } /* hide streak col on tiny screens */
   }
 </style>
 </head>
@@ -1067,9 +1111,13 @@
 
 <header class="hero">
   <div class="hero-inner">
-    <h1 class="wordmark">The Mater League</h1>
-    <p class="tagline">A mix of brothers, long time friends, and pro clubs teammates battle it out over 38 weeks to decide who wins the coveted Mater League.</p>
-    <p class="tagline-sub">Updated after every match week.</p>
+    <div class="hero-top-row">
+      <div class="hero-logo">⚽</div>
+      <div class="hero-title-stack">
+        <h1 class="wordmark">The Mater League</h1>
+        <p class="hero-subtitle">8 teams · 2026 season</p>
+      </div>
+    </div>
     <div class="hero-standings-preview" id="leader-strip">
       <span class="loading">Loading standings…</span>
     </div>
@@ -1100,14 +1148,16 @@
         <tr>
           <th></th>
           <th>Team</th>
-          <th class="num">Record</th>
-          <th class="num">Streak</th>
-          <th class="num">PF</th>
-          <th class="num">PA</th>
+          <th class="num sortable" data-sort="record">Record</th>
+          <th class="num sortable" data-sort="winpct">Win%</th>
+          <th class="num sortable" data-sort="allplay">All-Play</th>
+          <th class="num sortable" data-sort="pf">PF</th>
+          <th class="num sortable" data-sort="pa">PA</th>
+          <th class="num sortable" data-sort="maxpf">Max PF</th>
         </tr>
       </thead>
       <tbody id="standings-body">
-        <tr><td colspan="6" class="loading">Loading standings…</td></tr>
+        <tr><td colspan="8" class="loading">Loading standings…</td></tr>
       </tbody>
     </table>
     </div>
@@ -1740,22 +1790,61 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       `;
     }
 
-    const standingsBody = document.getElementById('standings-body');
-    standingsBody.innerHTML = standings.map((t, i) => {
-      const s = t.streaks.current;
-      const streakLabel = s.len ? `${s.type}${s.len}` : '–';
-      const streakClass = s.type === 'W' ? 'w' : (s.type === 'L' ? 'l' : '');
-      return `
-        <tr class="team-row" data-team-id="${t.id}">
-          <td class="pos">${i + 1}</td>
-          <td class="team-cell">${t.name}<span class="manager">${t.manager}</span></td>
-          <td class="num">${t.wins}-${t.losses}</td>
-          <td class="streak ${streakClass}">${streakLabel}</td>
-          <td class="num">${fmt(t.pf)}</td>
-          <td class="num">${fmt(t.pa)}</td>
-        </tr>
-      `;
-    }).join('');
+    // --- Standings table: sortable columns ---
+    const sortValue = {
+      record: t => t.wins * 1000 - t.losses, // wins first, losses as tiebreak
+      winpct: t => (t.wins + t.losses) ? t.wins / (t.wins + t.losses) : 0,
+      allplay: t => t.allPlay.w - t.allPlay.l,
+      pf: t => t.pf,
+      pa: t => t.pa,
+      maxpf: t => t.games.length ? Math.max(...t.games.map(g => g.score)) : 0
+    };
+
+    let currentSort = { key: 'record', dir: -1 }; // -1 = descending
+
+    function renderStandingsTable() {
+      const key = currentSort.key;
+      const dir = currentSort.dir;
+      standings.sort((a, b) => (sortValue[key](b) - sortValue[key](a)) * -dir);
+
+      document.querySelectorAll('th.sortable').forEach(th => {
+        const isActive = th.getAttribute('data-sort') === key;
+        th.classList.toggle('active', isActive);
+        th.innerHTML = th.textContent.replace(/\s*[▲▼]$/, '') + (isActive ? ` <span class="sort-arrow">${dir === -1 ? '▼' : '▲'}</span>` : '');
+      });
+
+      const standingsBody = document.getElementById('standings-body');
+      standingsBody.innerHTML = standings.map((t, i) => {
+        const winPct = sortValue.winpct(t) * 100;
+        const maxPf = sortValue.maxpf(t);
+        return `
+          <tr class="team-row" data-team-id="${t.id}">
+            <td class="pos">${i + 1}</td>
+            <td class="team-cell">${t.name}<span class="manager">${t.manager}</span></td>
+            <td class="num">${t.wins}-${t.losses}</td>
+            <td class="num">${winPct.toFixed(1)}%</td>
+            <td class="num">${t.allPlay.w}-${t.allPlay.l}</td>
+            <td class="num">${fmt(t.pf)}</td>
+            <td class="num">${fmt(t.pa)}</td>
+            <td class="num">${fmt(maxPf)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.getAttribute('data-sort');
+        if (currentSort.key === key) {
+          currentSort.dir = currentSort.dir === -1 ? 1 : -1;
+        } else {
+          currentSort = { key, dir: -1 };
+        }
+        renderStandingsTable();
+      });
+    });
+
+    renderStandingsTable();
 
     // --- Standings by week (cumulative rank after each matchweek) ---
     const allWeeks = [...new Set(matchups.map(m => m.week))].sort((a, b) => a - b);
