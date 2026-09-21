@@ -25,11 +25,6 @@
   body {
     margin: 0;
     background-color: var(--pitch-dark);
-    background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('stadium.jpg');
-    background-size: cover;
-    background-position: center top;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
     color: var(--chalk);
     font-family: 'IBM Plex Sans', sans-serif;
     line-height: 1.5;
@@ -176,10 +171,12 @@
 
   thead th {
     text-align: left;
-    font-weight: 500;
-    font-size: 0.8rem;
+    font-weight: 600;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--chalk-dim);
-    padding: 0 8px 10px;
+    padding: 0 10px 10px;
     border-bottom: 1px solid var(--pitch-line);
   }
 
@@ -188,9 +185,32 @@
   }
 
   tbody td {
-    padding: 12px 8px;
-    border-bottom: 1px solid var(--pitch-mid);
-    font-size: 0.98rem;
+    padding: 12px 10px;
+    border-bottom: 1px dashed var(--pitch-line);
+    font-size: 0.92rem;
+  }
+
+  table.standings th:first-child,
+  table.standings td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--pitch-dark);
+    z-index: 2;
+    width: 30px;
+  }
+
+  table.standings th:nth-child(2),
+  table.standings td:nth-child(2) {
+    position: sticky;
+    left: 30px;
+    background: var(--pitch-dark);
+    z-index: 2;
+    box-shadow: 3px 0 6px -2px rgba(0,0,0,0.6);
+  }
+
+  table.standings tbody tr:hover td:first-child,
+  table.standings tbody tr:hover td:nth-child(2) {
+    background: #131316;
   }
 
   tbody tr:first-child td {
@@ -1014,7 +1034,8 @@
   <section id="standings">
     <h2>Standings</h2>
     <p class="section-note">Click any team for their full profile — home/away splits, head-to-head, and waiver history.</p>
-    <table>
+    <div style="overflow-x: auto;">
+    <table class="standings">
       <thead>
         <tr>
           <th></th>
@@ -1029,6 +1050,7 @@
         <tr><td colspan="6" class="loading">Loading standings…</td></tr>
       </tbody>
     </table>
+    </div>
   </section>
 
   <section id="standings-chart">
