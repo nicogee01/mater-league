@@ -11,7 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
   :root {
-    --pitch-dark: #0a0a0c;
+    --pitch-dark: #000000;
     --pitch-mid: rgba(28, 28, 32, 0.85);
     --pitch-line: #2a2a2e;
     --chalk: #eceef0;
@@ -25,7 +25,7 @@
   body {
     margin: 0;
     background-color: var(--pitch-dark);
-    background-image: linear-gradient(rgba(10,10,12,0.5), rgba(10,10,12,0.5)), url('stadium.jpg');
+    background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('stadium.jpg');
     background-size: cover;
     background-position: center top;
     background-attachment: fixed;
@@ -291,7 +291,7 @@
     width: 100%;
     text-align: center;
     padding: 64px 24px;
-    background: #131316;
+    background: #000000;
     border-top: 1px solid var(--pitch-line);
     border-bottom: 1px solid var(--pitch-line);
   }
@@ -474,7 +474,7 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(10, 10, 12, 0.8);
+    background: rgba(0, 0, 0, 0.8);
     z-index: 50;
     align-items: flex-start;
     justify-content: center;
@@ -526,7 +526,7 @@
   }
 
   .tm-stat-groups {
-    background: rgba(10,10,12,0.55);
+    background: rgba(0,0,0,0.55);
     border: 1px solid var(--pitch-line);
     border-radius: 2px;
     padding: 18px 20px;
@@ -669,7 +669,7 @@
   .cup-tbd { color: var(--chalk-dim); border-color: var(--pitch-line); background: transparent; }
 
   .tm-sparkline-wrap {
-    background: rgba(10,10,12,0.55);
+    background: rgba(0,0,0,0.55);
     border: 1px solid var(--pitch-line);
     border-radius: 2px;
     padding: 12px;
@@ -773,7 +773,7 @@
   .tm-pitch-card-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(10,10,12,0.05) 0%, rgba(10,10,12,0.3) 45%, rgba(10,10,12,0.97) 100%);
+    background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.3) 45%, rgba(0,0,0,0.97) 100%);
   }
 
   .tm-pitch-card-fallback {
@@ -805,7 +805,7 @@
     font-size: 0.53rem;
     font-weight: 600;
     color: var(--chalk);
-    background: rgba(10,10,12,0.8);
+    background: rgba(0,0,0,0.8);
     padding: 1px 4px;
     border-radius: 2px;
     white-space: nowrap;
@@ -2066,7 +2066,7 @@ function loadRosterPhotos(teamObj) {
       const card = document.getElementById('team-modal-card');
       const stadiumFile = t.favoriteTeam ? STADIUM_MAP[String(t.favoriteTeam).trim().toLowerCase()] : null;
       if (stadiumFile) {
-        card.style.backgroundImage = `linear-gradient(rgba(10,10,12,0.65), rgba(10,10,12,0.65)), url('PNGS/${stadiumFile}')`;
+        card.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('PNGS/${stadiumFile}')`;
         card.style.backgroundSize = 'cover';
         card.style.backgroundPosition = 'center';
       } else {
