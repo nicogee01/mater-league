@@ -152,7 +152,9 @@
 
   h2 {
     font-weight: 700;
-    font-size: 1.9rem;
+    font-size: 1.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
     margin: 0 0 22px;
   }
 
@@ -305,6 +307,51 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
+  }
+
+  .tab-nav-wrap {
+    border-bottom: 1px solid var(--pitch-line);
+    background: var(--pitch-dark);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .tab-nav {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+  }
+
+  .tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--chalk-dim);
+    padding: 14px 16px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .tab-btn:hover:not(.active) {
+    color: var(--chalk);
+  }
+
+  .tab-btn.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+  }
+
+  .tab-panel {
+    display: none;
+  }
+
+  .tab-panel.active {
+    display: block;
   }
 
   .section-intro {
@@ -1029,7 +1076,20 @@
   </div>
 </header>
 
-<div class="wrap">
+<div class="tab-nav-wrap">
+  <div class="wrap">
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="standings">Standings</button>
+      <button class="tab-btn" data-tab="records">Hall of Records</button>
+      <button class="tab-btn" data-tab="cup">The McQueen Cup</button>
+      <button class="tab-btn" data-tab="victory-road">Victory Road</button>
+      <button class="tab-btn" data-tab="analytics">Analytics</button>
+    </nav>
+  </div>
+</div>
+
+<div class="tab-panel active" data-panel="standings">
+  <div class="wrap">
 
   <section id="standings">
     <h2>Standings</h2>
@@ -1053,6 +1113,12 @@
     </div>
   </section>
 
+  </div>
+</div>
+
+<div class="tab-panel" data-panel="analytics">
+  <div class="wrap">
+
   <section id="standings-chart">
     <h2>Standings by Week</h2>
     <p class="section-note">League position after each matchweek. Lower is better.</p>
@@ -1060,6 +1126,12 @@
       <canvas id="standings-line-chart" height="260"></canvas>
     </div>
   </section>
+
+  </div>
+</div>
+
+<div class="tab-panel" data-panel="records">
+  <div class="wrap">
 
   <section id="records">
     <h2>League Records</h2>
@@ -1069,15 +1141,18 @@
     </div>
   </section>
 
+  </div>
 </div>
 
-<div class="section-intro">
-  <p class="si-eyebrow">Knockout</p>
-  <h2 class="si-title">The McQueen Cup</h2>
-  <p class="si-tagline">Will there be a Cinderella story, or a dominant domestic double? There's all to play for.</p>
-</div>
+<div class="tab-panel" data-panel="cup">
 
-<div class="wrap">
+  <div class="section-intro">
+    <p class="si-eyebrow">Knockout</p>
+    <h2 class="si-title">The McQueen Cup</h2>
+    <p class="si-tagline">Will there be a Cinderella story, or a dominant domestic double? There's all to play for.</p>
+  </div>
+
+  <div class="wrap">
 
   <section id="cup">
     <p class="section-note">Two-legged knockout. Ties are decided on aggregate score once both legs are played.</p>
@@ -1086,15 +1161,18 @@
     </div>
   </section>
 
+  </div>
 </div>
 
-<div class="section-intro">
-  <p class="si-eyebrow">Hall of Fame</p>
-  <h2 class="si-title">Victory Road</h2>
-  <p class="si-tagline">Every champion the league has crowned, and the cup winners who survived the knockout.</p>
-</div>
+<div class="tab-panel" data-panel="victory-road">
 
-<div class="wrap">
+  <div class="section-intro">
+    <p class="si-eyebrow">Hall of Fame</p>
+    <h2 class="si-title">Victory Road</h2>
+    <p class="si-tagline">Every champion the league has crowned, and the cup winners who survived the knockout.</p>
+  </div>
+
+  <div class="wrap">
 
   <section id="victory-road" class="victory-road">
     <div class="vr-grid">
@@ -1135,11 +1213,15 @@
     </div>
   </section>
 
+  </div>
+</div>
+
+<div class="wrap">
   <footer>
     <p>Mater League — running since 2026. Created by Pep Guardiola's successor, Nico.</p>
   </footer>
-
 </div>
+
 
 <div class="modal-overlay" id="team-modal-overlay">
   <div class="modal-card" id="team-modal-card">
@@ -1423,6 +1505,16 @@ function loadRosterPhotos(teamObj) {
 </script>
 
 <script>
+// --- Tab navigation ---
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.getAttribute('data-tab');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.getAttribute('data-panel') === target));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
 (async function () {
   const DATA_FILE = 'league-data.xlsx';
 
