@@ -6,18 +6,18 @@
 <title>The Mater League</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
   :root {
-    --pitch-dark: #0B1F3A;
-    --pitch-mid: rgba(20, 42, 68, 0.82);
-    --pitch-line: #2A4A6E;
-    --chalk: #F2F5F8;
-    --chalk-dim: #9FB3C8;
-    --gold: #F4C542;
-    --loss-red: #E4574C;
+    --pitch-dark: #0a0a0c;
+    --pitch-mid: rgba(28, 28, 32, 0.85);
+    --pitch-line: #2a2a2e;
+    --chalk: #eceef0;
+    --chalk-dim: #9a9ca3;
+    --gold: #6fa8f5;
+    --loss-red: #e2626b;
   }
 
   * { box-sizing: border-box; }
@@ -25,22 +25,22 @@
   body {
     margin: 0;
     background-color: var(--pitch-dark);
-    background-image: linear-gradient(rgba(11,31,58,0.45), rgba(11,31,58,0.45)), url('stadium.jpg');
+    background-image: linear-gradient(rgba(10,10,12,0.5), rgba(10,10,12,0.5)), url('stadium.jpg');
     background-size: cover;
     background-position: center top;
     background-attachment: fixed;
     background-repeat: no-repeat;
     color: var(--chalk);
-    font-family: 'Inter', sans-serif;
+    font-family: 'IBM Plex Sans', sans-serif;
     line-height: 1.5;
   }
 
   h1, h2, .num {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
   }
 
   .wrap {
-    max-width: 1120px;
+    max-width: 1320px;
     margin: 0 auto;
     padding: 0 24px;
   }
@@ -67,7 +67,7 @@
   }
 
   .wordmark {
-    font-family: 'Bungee', cursive;
+    font-family: 'Anton', sans-serif;
     font-weight: 400;
     font-size: clamp(2rem, 7vw, 3.2rem);
     line-height: 1.1;
@@ -78,7 +78,7 @@
   }
 
   .tagline {
-    color: #DCE6F0;
+    color: #eceef0;
     font-size: 1.05rem;
     margin: 12px 0 6px;
     max-width: 46ch;
@@ -86,7 +86,7 @@
   }
 
   .tagline-sub {
-    color: #DCE6F0;
+    color: #eceef0;
     font-size: 0.85rem;
     font-style: italic;
     margin: 0 0 28px;
@@ -97,9 +97,9 @@
     display: flex;
     flex-direction: column;
     gap: 18px;
-    background: rgba(20, 42, 68, 0.6);
+    background: rgba(28, 28, 32, 0.65);
     border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 4px;
+    border-radius: 2px;
     padding: 18px 20px;
   }
 
@@ -121,7 +121,7 @@
   }
 
   .hsp-row .rank {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     color: var(--chalk-dim);
     width: 16px;
@@ -139,7 +139,7 @@
 
   .hsp-row .rec {
     margin-left: auto;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--chalk);
@@ -265,11 +265,11 @@
   }
 
   .fixture .score {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 1.4rem;
     background: var(--pitch-mid);
-    border-radius: 4px;
+    border-radius: 2px;
     padding: 4px 14px;
     min-width: 72px;
     text-align: center;
@@ -291,7 +291,7 @@
     width: 100%;
     text-align: center;
     padding: 64px 24px;
-    background: #0B1F3A;
+    background: #131316;
     border-top: 1px solid var(--pitch-line);
     border-bottom: 1px solid var(--pitch-line);
   }
@@ -305,7 +305,7 @@
   }
 
   .si-title {
-    font-family: 'Bungee', cursive;
+    font-family: 'Anton', sans-serif;
     font-weight: 400;
     font-size: clamp(1.8rem, 6vw, 2.8rem);
     color: var(--gold);
@@ -323,14 +323,14 @@
   .chart-wrap {
     background: var(--pitch-mid);
     border: 1px solid var(--pitch-line);
-    border-radius: 6px;
+    border-radius: 2px;
     padding: 20px 16px;
   }
 
   .record-card {
     background: var(--pitch-mid);
     border: 1px solid var(--pitch-line);
-    border-radius: 6px;
+    border-radius: 2px;
     padding: 12px 13px;
   }
 
@@ -343,7 +343,7 @@
   }
 
   .record-card .stat {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 1.3rem;
     color: var(--gold);
@@ -416,7 +416,7 @@
   .tie-card {
     background: var(--pitch-mid);
     border: 1px solid var(--pitch-line);
-    border-radius: 4px;
+    border-radius: 2px;
     overflow: hidden;
   }
 
@@ -448,7 +448,7 @@
   }
 
   .tie-row .tscore {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 1.15rem;
     font-variant-numeric: tabular-nums;
@@ -474,7 +474,7 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(8, 16, 28, 0.75);
+    background: rgba(10, 10, 12, 0.8);
     z-index: 50;
     align-items: flex-start;
     justify-content: center;
@@ -490,7 +490,7 @@
     position: relative;
     background: var(--pitch-dark);
     border: 1px solid var(--pitch-line);
-    border-radius: 6px;
+    border-radius: 2px;
     max-width: 640px;
     width: 100%;
     padding: 32px 28px;
@@ -514,7 +514,7 @@
   }
 
   .tm-name {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 2rem;
     margin: 0;
@@ -526,9 +526,9 @@
   }
 
   .tm-stat-groups {
-    background: rgba(11,31,58,0.5);
+    background: rgba(10,10,12,0.55);
     border: 1px solid var(--pitch-line);
-    border-radius: 6px;
+    border-radius: 2px;
     padding: 18px 20px;
     margin-bottom: 24px;
   }
@@ -570,7 +570,7 @@
   }
 
   .tm-stat-item .value {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 1.1rem;
     font-variant-numeric: tabular-nums;
@@ -623,7 +623,7 @@
   }
 
   .tm-waiver-row .faab {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     color: var(--gold);
     white-space: nowrap;
@@ -663,15 +663,15 @@
     border: 1px solid;
   }
 
-  .cup-won { color: var(--gold); border-color: rgba(244,197,66,0.5); background: rgba(244,197,66,0.1); }
+  .cup-won { color: var(--gold); border-color: rgba(111,168,245,0.5); background: rgba(111,168,245,0.1); }
   .cup-lost { color: var(--loss-red); border-color: rgba(228,87,76,0.5); background: rgba(228,87,76,0.1); }
   .cup-pending { color: var(--chalk); border-color: var(--pitch-line); background: rgba(255,255,255,0.05); }
   .cup-tbd { color: var(--chalk-dim); border-color: var(--pitch-line); background: transparent; }
 
   .tm-sparkline-wrap {
-    background: rgba(11,31,58,0.5);
+    background: rgba(10,10,12,0.55);
     border: 1px solid var(--pitch-line);
-    border-radius: 6px;
+    border-radius: 2px;
     padding: 12px;
     margin-bottom: 20px;
   }
@@ -685,13 +685,13 @@
   .nc-item {
     flex: 1;
     text-align: center;
-    border-radius: 6px;
+    border-radius: 2px;
     padding: 12px 10px;
     border: 1px solid;
   }
 
   .nc-nemesis { border-color: rgba(228,87,76,0.4); background: rgba(228,87,76,0.08); }
-  .nc-cupcake { border-color: rgba(244,197,66,0.4); background: rgba(244,197,66,0.08); }
+  .nc-cupcake { border-color: rgba(111,168,245,0.4); background: rgba(111,168,245,0.08); }
 
   .nc-label {
     font-size: 0.68rem;
@@ -708,7 +708,7 @@
   }
 
   .nc-rec {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     margin: 2px 0 0;
   }
@@ -736,7 +736,7 @@
     max-width: 340px;
     margin: 0 auto 20px;
     aspect-ratio: 2 / 3;
-    border-radius: 8px;
+    border-radius: 2px;
     overflow: hidden;
     border: 1px solid var(--pitch-line);
     background-image: repeating-linear-gradient(0deg, #1c5c34 0px, #1c5c34 34px, #1a5530 34px, #1a5530 68px);
@@ -763,7 +763,7 @@
     width: 52px;
     aspect-ratio: 3 / 4;
     border: 1.5px solid var(--gold);
-    border-radius: 6px;
+    border-radius: 2px;
     overflow: hidden;
     background-color: var(--pitch-line);
     background-size: cover;
@@ -773,7 +773,7 @@
   .tm-pitch-card-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(11,31,58,0.05) 0%, rgba(11,31,58,0.25) 45%, rgba(11,31,58,0.95) 100%);
+    background: linear-gradient(180deg, rgba(10,10,12,0.05) 0%, rgba(10,10,12,0.3) 45%, rgba(10,10,12,0.97) 100%);
   }
 
   .tm-pitch-card-fallback {
@@ -781,7 +781,7 @@
     top: 8%;
     left: 50%;
     transform: translateX(-50%);
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 0.85rem;
     color: rgba(255,255,255,0.22);
@@ -794,7 +794,7 @@
     right: 0;
     text-align: center;
     color: var(--gold);
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 0.62rem;
     z-index: 2;
@@ -805,9 +805,9 @@
     font-size: 0.53rem;
     font-weight: 600;
     color: var(--chalk);
-    background: rgba(11,31,58,0.75);
+    background: rgba(10,10,12,0.8);
     padding: 1px 4px;
-    border-radius: 3px;
+    border-radius: 2px;
     white-space: nowrap;
     max-width: 58px;
     overflow: hidden;
@@ -841,7 +841,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 0.7rem;
     color: var(--chalk);
@@ -859,15 +859,15 @@
   }
 
   .tm-record-transfer {
-    background: linear-gradient(160deg, rgba(244,197,66,0.14), rgba(20,42,68,0.6));
-    border: 1px solid rgba(244,197,66,0.4);
-    border-radius: 6px;
+    background: linear-gradient(160deg, rgba(111,168,245,0.14), rgba(28, 28, 32, 0.65));
+    border: 1px solid rgba(111,168,245,0.4);
+    border-radius: 2px;
     padding: 18px 20px;
     text-align: center;
   }
 
   .tm-record-transfer .rt-player {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 1.4rem;
     margin: 0;
@@ -881,7 +881,7 @@
   }
 
   .tm-record-transfer .rt-faab {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 1.6rem;
     color: var(--gold);
@@ -892,7 +892,7 @@
   .victory-road {
     text-align: center;
     padding: 64px 0 56px;
-    background: radial-gradient(ellipse 500px 260px at 50% 0%, rgba(244,197,66,0.08), transparent 70%);
+    background: radial-gradient(ellipse 500px 260px at 50% 0%, rgba(111,168,245,0.08), transparent 70%);
   }
 
   .vr-eyebrow {
@@ -931,9 +931,9 @@
   }
 
   .vr-season {
-    background: linear-gradient(160deg, rgba(244,197,66,0.12), rgba(20,42,68,0.7));
-    border: 1px solid rgba(244,197,66,0.4);
-    border-radius: 6px;
+    background: linear-gradient(160deg, rgba(111,168,245,0.12), rgba(28, 28, 32, 0.7));
+    border: 1px solid rgba(111,168,245,0.4);
+    border-radius: 2px;
     padding: 24px 20px;
     display: flex;
     flex-direction: column;
@@ -942,7 +942,7 @@
   }
 
   .vr-year {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     color: var(--chalk-dim);
     letter-spacing: 1px;
@@ -957,7 +957,7 @@
   }
 
   .vr-champion {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Anton', sans-serif;
     font-weight: 700;
     font-size: 1.5rem;
     color: var(--gold);
@@ -974,7 +974,7 @@
     font-size: 0.72rem;
     color: var(--chalk-dim);
     border: 1px solid var(--pitch-line);
-    border-radius: 3px;
+    border-radius: 2px;
     padding: 3px 10px;
   }
 
@@ -1659,7 +1659,7 @@ function loadRosterPhotos(teamObj) {
       cume.forEach((c, i) => rankHistory[c.id].push(i + 1));
     });
 
-    const chartColors = ['#F4C542', '#5B9BD5', '#E4574C', '#7ED957', '#B57EDC', '#FF9F45', '#4ECDC4', '#F26D9D'];
+    const chartColors = ['#6fa8f5', '#4c76ad', '#e2626b', '#7ED957', '#B57EDC', '#FF9F45', '#4ECDC4', '#F26D9D'];
     const canvasEl = document.getElementById('standings-line-chart');
     if (canvasEl && allWeeks.length && window.Chart) {
       new Chart(canvasEl.getContext('2d'), {
@@ -2066,7 +2066,7 @@ function loadRosterPhotos(teamObj) {
       const card = document.getElementById('team-modal-card');
       const stadiumFile = t.favoriteTeam ? STADIUM_MAP[String(t.favoriteTeam).trim().toLowerCase()] : null;
       if (stadiumFile) {
-        card.style.backgroundImage = `linear-gradient(rgba(11,31,58,0.6), rgba(11,31,58,0.6)), url('PNGS/${stadiumFile}')`;
+        card.style.backgroundImage = `linear-gradient(rgba(10,10,12,0.65), rgba(10,10,12,0.65)), url('PNGS/${stadiumFile}')`;
         card.style.backgroundSize = 'cover';
         card.style.backgroundPosition = 'center';
       } else {
@@ -2163,8 +2163,8 @@ function loadRosterPhotos(teamObj) {
           data: {
             labels: lg.map(g => 'Wk ' + g.week),
             datasets: [
-              { label: 'Actual', data: lg.map(g => g.actual), borderColor: '#F4C542', backgroundColor: '#F4C542', tension: 0.25, pointRadius: 2, borderWidth: 2 },
-              { label: 'Best Possible', data: lg.map(g => g.best), borderColor: '#5B9BD5', backgroundColor: '#5B9BD5', borderDash: [4, 3], tension: 0.25, pointRadius: 2, borderWidth: 2 }
+              { label: 'Actual', data: lg.map(g => g.actual), borderColor: '#6fa8f5', backgroundColor: '#6fa8f5', tension: 0.25, pointRadius: 2, borderWidth: 2 },
+              { label: 'Best Possible', data: lg.map(g => g.best), borderColor: '#4c76ad', backgroundColor: '#4c76ad', borderDash: [4, 3], tension: 0.25, pointRadius: 2, borderWidth: 2 }
             ]
           },
           options: {
