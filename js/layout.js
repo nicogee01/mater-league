@@ -62,16 +62,6 @@
         <path d="M20 12.5V4.2M27 17.6l7.6-2.6M24.3 25.9l4.6 6.6M15.7 25.9l-4.6 6.6M13 17.6l-7.6-2.6" stroke="#15001a" stroke-width="1.4" fill="none" />
         <path d="M16.5 2.2l3.5 2 3.5-2A18.5 18.5 0 0 0 16.5 2.2zM37.6 13.4l-3 1.6.7 4.8 2.9 1.2a18.5 18.5 0 0 0-.6-7.6zM31.9 34.2l-3-1.7-4.2 2.6.1 3.6a18.5 18.5 0 0 0 7.1-4.5zM8.1 34.2l3-1.7 4.2 2.6-.1 3.6a18.5 18.5 0 0 1-7.1-4.5zM2.4 13.4l3 1.6-.7 4.8-2.9 1.2a18.5 18.5 0 0 1 .6-7.6z" fill="#15001a" />
       </symbol>
-      <symbol id="trophy" viewBox="0 0 60 70">
-        <g fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round">
-          <path d="M14 8Q14 34 30 34Q46 34 46 8Z"/>
-          <path d="M14 14Q-2 14-2 28Q-2 42 14 40"/>
-          <path d="M46 14Q62 14 62 28Q62 42 46 40"/>
-          <path d="M30 34V52"/>
-          <path d="M18 52H42L37 62H23Z"/>
-          <rect x="12" y="62" width="36" height="6" rx="1.5"/>
-        </g>
-      </symbol>
     </defs>
   </svg>`;
 

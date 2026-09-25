@@ -1216,6 +1216,7 @@
   }
   // the McQueen Cup itself (media/mcqueen-cup.png, background removed); a glint sweeps across it
   const CUP_IMG = "media/mcqueen-cup.png";
+  const LEAGUE_IMG = "media/league-trophy.png";   // the Mater League trophy (background removed)
   const TROPHY = `<span class="final-trophy" aria-hidden="true"><img src="${CUP_IMG}" alt="" width="289" height="497"></span>`;
 
   function tieCard(t) {
@@ -1322,21 +1323,21 @@
   function renderVictoryRoad() {
     if (!$("#victoryRoad")) return;
     const H = LORE.honours || {};
-    const col = (label, list, pending, cupImage) => `
+    const col = (label, list, pending, trophy) => `
       <div class="vr__col reveal">
         <p class="vr__label">${label}</p>
         ${(list && list.length ? [...list].sort((a, b) => b.year - a.year) : [{ year: new Date().getFullYear(), champion: null }]).map((s) => {
           const champ = state.byRoster[rosterOf(s.champion)], ru = state.byRoster[rosterOf(s.runnerUp)];
           return `<div class="vr__season ${champ ? "is-won" : ""}">
             <span class="vr__year">${s.year}</span>
-            ${cupImage ? `<img class="vr__trophy vr__trophy--img" src="${CUP_IMG}" alt="" width="289" height="497">` : `<svg class="vr__trophy" viewBox="0 0 60 70" aria-hidden="true"><use href="#trophy"/></svg>`}
+            <img class="vr__trophy vr__trophy--img" src="${trophy}" alt="" loading="lazy">
             <div class="vr__champ">${champ ? crest(champ) : ""}<b>${champ ? club(champ) : "TBD"}</b></div>
             <p class="vr__ru">Runner-up · ${ru ? club(ru) : "TBD"}</p>
             ${champ ? "" : `<span class="vr__status">${pending}</span>`}
           </div>`;
         }).join("")}
       </div>`;
-    $("#victoryRoad").innerHTML = col("Mater League Champions", H.league, "Season in progress") + col("McQueen Cup Champions", H.cup, "Bracket in progress", true);
+    $("#victoryRoad").innerHTML = col("Mater League Champions", H.league, "Season in progress", LEAGUE_IMG) + col("McQueen Cup Champions", H.cup, "Bracket in progress", CUP_IMG);
   }
 
   // ---------- ANALYTICS ----------

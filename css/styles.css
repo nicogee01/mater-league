@@ -677,7 +677,7 @@ button { cursor: pointer; touch-action: manipulation; }
   color: transparent; -webkit-text-stroke: 1px rgba(11,31,58,0.2);
 }
 .vr__trophy { width: 88px; height: 100px; color: #b08a3e; }
-.vr__trophy--img { width: auto; height: 120px; filter: drop-shadow(0 8px 12px rgba(11, 31, 58, 0.3)); }
+.vr__trophy--img { width: auto; height: 132px; filter: drop-shadow(0 8px 12px rgba(11, 31, 58, 0.3)); }
 .vr__season:not(.is-won) .vr__trophy { opacity: 0.55; }
 .vr__champ { display: flex; align-items: center; gap: var(--s3); }
 .vr__champ b { font-family: var(--f-display); font-weight: 400; font-size: 34px; text-transform: uppercase; line-height: 1.05; }
