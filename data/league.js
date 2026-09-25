@@ -3,6 +3,7 @@
 
   derbies  - rivalries between two managers, matched by their Sleeper username
              (case doesn't matter). "slug" is used in links like h2h.html#derby-clifton.
+  favourites - the Premier League club each manager supports (shown on club profiles).
   honours  - Victory Road. One entry per season; champion / runnerUp are Sleeper
              usernames, or null while the season is still being played.
 
@@ -39,6 +40,16 @@ window.MATER_LEAGUE = {
       "story": "La Tri against La H, South America against Central America. An Ecuadorian in New York and a Honduran in Maryland, online friends who've never let a few hundred miles of I-95 get in the way of a rivalry."
     }
   ],
+  "favourites": {
+    "nicog01": "Manchester City",
+    "officialmaje": "Arsenal",
+    "glenm22": "West Ham",
+    "austinclifton": "Spurs",
+    "kingabes": "Brighton",
+    "bottomcap": "Chelsea",
+    "treyclif3": "Chelsea",
+    "nictrn": "Arsenal"
+  },
   "honours": {
     "league": [{ "year": 2026, "champion": null, "runnerUp": null }],
     "cup": [{ "year": 2026, "champion": null, "runnerUp": null }]

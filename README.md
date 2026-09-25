@@ -52,11 +52,14 @@ week,home,away,home_pts,away_pts,home_best,away_best
 `home_best` / `away_best` (best possible lineup) are optional. When present, they
 unlock the bench records and optimal-lineup stats.
 
-`data/cup.csv` has one row per McQueen Cup leg. Leave the scores blank until it's played:
+`data/cup.csv` has one row per McQueen Cup leg: one "marquee" leg per gameweek,
+QF from GW19, SF from GW31, the Final in GW37–38. Rows stay in tie order (first QF
+row = QF1). After the draw, fill in `home` / `away`; scores fill themselves from
+each club's league score that week in `matchups.csv` (type them only to override):
 
 ```
 round,leg,week,home,away,home_pts,away_pts
-Quarterfinals,1,7,nicog01,BottomCap,,
+Quarterfinals,1,19,nicog01,BottomCap,,
 ```
 
 Past champions (Victory Road) are in `data/league.js` under `honours`.
@@ -77,7 +80,7 @@ css/styles.css        "matchday programme" theme tokens at the top, then compone
 js/layout.js          shared nav + footer (edit PAGES here to add or rename a tab)
 js/motion.js          hero video, pause button, nav ball
 js/app.js             Sleeper data → whatever sections the current page has
-data/league.js        league lore: the four derbies and past champions
+data/league.js        league lore: derbies, favourite Premier League clubs, past champions
 data/matchups.csv     league results, one row per match
 data/cup.csv          McQueen Cup legs
 scripts/check-matchups.mjs  verifies matchups.csv against Sleeper (Node 18+)

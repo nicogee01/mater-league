@@ -159,6 +159,18 @@
   };
   const club = (t) => (t ? esc(t.name) + emblem(t) : "TBD");           // club name as HTML, with emblem
   const clubById = (id) => club(state.byRoster[id]);
+  // "Supports <badge> Chelsea" from data/league.js (favourite Premier League club)
+  const EPL_ABBR = { "Arsenal": "ARS", "Aston Villa": "AVL", "Bournemouth": "BOU", "Brentford": "BRE", "Brighton": "BHA", "Chelsea": "CHE",
+    "Crystal Palace": "CRY", "Everton": "EVE", "Fulham": "FUL", "Liverpool": "LIV", "Manchester City": "MCI", "Manchester United": "MUN",
+    "Newcastle": "NEW", "Nottingham Forest": "NFO", "Spurs": "TOT", "Tottenham": "TOT", "West Ham": "WHU", "Wolves": "WOL",
+    "Leeds": "LEE", "Burnley": "BUR", "Sunderland": "SUN", "Hull": "HUL", "Ipswich": "IPS" };
+  function supports(t) {
+    const fav = ((window.MATER_LEAGUE && window.MATER_LEAGUE.favourites) || {})[t.manager.toLowerCase()];
+    if (!fav) return "";
+    const abbr = EPL_ABBR[fav];
+    const p = abbr && Object.values(state.players).find((x) => x.c === abbr && x.t);
+    return `<span class="badge badge--fav">${p ? clubLogo(p.t) : ""}Supports ${esc(fav)}</span>`;
+  }
   const clubText = (t) => t.name + (t.prTag ? " " + EMBLEM[t.prTag][0] : ""); // plain text (dropdowns)
 
   // ---------- build model ----------
@@ -423,12 +435,23 @@
       return ok;
     });
   }
+  // a club's league score in a given week (from matchups.csv), or null if not logged yet
+  function weekScore(id, week) {
+    const m = state.results.find((x) => x.week === week && (x.home === id || x.away === id));
+    return m ? (m.home === id ? m.homePts : m.awayPts) : null;
+  }
+  // Cup legs are one "marquee" tie per gameweek, scored on each club's league score that week.
+  // Typed scores in cup.csv win; otherwise they're filled from matchups.csv once that week is in.
   function loadCupRows(rows) {
-    return rows.map((r) => ({
-      round: r.round, leg: +r.leg || 1, week: numOrNull(r.week),
-      a: rosterOf(r.home), b: rosterOf(r.away), aPts: numOrNull(r.home_pts) ?? 0, bPts: numOrNull(r.away_pts) ?? 0,
-      played: r.home_pts !== "" && r.away_pts !== "",
-    }));
+    const seen = {};
+    return rows.map((r) => {
+      const key = `${r.round}|${r.leg}`;
+      const tie = (seen[key] = (seen[key] || 0) + 1);
+      const a = rosterOf(r.home), b = rosterOf(r.away), week = numOrNull(r.week);
+      let aPts = numOrNull(r.home_pts), bPts = numOrNull(r.away_pts);
+      if (a && b && week && aPts == null && bPts == null) { aPts = weekScore(a, week); bPts = weekScore(b, week); }
+      return { round: r.round, leg: +r.leg || 1, week, tie, a, b, aPts: aPts ?? 0, bPts: bPts ?? 0, played: aPts != null && bPts != null };
+    });
   }
   function h2h(a, b) {
     const games = state.results.filter((m) => (m.home === a && m.away === b) || (m.home === b && m.away === a));
@@ -650,7 +673,7 @@
         <div class="cp__id">
           <h3>${club(t)}</h3>
           <p>Managed by ${esc(t.manager)} · ${ordinal(t.pos)} place <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></p>
-          <p class="cp__badges">${cupBadge}${t.derby ? `<span class="badge badge--derby">${esc(t.derby.name)}</span>` : ""}</p>
+          <p class="cp__badges">${cupBadge}${t.derby ? `<span class="badge badge--derby">${esc(t.derby.name)}</span>` : ""}${supports(t)}</p>
         </div>
         <button class="cp__close" type="button" aria-label="Close club profile"><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
       </div>
@@ -890,6 +913,8 @@
     const hot = streakLeader();
     if (hot) items.push(`${club(hot)} on a ${esc(hot.streak)} streak`);
     state.derbies.forEach((d) => items.push(`${esc(d.name)}: ${esc(derbyVerdict(d).text)}`));
+    const nextCup = (state.cupRows || []).find((r) => r.week >= state.week && !r.played);
+    if (nextCup) items.push(`McQueen Cup: ${esc(nextCup.round.replace(/s$/, ""))} ${nextCup.round === "Final" ? "" : nextCup.tie + " "}leg ${nextCup.leg} is the Gameweek ${nextCup.week} marquee`);
     items.push("Site in development: matchups &amp; the McQueen Cup coming soon");
     // two identical copies so the -50% marquee loop is seamless; the copy is hidden from screen readers
     $("#ticker").innerHTML = items.map((s) => `<span>${s}</span>`).join("") + items.map((s) => `<span aria-hidden="true">${s}</span>`).join("");
@@ -1232,7 +1257,29 @@
         <span class="tie__agg">${num(t.agg[id])}</span>${t.winner === id ? CHECK : ""}</div>`).join("")}
       <p class="tie__meta">${meta}</p></div>`;
   }
+  // ---- cup calendar: every marquee leg, gameweek by gameweek ----
+  const ROUND_SHORT = { Quarterfinals: "QF", Semifinals: "SF", Final: "Final" };
+  function renderCupCalendar() {
+    const el = $("#cupCal");
+    if (!el) return;
+    const rows = [...(state.cupRows || [])].sort((x, y) => x.week - y.week);
+    const next = rows.find((r) => !r.played && r.week >= state.week);
+    el.innerHTML = rows.map((r) => {
+      const label = r.round === "Final" ? `Final · Leg ${r.leg}` : `${ROUND_SHORT[r.round] || r.round}${r.tie} · Leg ${r.leg}`;
+      const side = (id, pts, won) => id
+        ? `<span class="cal__club${won ? " is-win" : ""}">${crest(state.byRoster[id])}<b>${clubById(id)}</b>${r.played ? `<em>${num(pts)}</em>` : ""}</span>`
+        : `<span class="cal__club is-tbd"><span class="tie__crest"></span><b>To be drawn</b></span>`;
+      const status = r.played ? "Played" : r === next ? "Next up" : r.week < state.week ? "Awaiting score" : "Upcoming";
+      return `<li class="cal__row${r === next ? " is-next" : ""}${r.played ? " is-played" : ""}">
+        <span class="cal__gw"><small>Gameweek</small><b>${r.week}</b></span>
+        <span class="cal__label">${label}<small>${status}</small></span>
+        <span class="cal__match">${side(r.a, r.aPts, r.played && r.aPts > r.bPts)}<i>vs</i>${side(r.b, r.bPts, r.played && r.bPts > r.aPts)}</span>
+      </li>`;
+    }).join("");
+  }
+
   function renderCup() {
+    renderCupCalendar();
     if (!$("#bracket")) return;
     const last = state.cupLevels.length - 1;
     $("#bracket").innerHTML = state.cupLevels.map((lv, li) => {

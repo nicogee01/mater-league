@@ -8,7 +8,8 @@
     - both usernames are managers in the league and nobody plays twice in a week
     - the result (W/L/D) matches Sleeper's week-by-week record for BOTH teams
   Once every scored gameweek is in the file it also confirms each club's
-  season points for / against match Sleeper to the cent.
+  season points for / against (and, when filled in, best lineups vs Sleeper's
+  "max points") match Sleeper to the cent.
 
   Exit code 1 if anything is wrong. Needs Node 18+ (built-in fetch).
 */
@@ -49,7 +50,8 @@ async function main() {
       record: (r.metadata && r.metadata.record) || "",
       pf: money((s.fpts || 0) + (s.fpts_decimal || 0) / 100),
       pa: money((s.fpts_against || 0) + (s.fpts_against_decimal || 0) / 100),
-      sumFor: 0, sumAgainst: 0, weeks: new Set(),
+      pp: money((s.ppts || 0) + (s.ppts_decimal || 0) / 100),   // Sleeper "max points" = sum of best lineups
+      sumFor: 0, sumAgainst: 0, sumBest: 0, bestRows: 0, weeks: new Set(),
     };
   }
 
@@ -78,6 +80,9 @@ async function main() {
       if (sleeper && sleeper !== res(mine, theirs)) bad(row, `${T.user} ${res(mine, theirs) === "W" ? "won" : "lost"} here, but Sleeper has a ${sleeper} for them in GW${wk}. Scores may be swapped or misheard.`);
       T.sumFor = money(T.sumFor + mine); T.sumAgainst = money(T.sumAgainst + theirs);
     }
+    for (const [T, best] of [[H, row.home_best], [A, row.away_best]]) {
+      if (best !== "" && best !== undefined && !isNaN(+best)) { T.sumBest = money(T.sumBest + +best); T.bestRows++; }
+    }
   }
 
   // season totals only line up once every scored week is present
@@ -87,6 +92,8 @@ async function main() {
     for (const T of Object.values(team)) {
       if (Math.abs(T.sumFor - T.pf) > 0.011) problems.push(`${T.user}: points for add up to ${T.sumFor}, Sleeper says ${T.pf}`);
       if (Math.abs(T.sumAgainst - T.pa) > 0.011) problems.push(`${T.user}: points against add up to ${T.sumAgainst}, Sleeper says ${T.pa}`);
+      // best lineups are optional, but when every week has one they must add up to Sleeper's max points
+      if (T.bestRows === T.weeks.size && Math.abs(T.sumBest - T.pp) > 0.011) problems.push(`${T.user}: best lineups add up to ${T.sumBest}, Sleeper's max points is ${T.pp}`);
     }
   }
 

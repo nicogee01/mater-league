@@ -632,6 +632,31 @@ button { cursor: pointer; touch-action: manipulation; }
 .tie__row.is-out { opacity: 0.55; }
 .tie__meta { margin: 4px 8px 4px; font-size: 13px; color: var(--faint); }
 
+/* ---- marquee calendar ---- */
+.cal { margin-top: var(--s8); }
+.cal .subhead { font-size: clamp(32px, 4vw, 44px); margin: 0; }
+.cal__list { list-style: none; margin: var(--s4) 0 0; padding: 0; display: grid; gap: 6px; }
+.cal__row { display: grid; grid-template-columns: 84px minmax(120px, 170px) minmax(0, 1fr); gap: var(--s4); align-items: center;
+  padding: 10px var(--s4); border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.cal__row.is-next { border: 2px solid #b08a3e; background: #fff; }
+.cal__row.is-played { opacity: 0.85; }
+.cal__gw { display: grid; text-align: center; }
+.cal__gw small { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.cal__gw b { font-family: var(--f-display); font-weight: 400; font-size: 30px; line-height: 1; }
+.cal__label { display: grid; font-family: var(--f-label); font-weight: 700; font-size: 17px; letter-spacing: 0.06em; text-transform: uppercase; }
+.cal__label small { font-family: var(--f-body); font-weight: 600; font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--faint); }
+.cal__row.is-next .cal__label small { color: var(--accent); }
+.cal__match { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; }
+.cal__match > i { font-style: normal; font-family: var(--f-display); color: var(--faint); }
+.cal__club { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.cal__club .crest, .cal__club .tie__crest { width: 28px; height: 28px; flex: none; }
+.cal__club b { font-weight: 600; overflow-wrap: break-word; }
+.cal__club.is-tbd b { color: var(--faint); font-weight: 500; }
+.cal__club em { font-style: normal; font-family: var(--f-display); font-size: 18px; }
+.cal__club.is-win b, .cal__club.is-win em { color: var(--pos); font-weight: 700; }
+.badge--fav { display: inline-flex; align-items: center; gap: 5px; color: #fbf7ee; }
+.badge--fav .club-logo { width: 14px; height: 14px; }
+
 /* ================= VICTORY ROAD ================= */
 .vr { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s5); }
 .vr__label { margin: 0 0 var(--s4); font-family: var(--f-label); font-weight: 700; font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
@@ -1400,6 +1425,9 @@ button { cursor: pointer; touch-action: manipulation; }
   .pr-card__id .form { margin-left: 0; }
   .pr-stat { min-width: 64px; padding: 4px 8px; }
   .pr-login, .pr-login input { width: 100%; }
+  .cal__row { grid-template-columns: 56px minmax(0, 1fr); gap: 6px var(--s3); padding: 10px var(--s3); }
+  .cal__gw b { font-size: 24px; }
+  .cal__match { grid-column: 1 / -1; }
   .page-hero { padding-left: var(--s4); padding-right: var(--s4); padding-top: calc(var(--nav-h) + var(--s6)); }
   .home-card { padding: var(--s4); }
   .home-card__head { flex-wrap: wrap; }
