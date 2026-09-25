@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=11" />
+  <link rel="stylesheet" href="css/styles.css?v=14" />
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -58,20 +58,9 @@
 
   <!-- ===== HERO ===== -->
   <section class="hero" id="top" aria-labelledby="heroTitle">
-    <div class="hero__stage" id="stage" aria-hidden="true">
-      <div class="hero__sky"></div>
-      <div class="hero__crowd"></div>
-      <div class="hero__beam hero__beam--l"></div>
-      <div class="hero__beam hero__beam--r"></div>
-      <div class="hero__lights">
-        <span></span><span></span><span></span><span></span><span></span><span></span>
-      </div>
-      <div class="hero__pitch">
-        <div class="hero__stripes"></div>
-        <div class="hero__lines"></div>
-      </div>
-      <div class="hero__runners" id="runners"></div>
-      <canvas class="hero__turf" id="turf"></canvas>
+    <div class="hero__stage" aria-hidden="true">
+      <video class="hero__video" id="heroVideo" muted loop playsinline preload="auto" poster="media/hero-match.jpg"></video>
+      <div class="hero__grade"></div>
       <div class="hero__vignette"></div>
     </div>
 
@@ -117,7 +106,7 @@
 
     <button class="motion-toggle" id="motionToggle" aria-pressed="false">
       <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="3" height="10" /><rect x="9" y="3" width="3" height="10" /></svg>
-      <span>Pause motion</span>
+      <span>Pause video</span>
     </button>
   </section>
 
@@ -321,8 +310,8 @@
     </defs>
   </svg>
 
-  <script src="data/results.js?v=11"></script>
-  <script src="js/motion.js?v=11"></script>
-  <script src="js/app.js?v=11"></script>
+  <script src="data/results.js?v=14"></script>
+  <script src="js/motion.js?v=14"></script>
+  <script src="js/app.js?v=14"></script>
 </body>
 </html>

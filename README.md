@@ -57,11 +57,11 @@ club's points-for/against week to week (`node scripts/snapshot.mjs`).
 ```
 index.html            page structure
 css/styles.css        design tokens, layout, animations
-js/motion.js          hero animation: running players, ball, turf, nav ball
+js/motion.js          hero video (wide vs phone clip), pause button, nav ball
 js/app.js             Sleeper data → every section
 data/results.js       logged matchups, cup, honours
 scripts/snapshot.mjs  weekly result logger (Node 18+)
-media/                hero videos, images and animations
+media/                hero videos + posters (originals/ is git-ignored)
 ```
 
 ## Tweaks

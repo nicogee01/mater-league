@@ -148,90 +148,31 @@ button { cursor: pointer; touch-action: manipulation; }
   background: var(--ink);
 }
 .hero__stage { position: absolute; inset: 0; z-index: var(--z-stage); overflow: hidden; }
-.hero__sky {
+.hero__video {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(1.05) contrast(1.1) brightness(0.9);
+  background: var(--ink);
+}
+/* tints the footage toward league purple so the neon accents sit on it */
+.hero__grade {
   position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(55, 0, 60, 0.35), rgba(55, 0, 60, 0.15) 60%, rgba(14, 0, 19, 0.5));
+  mix-blend-mode: multiply;
+}
+.hero__grade::before {
+  content: ""; position: absolute; inset: 0; mix-blend-mode: screen;
   background:
-    radial-gradient(60% 50% at 78% 18%, rgba(4, 245, 255, 0.28), transparent 70%),
-    radial-gradient(55% 45% at 12% 8%, rgba(255, 40, 130, 0.28), transparent 70%),
-    linear-gradient(180deg, #1a0020 0%, #37003c 46%, #150019 62%);
+    radial-gradient(55% 50% at 88% 10%, rgba(4, 245, 255, 0.28), transparent 70%),
+    radial-gradient(50% 45% at 8% 0%, rgba(255, 40, 130, 0.28), transparent 70%);
 }
-/* crowd: a field of tiny camera-flash dots in the stands */
-.hero__crowd {
-  position: absolute; left: -5%; right: -5%; top: 18%; height: 34%;
-  background-image:
-    radial-gradient(circle, rgba(255,255,255,0.55) 0.8px, transparent 1.4px),
-    radial-gradient(circle, rgba(255,255,255,0.25) 0.8px, transparent 1.4px);
-  background-size: 14px 11px, 9px 7px;
-  background-position: 0 0, 4px 3px;
-  mask-image: linear-gradient(180deg, transparent, #000 25%, #000 80%, transparent);
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 25%, #000 80%, transparent);
-  opacity: 0.55;
-  animation: crowd-flicker 3.2s steps(2) infinite;
-}
-.hero__lights { position: absolute; left: 0; right: 0; top: 11%; display: flex; justify-content: space-around; padding: 0 6%; }
-.hero__lights span {
-  width: 54px; height: 10px; border-radius: 4px;
-  background: #fff;
-  box-shadow: 0 0 18px 6px rgba(255,255,255,0.8), 0 0 60px 20px rgba(4,245,255,0.35);
-  animation: light-pulse 4s ease-in-out infinite;
-}
-.hero__lights span:nth-child(2n) { animation-delay: -1.3s; box-shadow: 0 0 18px 6px rgba(255,255,255,0.8), 0 0 60px 20px rgba(255,40,130,0.35); }
-.hero__lights span:nth-child(3n) { animation-delay: -2.6s; }
-.hero__beam {
-  position: absolute; top: 10%; width: 46%; height: 90%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 75%);
-  filter: blur(18px); mix-blend-mode: screen; opacity: 0.55;
-  transform-origin: top center;
-}
-.hero__beam--l { left: 4%; clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%); animation: beam-sway-l 9s ease-in-out infinite; }
-.hero__beam--r { right: 4%; clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%); animation: beam-sway-r 11s ease-in-out infinite; }
-
-.hero__pitch {
-  position: absolute; left: -40%; right: -40%; top: 54%; height: 110%;
-  transform: perspective(700px) rotateX(64deg);
-  transform-origin: top center;
-}
-.hero__stripes {
-  position: absolute; inset: 0;
-  background:
-    repeating-linear-gradient(90deg, #0b5a2c 0 90px, #0e6b35 90px 180px);
-  animation: pitch-scroll 1.6s linear infinite;
-}
-.hero__lines {
-  position: absolute; inset: 0;
-  background:
-    linear-gradient(90deg, transparent calc(50% - 2px), rgba(255,255,255,0.75) calc(50% - 2px), rgba(255,255,255,0.75) calc(50% + 2px), transparent calc(50% + 2px)) 0 0 / 100% 100% no-repeat,
-    radial-gradient(circle at 50% 22%, transparent 118px, rgba(255,255,255,0.75) 119px, rgba(255,255,255,0.75) 123px, transparent 124px);
-  opacity: 0.55;
-  animation: lines-scroll 16s linear infinite;
-}
-.hero__pitch::after {
-  content: ""; position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(55,0,60,0.65), rgba(20,0,26,0.2) 40%, rgba(20,0,26,0.85));
-}
-.hero__runners { position: absolute; inset: 0; }
-.hero__turf { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero__grade::after { content: ""; position: absolute; inset: 0; background: rgba(90, 15, 99, 0.45); mix-blend-mode: color; }
 .hero__vignette {
   position: absolute; inset: 0; pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(14,0,19,0.92) 0%, rgba(14,0,19,0.55) 38%, rgba(14,0,19,0) 65%),
+    linear-gradient(90deg, rgba(14,0,19,0.85) 0%, rgba(14,0,19,0.45) 36%, rgba(14,0,19,0) 60%),
     linear-gradient(0deg, var(--ink) 0%, rgba(14,0,19,0) 30%),
-    radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.6));
+    radial-gradient(120% 90% at 50% 50%, transparent 60%, rgba(0,0,0,0.45));
 }
-
-/* running player */
-.runner { position: absolute; bottom: 0; left: 0; will-change: transform; }
-.runner svg { width: 100%; height: 100%; overflow: visible; display: block; }
-.runner .rig { animation: bob var(--stride) linear infinite; transform-origin: 50px 90px; }
-.runner .thigh { animation: thigh var(--stride) linear infinite; transform-origin: 50px 92px; }
-.runner .shin { animation: shin var(--stride) linear infinite; transform-origin: 50px 120px; }
-.runner .arm { animation: arm var(--stride) linear infinite; transform-origin: 56px 52px; }
-.runner .leg-b, .runner .arm-b { animation-delay: calc(var(--stride) / -2); }
-.runner .leg-b .shin { animation-delay: calc(var(--stride) / -2); }
-.runner .ball-rig { animation: dribble calc(var(--stride) * 2) var(--ease-out) infinite; transform-origin: 110px 172px; }
-.runner .ball-spin { animation: spin 0.55s linear infinite; transform-origin: 20px 20px; }
-.runner--cross { animation: cross var(--dur) linear infinite; }
-.runner--hero { animation: hero-sway 7s ease-in-out infinite; }
 
 .hero__content { min-width: 0; position: relative; z-index: var(--z-content); max-width: var(--maxw); width: 100%; margin: 0 auto; }
 .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 0 0 rgba(255,40,130,0.7); animation: ping 1.8s var(--ease-out) infinite; }
@@ -293,8 +234,6 @@ button { cursor: pointer; touch-action: manipulation; }
 .motion-toggle svg { width: 12px; height: 12px; fill: currentColor; }
 
 /* paused state stops every decorative animation in the stage */
-.is-paused .hero__stage *, .is-paused .hero__stage *::after,
-.hero.is-offscreen .hero__stage *, .hero.is-offscreen .hero__stage *::after { animation-play-state: paused !important; }
 .is-paused .brand__ball { animation-play-state: paused; }
 
 /* ================= TICKER ================= */
@@ -618,44 +557,6 @@ button { cursor: pointer; touch-action: manipulation; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(255,40,130,0.7); } 100% { box-shadow: 0 0 0 10px rgba(255,40,130,0); } }
-@keyframes crowd-flicker { 0% { background-position: 0 0, 4px 3px; } 100% { background-position: 7px 5px, 0 0; } }
-@keyframes light-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.75; } }
-@keyframes beam-sway-l { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(4deg); } }
-@keyframes beam-sway-r { 0%, 100% { transform: rotate(8deg); } 50% { transform: rotate(-5deg); } }
-@keyframes pitch-scroll { to { background-position: -180px 0; } }
-@keyframes lines-scroll { from { transform: translateX(60%); } to { transform: translateX(-60%); } }
-@keyframes cross { from { transform: translateX(var(--from)) scale(var(--s)); } to { transform: translateX(var(--to)) scale(var(--s)); } }
-@keyframes hero-sway { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-3vw); } }
-
-/* run cycle — one stride = --stride */
-@keyframes bob {
-  0%, 50%, 100% { transform: translateY(0); }
-  25%, 75% { transform: translateY(-6px); }
-}
-@keyframes thigh {
-  0% { transform: rotate(-42deg); }
-  50% { transform: rotate(34deg); }
-  100% { transform: rotate(-42deg); }
-}
-@keyframes shin {
-  0% { transform: rotate(18deg); }
-  30% { transform: rotate(8deg); }
-  50% { transform: rotate(40deg); }
-  72% { transform: rotate(118deg); }
-  100% { transform: rotate(18deg); }
-}
-@keyframes arm {
-  0% { transform: rotate(38deg); }
-  50% { transform: rotate(-48deg); }
-  100% { transform: rotate(38deg); }
-}
-@keyframes dribble {
-  0%, 100% { transform: translate(0, 0); }
-  20% { transform: translate(9px, -10px); }
-  45% { transform: translate(15px, 0); }
-  70% { transform: translate(8px, -4px); }
-  85% { transform: translate(2px, 0); }
-}
 
 /* ================= IN DEVELOPMENT SIGN ================= */
 .dev-sign {
@@ -883,7 +784,7 @@ button { cursor: pointer; touch-action: manipulation; }
   .lc__name { grid-column: 1 / -1; }
   .vr { grid-template-columns: 1fr; }
   .hero { align-content: end; padding-bottom: var(--s8); }
-  .hero__vignette { background: linear-gradient(0deg, var(--ink) 0%, rgba(14,0,19,0.75) 45%, rgba(14,0,19,0.15) 80%), radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.6)); }
+  .hero__vignette { background: linear-gradient(0deg, var(--ink) 0%, rgba(14,0,19,0.7) 30%, rgba(14,0,19,0.25) 55%, rgba(14,0,19,0.1) 100%); }
   .versus { grid-template-columns: 1fr; gap: var(--s4); }
   .versus__mid { order: -1; }
   .cp__kpis { grid-template-columns: repeat(2, 1fr); }
