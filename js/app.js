@@ -1,6 +1,6 @@
 /* =========================================================
    The Mater League — live data from the Sleeper API,
-   plus logged matchups / cup / honours from data/results.js
+   plus match results from data/matchups.csv + data/cup.csv
    ========================================================= */
 (function () {
   const LEAGUE_ID = "1390750210698780672";
@@ -478,7 +478,7 @@
     if (!state.hasResults) {
       const empty = $("#h2hEmpty");
       empty.hidden = false;
-      empty.innerHTML = `Gold cells are derbies. Sleeper doesn't publish soccer matchups publicly, so head-to-heads fill in as results are logged in <code>data/results.js</code>.`;
+      empty.innerHTML = `Gold cells are derbies. Sleeper doesn't publish soccer matchups publicly, so head-to-heads fill in as results are added to <code>data/matchups.csv</code>.`;
     }
   }
 
