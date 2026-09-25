@@ -3,3 +3,6 @@ media/originals/
 
 # Club voting codes and the SQL that loads them (never publish)
 private/
+
+# screen recordings of Sleeper matchups (source for data/lineups.csv)
+data/Matchups Vids/
