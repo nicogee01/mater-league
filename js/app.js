@@ -1278,6 +1278,37 @@
     }).join("");
   }
 
+  // bracket connector lines: each pair of ties joins the tie it feeds in the next round
+  function drawBracketLines() {
+    const br = $("#bracket");
+    if (!br) return;
+    const old = $(".bracket__lines", br);
+    if (old) old.remove();
+    const box = br.getBoundingClientRect();
+    const rect = (el) => {
+      const r = el.getBoundingClientRect();
+      return { l: r.left - box.left + br.scrollLeft, r: r.right - box.left + br.scrollLeft, m: (r.top + r.bottom) / 2 - box.top + br.scrollTop };
+    };
+    const rounds = $$(".bracket__round", br).map((rd) => {
+      const stage = $(".final-stage", rd);
+      return $$(".tie", rd).map((t) => ({ el: t, edge: stage ? rect(stage).l : null, winner: t.querySelector(".tie__row.is-win") }));
+    });
+    let d = "", gold = "";
+    for (let i = 0; i < rounds.length - 1; i++) {
+      rounds[i + 1].forEach((next, k) => {
+        const to = rect(next.el), toX = next.edge != null ? next.edge : to.l;
+        [rounds[i][2 * k], rounds[i][2 * k + 1]].filter(Boolean).forEach((from) => {
+          const a = rect(from.el), mid = (a.r + toX) / 2;
+          const path = `M${a.r} ${a.m}H${mid}V${to.m}H${toX}`;
+          from.winner ? (gold += path) : (d += path);
+        });
+      });
+    }
+    br.insertAdjacentHTML("afterbegin", `<svg class="bracket__lines" width="${br.scrollWidth}" height="${br.scrollHeight}" aria-hidden="true"><path d="${d}"/><path class="is-through" d="${gold}"/></svg>`);
+  }
+  let bracketTimer;
+  window.addEventListener("resize", () => { clearTimeout(bracketTimer); bracketTimer = setTimeout(drawBracketLines, 150); });
+
   function renderCup() {
     renderCupCalendar();
     if (!$("#bracket")) return;
@@ -1304,6 +1335,8 @@
         <div class="bracket__ties">${lv.ties.map(tieCard).join("")}</div>
       </div><div class="bracket__link" aria-hidden="true"></div>`;
     }).join("");
+    requestAnimationFrame(drawBracketLines);
+    if (document.fonts) document.fonts.ready.then(drawBracketLines);
   }
 
   // ---------- VICTORY ROAD ----------
