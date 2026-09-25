@@ -18,7 +18,8 @@
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const num = (n, d = 1) => Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+  // scores move in quarter-points, so keep up to two decimals (541.0, 79.75); d = 0 rounds to whole numbers
+  const num = (n, d = 1) => Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d === 0 ? 0 : Math.max(d, 2) });
   const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const state = {
