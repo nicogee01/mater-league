@@ -716,7 +716,7 @@ button { cursor: pointer; touch-action: manipulation; }
 .mu-p.is-star .mu-p__name small { color: var(--gold); font-weight: 700; }
 
 /* ---- player drawer ---- */
-.pd { width: min(560px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 32px)); padding: 0; border: 1px solid var(--line-2); border-radius: 20px; background: var(--surface); color: var(--text); box-shadow: 0 30px 80px -20px rgba(11,31,58,0.55); }
+.pd { width: min(780px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 32px)); padding: 0; border: 1px solid var(--line-2); border-radius: 20px; background: var(--surface); color: var(--text); box-shadow: 0 30px 80px -20px rgba(11,31,58,0.55); }
 .pd::backdrop { background: rgba(11, 31, 58, 0.55); }
 .pd__close { position: absolute; top: 10px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--surface); font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; }
 .pd__close:hover { color: var(--text); border-color: var(--ink); }
@@ -732,7 +732,16 @@ button { cursor: pointer; touch-action: manipulation; }
 .pd__tiles .stat-tile { padding: var(--s3); }
 .pd__tiles .stat-tile__v { font-size: 30px; }
 .pd__sub { margin: var(--s5) 0 var(--s2); font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.pd__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2) var(--s3); margin: var(--s5) 0 var(--s2); }
+.pd__bar .pd__sub { margin: 0; }
+.pd__bar .chip { min-height: 32px; }
 .pd__table td, .pd__table th { padding: 7px 8px; }
+.pd__table thead th { white-space: nowrap; }
+.pd__table abbr { text-decoration: none; }
+.pd__table td.is-zero { color: var(--faint); opacity: 0.6; }
+.pd__table td.is-neg { color: var(--neg); }
+.pd__table th[scope="row"], .pd__table thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+.pd__table td.pd__dnp { text-align: left; color: var(--faint); font-style: italic; }
 .pd__table thead th:last-child { text-align: left; }
 .pd__table .pd__stats { text-align: left; white-space: normal; font-size: 13px; color: var(--muted); min-width: 160px; }
 .pd__table tr.is-dnp td, .pd__table tr.is-dnp th { color: var(--faint); }

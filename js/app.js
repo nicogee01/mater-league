@@ -1428,8 +1428,14 @@
   }
 
   // ---- player drawer: recent gameweeks from Sleeper's weekly stats ----
-  const STAT_LINE = [["g", "G"], ["at", "A"], ["sot", "SOT"], ["sat", "Shots"], ["kp", "KP"], ["tkw", "TKW"], ["int", "INT"], ["clr", "CLR"],
-    ["bs", "BS"], ["aer", "AER"], ["cs", "CS"], ["sv", "SV"], ["ga", "GA"], ["yc", "YC"], ["rc", "RC"], ["og", "OG"]];
+  // One column per stat. "Stats" shows the raw count (1 goal = 1); "Fantasy points" shows what that stat
+  // was worth under this league's scoring for the position he played (a midfielder's goal = 9), so a
+  // row's columns plus "Other" add up to that gameweek's points.
+  const STAT_COLS = [["g", "G", "Goals"], ["at", "A", "Assists"], ["sot", "SOT", "Shots on target"], ["kp", "KP", "Key passes"],
+    ["tkw", "TKW", "Tackles won"], ["int", "INT", "Interceptions"], ["aer", "AER", "Aerial duels won"], ["clr", "CLR", "Clearances"],
+    ["bs", "BS", "Blocked shots"], ["cs", "CS", "Clean sheets"], ["sv", "SV", "Saves"], ["ga", "GA", "Goals conceded"],
+    ["dis", "DIS", "Times dispossessed"], ["yc", "YC", "Yellow cards"], ["rc", "RC", "Red cards"]];
+  const pd = { mode: (() => { try { return localStorage.getItem("nym-pd-mode") || "stats"; } catch (_) { return "stats"; } })(), rows: null };
   let weeklyStats = null;
   function loadWeeklyStats() {
     if (weeklyStats) return weeklyStats;
@@ -1440,11 +1446,51 @@
     return weeklyStats;
   }
   const scorePts = (line) => { const sc = state.league.scoring_settings || {}; let p = 0; for (const [k, v] of Object.entries(line || {})) if (sc[k] !== undefined && typeof v === "number") p += v * sc[k]; return Math.round(p * 100) / 100; };
+  // what one stat was worth: the line carries position-scoped keys (pos_m_g, pos_d_cs, ...) that the league scores
+  function statPts(line, key) {
+    const sc = state.league.scoring_settings || {};
+    const pre = Object.keys(line || {}).map((k) => k.match(/^pos_(gk|d|m|f)_/)).find(Boolean);
+    if (!pre) return 0;
+    const k = pre[0] + key, v = line[k] ?? line[key] ?? 0;
+    return (sc[k] || 0) * v;
+  }
+  function renderPlayerTable() {
+    const box = $("#pdTable");
+    if (!box || !pd.rows) return;
+    const pts = pd.mode === "pts";
+    const played = pd.rows.filter((r) => r.line && r.line.min > 0);
+    // hide columns this player never registered
+    const cols = STAT_COLS.filter(([k]) => played.some((r) => (pts ? statPts(r.line, k) : r.line[k] || 0) !== 0));
+    const cell = (r, k) => {
+      const v = pts ? statPts(r.line, k) : r.line[k] || 0;
+      return `<td class="${v === 0 ? "is-zero" : v < 0 ? "is-neg" : ""}">${v === 0 ? "·" : pts ? num(v) : v}</td>`;
+    };
+    const other = (r) => Math.round((r.pts - cols.reduce((a, [k]) => a + statPts(r.line, k), 0)) * 100) / 100;
+    const showOther = pts && played.some((r) => other(r) !== 0);
+    const span = cols.length + (showOther ? 1 : 0);
+    box.innerHTML = `<table class="data-table pd__table">
+      <caption class="visually-hidden">${pts ? "Fantasy points by stat" : "Stats"} per gameweek</caption>
+      <thead><tr><th scope="col">GW</th><th scope="col">Min</th><th scope="col">Pts</th><th scope="col">Proj</th>
+        ${cols.map(([, ab, full]) => `<th scope="col" title="${full}"><abbr title="${full}">${ab}</abbr></th>`).join("")}
+        ${showOther ? `<th scope="col" title="Everything else the league scores: penalties, crosses, successful dribbles, high claims and more">Other</th>` : ""}</tr></thead>
+      <tbody>${pd.rows.map((r) => {
+        const on = r.line && r.line.min > 0;
+        return `<tr${on ? "" : ' class="is-dnp"'}>
+          <th scope="row">GW${r.week}</th><td>${r.line ? r.line.min || 0 : 0}</td><td><b>${on ? num(r.pts) : "DNP"}</b></td>
+          <td>${r.proj != null ? num(r.proj) : "–"}</td>
+          ${on ? cols.map(([k]) => cell(r, k)).join("") + (showOther ? `<td class="${other(r) === 0 ? "is-zero" : other(r) < 0 ? "is-neg" : ""}">${other(r) === 0 ? "·" : num(other(r))}</td>` : "")
+            : `<td colspan="${Math.max(1, span)}" class="pd__dnp">Did not play</td>`}
+        </tr>`;
+      }).join("")}</tbody>
+    </table>`;
+    $$("#pdMode .chip").forEach((c) => { const on = c.dataset.mode === pd.mode; c.classList.toggle("is-active", on); c.setAttribute("aria-pressed", String(on)); });
+  }
   async function openPlayer(pid, fallbackName) {
     const dlg = $("#playerDlg");
     const p = state.players[pid] || {};
     const name = p.n || fallbackName || "Player";
     const owner = state.teams.find((t) => (t.players || []).includes(pid));
+    pd.rows = null;
     $("#playerDlgBody").innerHTML = `
       <header class="pd__head">
         <span class="pd__photo" data-photo="${esc(pid)}" aria-hidden="true"><span>${esc(initials(name))}</span></span>
@@ -1456,24 +1502,25 @@
     loadPhotos([pid], dlg);
     const weeks = await loadWeeklyStats();
     if (!dlg.open) return;
-    const rows = weeks.map(({ week, stats, proj }) => ({ week, line: stats[pid], pts: scorePts(stats[pid]), proj: proj[pid] ? scorePts(proj[pid]) : null }))
+    pd.rows = weeks.map(({ week, stats, proj }) => ({ week, line: stats[pid], pts: scorePts(stats[pid]), proj: proj[pid] ? scorePts(proj[pid]) : null }))
       .filter((r) => r.line || r.proj != null).reverse();
-    const played = rows.filter((r) => r.line && r.line.min > 0);
+    const played = pd.rows.filter((r) => r.line && r.line.min > 0);
     const total = played.reduce((a, r) => a + r.pts, 0);
-    const statTxt = (l) => STAT_LINE.filter(([k]) => l && l[k] > 0).map(([k, lab]) => `${l[k]} ${lab}`).join(", ") || "–";
     $(".pd__body", dlg).innerHTML = `
       <div class="pd__tiles">
         <div class="stat-tile"><span class="stat-tile__label">Season points</span><b class="stat-tile__v">${num(total)}</b></div>
         <div class="stat-tile"><span class="stat-tile__label">Per game</span><b class="stat-tile__v">${played.length ? num(total / played.length) : "–"}</b></div>
         <div class="stat-tile"><span class="stat-tile__label">Games played</span><b class="stat-tile__v">${played.length}</b></div>
       </div>
-      <h3 class="pd__sub">Recent gameweeks</h3>
-      ${rows.length ? `<div class="table-scroll"><table class="data-table pd__table">
-        <thead><tr><th scope="col">GW</th><th scope="col">Min</th><th scope="col">Pts</th><th scope="col">Proj</th><th scope="col">Stats</th></tr></thead>
-        <tbody>${rows.map((r) => `<tr${r.line && r.line.min > 0 ? "" : ' class="is-dnp"'}>
-          <th scope="row">GW${r.week}</th><td>${r.line ? r.line.min || 0 : 0}</td><td><b>${r.line && r.line.min > 0 ? num(r.pts) : "DNP"}</b></td>
-          <td>${r.proj != null ? num(r.proj) : "–"}</td><td class="pd__stats">${r.line && r.line.min > 0 ? statTxt(r.line) : "Did not play"}</td></tr>`).join("")}</tbody>
-      </table></div>` : `<p class="pending-note">No Premier League minutes recorded this season.</p>`}`;
+      <div class="pd__bar">
+        <h3 class="pd__sub">Gameweek by gameweek</h3>
+        <div class="filters" id="pdMode" role="group" aria-label="Show">
+          <button type="button" class="chip" data-mode="stats" aria-pressed="false">Stats</button>
+          <button type="button" class="chip" data-mode="pts" aria-pressed="false">Fantasy points</button>
+        </div>
+      </div>
+      ${pd.rows.length ? `<div class="table-scroll" id="pdTable"></div>` : `<p class="pending-note">No Premier League minutes recorded this season.</p>`}`;
+    renderPlayerTable();
   }
   document.addEventListener("click", (e) => {
     const wb = e.target.closest("#muWeeks .chip");
@@ -1488,6 +1535,8 @@
       if (open) paintMatchPhotos(card);
       return;
     }
+    const mb = e.target.closest("#pdMode .chip");
+    if (mb) { pd.mode = mb.dataset.mode; try { localStorage.setItem("nym-pd-mode", pd.mode); } catch (_) {} renderPlayerTable(); return; }
     const pb = e.target.closest(".mu-p__btn");
     if (pb) { openPlayer(pb.dataset.pid, $(".mu-p__name", pb).firstChild.textContent.trim()); return; }
     if (e.target.id === "playerDlg" || e.target.closest(".pd__close")) $("#playerDlg").close();
