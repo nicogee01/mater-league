@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=16" />
+  <link rel="stylesheet" href="css/styles.css?v=19" />
 </head>
 <body data-page="transfers">
   <main id="main">
@@ -23,20 +23,42 @@
     </header>
 
     <section class="section section--page" aria-label="Transfer window">
-      <div class="filters reveal" role="group" aria-label="Filter transfers">
+      <div class="market">
+      <div class="market__main">
+      <div class="filters reveal" id="transfers-filters" role="group" aria-label="Filter transfers">
         <button class="chip is-active" data-filter="all" aria-pressed="true">All</button>
         <button class="chip" data-filter="waiver" aria-pressed="false">Waivers</button>
         <button class="chip" data-filter="free_agent" aria-pressed="false">Free agents</button>
         <button class="chip" data-filter="trade" aria-pressed="false">Trades</button>
       </div>
-      <ol class="feed" id="feed"><li class="feed__item"><div class="skeleton"></div></li></ol>
-      <button class="btn-more" id="feedMore" hidden>Load more</button>
+      <div class="gw-groups" id="gwGroups"><div class="skeleton"></div></div>
+      </div>
+      <aside class="market__side" aria-label="Transfer market summary">
+        <section class="side-card reveal">
+          <h2 class="side-card__title">Window totals</h2>
+          <div class="mk-stats" id="mkTotals"></div>
+        </section>
+        <section class="side-card reveal">
+          <h2 class="side-card__title">FAAB remaining <small id="mkBudget"></small></h2>
+          <ol class="mk-list" id="mkFaab"></ol>
+        </section>
+        <section class="side-card reveal">
+          <h2 class="side-card__title">Biggest spenders</h2>
+          <ol class="mk-list" id="mkSpend"></ol>
+        </section>
+        <section class="side-card reveal">
+          <h2 class="side-card__title">Most active</h2>
+          <ol class="mk-list" id="mkBusy"></ol>
+        </section>
+      </aside>
+      </div>
     </section>
   </main>
 
-  <script src="js/layout.js?v=16"></script>
-  <script src="data/results.js?v=16"></script>
-  <script src="js/motion.js?v=16"></script>
-  <script src="js/app.js?v=16"></script>
+  <script src="js/layout.js?v=19"></script>
+  <script src="data/league.js?v=19"></script>
+  <script src="data/results.js?v=19"></script>
+  <script src="js/motion.js?v=19"></script>
+  <script src="js/app.js?v=19"></script>
 </body>
 </html>

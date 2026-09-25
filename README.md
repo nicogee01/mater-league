@@ -64,6 +64,7 @@ css/styles.css        "matchday programme" theme tokens at the top, then compone
 js/layout.js          shared nav + footer (edit PAGES here to add or rename a tab)
 js/motion.js          hero video, pause button, nav ball
 js/app.js             Sleeper data → whatever sections the current page has
+data/league.js        league lore: the four derbies (edit names, stories, pairings here)
 data/results.js       logged matchups, cup, honours
 scripts/snapshot.mjs  weekly result logger (Node 18+)
 media/                hero videos + posters (originals/ is git-ignored)
@@ -73,5 +74,6 @@ media/                hero videos + posters (originals/ is git-ignored)
 
 - **Remove the IN DEVELOPMENT sign:** delete the `<div class="dev-sign">` block in `index.html`.
 - **Colours:** use the tokens at the top of `css/styles.css` (paper, navy ink, programme red, old gold).
+- **Derbies:** edit `data/league.js`. Managers are matched by Sleeper username.
 - **Playoff line:** `PLAYOFF_SPOTS` in `js/app.js`.
 - **After edits:** bump the `?v=` number on the CSS/JS links in every `.html` page so browsers pick up the change.

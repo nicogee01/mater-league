@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=16" />
+  <link rel="stylesheet" href="css/styles.css?v=19" />
 </head>
 <body data-page="h2h">
   <main id="main">
@@ -23,7 +23,17 @@
     </header>
 
     <section class="section section--page" aria-label="Head-to-head">
-      <div class="versus reveal">
+      <div class="derby-days">
+        <div class="derby-days__head reveal">
+          <p class="eyebrow">Local rivalries</p>
+          <h2 class="subhead">Derby days</h2>
+          <p class="section__lede">Four rivalries with history behind them: family, brothers, hometown and long distance. Winning these counts double at home.</p>
+        </div>
+        <div class="derbies" id="derbies"></div>
+      </div>
+
+      <h2 class="subhead h2h-pick">Any two clubs</h2>
+      <div class="versus reveal" id="versus">
         <div class="versus__side">
           <label for="h2hA">Home</label>
           <select id="h2hA"></select>
@@ -52,9 +62,10 @@
     </section>
   </main>
 
-  <script src="js/layout.js?v=16"></script>
-  <script src="data/results.js?v=16"></script>
-  <script src="js/motion.js?v=16"></script>
-  <script src="js/app.js?v=16"></script>
+  <script src="js/layout.js?v=19"></script>
+  <script src="data/league.js?v=19"></script>
+  <script src="data/results.js?v=19"></script>
+  <script src="js/motion.js?v=19"></script>
+  <script src="js/app.js?v=19"></script>
 </body>
 </html>

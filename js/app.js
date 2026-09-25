@@ -23,7 +23,7 @@
 
   const state = {
     league: null, teams: [], byRoster: {}, players: {}, txns: [], week: 0,
-    results: [], hasResults: false, projections: {}, seasonPts: {}, rankHistory: null, cupLevels: [],
+    results: [], hasResults: false, derbies: [], projections: {}, seasonPts: {}, rankHistory: null, cupLevels: [],
   };
 
   // ---------- fetch helpers ----------
@@ -369,16 +369,76 @@
     const body = T.map((row) => `<tr><th scope="row">${crest(row)}${esc(row.name)}</th>${T.map((col) => {
       if (row === col) return `<td class="self" aria-label="Same club"></td>`;
       const r = h2h(row.rosterId, col.rosterId);
-      if (!r.games.length) return `<td class="even">–</td>`;
+      const derby = row.derby && row.derby === col.derby;
+      const d = derby ? ` is-derby" title="${esc(row.derby.name)}` : "";
+      const dl = derby ? `<span class="visually-hidden"> (${esc(row.derby.name)})</span>` : "";
+      if (!r.games.length) return `<td class="even${d}">–${dl}</td>`;
       const c = r.wa > r.wb ? "up" : r.wa < r.wb ? "down" : "even";
-      return `<td class="${c}">${r.wa}–${r.wb}${r.dr ? `–${r.dr}` : ""}</td>`;
+      return `<td class="${c}${d}">${r.wa}–${r.wb}${r.dr ? `–${r.dr}` : ""}${dl}</td>`;
     }).join("")}</tr>`).join("");
     $("#h2hMatrix").innerHTML = head + `<tbody>${body}</tbody>`;
     if (!state.hasResults) {
       const empty = $("#h2hEmpty");
       empty.hidden = false;
-      empty.innerHTML = `Sleeper doesn't publish soccer matchups publicly, so head-to-heads fill in as results are logged in <code>data/results.js</code>.`;
+      empty.innerHTML = `Gold cells are derbies. Sleeper doesn't publish soccer matchups publicly, so head-to-heads fill in as results are logged in <code>data/results.js</code>.`;
     }
+  }
+
+  // ---------- DERBIES ----------
+  // rivalries come from data/league.js, matched to clubs by Sleeper username
+  function buildDerbies() {
+    const byMgr = Object.fromEntries(state.teams.map((t) => [t.manager.toLowerCase(), t]));
+    const list = (window.MATER_LEAGUE && window.MATER_LEAGUE.derbies) || [];
+    return list.map((d) => {
+      const [a, b] = d.managers.map((m) => byMgr[String(m).toLowerCase()]);
+      if (!a || !b) return null;
+      const derby = { ...d, a, b };
+      a.derby = derby; b.derby = derby;
+      return derby;
+    }).filter(Boolean);
+  }
+  const derbyRival = (t) => (t.derby ? (t.derby.a === t ? t.derby.b : t.derby.a) : null);
+  // who holds bragging rights: derby wins first, then league position
+  function derbyVerdict(d) {
+    const r = h2h(d.a.rosterId, d.b.rosterId);
+    if (r.wa !== r.wb) {
+      const lead = r.wa > r.wb ? d.a : d.b;
+      return { lead, r, text: `${lead.name} lead the derby ${Math.max(r.wa, r.wb)}–${Math.min(r.wa, r.wb)}` };
+    }
+    const lead = d.a.pos < d.b.pos ? d.a : d.b, trail = lead === d.a ? d.b : d.a;
+    const pre = r.games.length ? `Level at ${r.wa}–${r.wb} in meetings. ` : "";
+    return { lead, r, text: `${pre}${lead.name} hold the bragging rights for now: ${ordinal(lead.pos)} vs ${ordinal(trail.pos)} in the table` };
+  }
+  function renderDerbies() {
+    const el = $("#derbies");
+    if (!el) return;
+    el.innerHTML = state.derbies.map((d) => {
+      const { lead, r, text } = derbyVerdict(d);
+      const share = d.a.pf + d.b.pf ? d.a.pf / (d.a.pf + d.b.pf) : 0.5;
+      const side = (t, cls) => `<div class="derby__side derby__side--${cls}${lead === t ? " is-lead" : ""}">
+          ${crest(t, "lg")}<b>${esc(t.name)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)}</small></div>`;
+      const row = (a, label, b) => `<div class="derby__row"><span>${a}</span><small>${label}</small><span>${b}</span></div>`;
+      return `<article class="derby reveal" id="derby-${esc(d.slug)}">
+        <header class="derby__head"><span class="derby__tag">${esc(d.tag)}</span><h3>${esc(d.name)}</h3></header>
+        <div class="derby__clash">${side(d.a, "a")}<span class="derby__vs" aria-hidden="true">VS</span>${side(d.b, "b")}</div>
+        <p class="derby__story">${esc(d.story)}</p>
+        <div class="derby__stats">
+          ${row(`${d.a.w}-${d.a.d}-${d.a.l}`, "Record", `${d.b.w}-${d.b.d}-${d.b.l}`)}
+          ${row(num(d.a.pf), "Points", num(d.b.pf))}
+          ${row(r.wa, "Derby wins", r.wb)}
+        </div>
+        <div class="derby__bar" role="img" aria-label="Share of combined points: ${esc(d.a.name)} ${Math.round(share * 100)}%, ${esc(d.b.name)} ${100 - Math.round(share * 100)}%"><span style="--share:${share}"></span></div>
+        <p class="derby__verdict">${esc(text)}.</p>
+        <button type="button" class="derby__open" data-a="${d.a.rosterId}" data-b="${d.b.rosterId}">Full head-to-head</button>
+      </article>`;
+    }).join("");
+    $$(".derby__open", el).forEach((b) => b.addEventListener("click", () => {
+      const A = $("#h2hA"), B = $("#h2hB");
+      if (!A || !B) return;
+      A.value = b.dataset.a; B.value = b.dataset.b;
+      renderH2H(+A.value, +B.value, "#h2hCrestA");
+      $("#versus").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "center" });
+    }));
   }
 
   // ---------- CLUBS ----------
@@ -471,7 +531,7 @@
         <div class="cp__id">
           <h3>${esc(t.name)}</h3>
           <p>Managed by ${esc(t.manager)} · ${ordinal(t.pos)} place <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></p>
-          <p class="cp__badges">${cupBadge}</p>
+          <p class="cp__badges">${cupBadge}${t.derby ? `<span class="badge badge--derby">${esc(t.derby.name)}</span>` : ""}</p>
         </div>
         <button class="cp__close" type="button" aria-label="Close club profile"><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
       </div>
@@ -501,6 +561,16 @@
         </div>
 
         ${t.games.length ? `<div class="cp__block cp__wide"><h4 class="subhead">Season sparkline</h4>${sparklineSVG(t.games)}</div>` : ""}
+
+        ${t.derby ? (() => {
+          const rival = derbyRival(t), v = derbyVerdict(t.derby);
+          return `<a class="cp-derby cp__wide" href="h2h.html#derby-${esc(t.derby.slug)}">
+            <span class="cp-derby__label">Derby rival · ${esc(t.derby.tag)}</span>
+            <span class="cp-derby__name">${esc(t.derby.name)}</span>
+            <span class="cp-derby__vs">${crest(t)}<b>vs</b>${crest(rival)}<span>${esc(rival.name)}</span></span>
+            <span class="cp-derby__verdict">${esc(v.text)}.</span>
+          </a>`;
+        })() : ""}
 
         ${t.nemesis || t.cupcake ? `<div class="nc cp__wide">
           ${t.nemesis ? `<div class="nc__item nc__item--nem"><small>Nemesis</small>${crest(state.byRoster[t.nemesis.id])}<b>${esc(teamName(t.nemesis.id))}</b><span>${rec(t.nemesis)}</span></div>` : ""}
@@ -564,7 +634,7 @@
   const ordinal = (n) => n + (["th", "st", "nd", "rd"][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] || "th");
 
   // ---------- TRANSFERS ----------
-  let feedFilter = "all", feedShown = 12;
+  let feedFilter = "all";
   const IN = `<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1l5 6H8v4H4V7H1z"/></svg>`;
   const OUT = `<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 11L1 5h3V1h4v4h3z"/></svg>`;
   function txnSummary(tx) {
@@ -598,28 +668,77 @@
     if (s < 86400 * 7) return `${Math.round(s / 86400)}d ago`;
     return new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
-  function renderFeed() {
-    if (!$("#feed")) return;
-    const list = state.txns.filter((t) => feedFilter === "all" || t.type === feedFilter);
-    const shown = list.slice(0, feedShown);
-    $("#feed").innerHTML = shown.length ? shown.map((tx, i) => {
-      const { head, moves, main } = txnSummary(tx);
-      const bid = tx.settings && tx.settings.waiver_bid;
-      const label = { waiver: "Waiver", free_agent: "Free agent", trade: "Trade" }[tx.type] || tx.type;
-      return `<li class="feed__item" style="animation-delay:${Math.min(i, 8) * 40}ms">
-        ${main ? crest(main) : ""}
-        <div class="body"><span class="feed__type ${tx.type}">${label}</span><div class="feed__head">${head}</div><div class="moves">${moves}</div></div>
-        <div class="feed__side">${bid != null && tx.type === "waiver" ? `<div class="feed__fee">$${bid}<small>FAAB fee</small></div>` : ""}<div class="feed__when">GW ${tx.leg} · ${when(tx.status_updated || tx.created)}</div></div>
-      </li>`;
-    }).join("") : `<li class="empty">Quiet window. No ${feedFilter === "all" ? "" : feedFilter.replace("_", " ") + " "}moves yet.</li>`;
-    $("#feedMore").hidden = list.length <= feedShown;
+  // feed grouped by gameweek; the newest gameweek starts open, the rest collapse
+  let openLegs = null;
+  const TYPE_LABEL = { waiver: "Waiver", free_agent: "Free agent", trade: "Trade" };
+  function feedItem(tx, i) {
+    const { head, moves, main } = txnSummary(tx);
+    const bid = tx.settings && tx.settings.waiver_bid;
+    return `<li class="feed__item" style="animation-delay:${Math.min(i, 8) * 40}ms">
+      ${main ? crest(main) : ""}
+      <div class="body"><span class="feed__type ${tx.type}">${TYPE_LABEL[tx.type] || tx.type}</span><div class="feed__head">${head}</div><div class="moves">${moves}</div></div>
+      <div class="feed__side">${bid != null && tx.type === "waiver" ? `<div class="feed__fee">$${bid}<small>FAAB fee</small></div>` : ""}<div class="feed__when">${when(tx.status_updated || tx.created)}</div></div>
+    </li>`;
   }
-  $$(".filters .chip").forEach((c) => c.addEventListener("click", () => {
-    feedFilter = c.dataset.filter; feedShown = 12;
-    $$(".filters .chip").forEach((x) => { x.classList.toggle("is-active", x === c); x.setAttribute("aria-pressed", String(x === c)); });
+  function renderFeed() {
+    const el = $("#gwGroups");
+    if (!el) return;
+    const list = state.txns.filter((t) => feedFilter === "all" || t.type === feedFilter);
+    const legs = [...new Set(state.txns.map((t) => t.leg))].sort((a, b) => b - a);
+    if (!openLegs) openLegs = new Set(legs.slice(0, 1));
+    const groups = legs.map((leg) => ({ leg, items: list.filter((t) => t.leg === leg) })).filter((g) => g.items.length);
+    el.innerHTML = groups.length ? groups.map((g) => {
+      const fees = g.items.reduce((s, t) => s + ((t.type === "waiver" && t.settings && t.settings.waiver_bid) || 0), 0);
+      const trades = g.items.filter((t) => t.type === "trade").length;
+      return `<details class="gw" data-leg="${g.leg}"${openLegs.has(g.leg) ? " open" : ""}>
+        <summary class="gw__sum">
+          <span class="gw__title">Gameweek ${g.leg}</span>
+          <span class="gw__meta"><b>${g.items.length}</b> move${g.items.length > 1 ? "s" : ""}${fees ? ` · <b>$${fees}</b> in fees` : ""}${trades ? ` · <b>${trades}</b> trade${trades > 1 ? "s" : ""}` : ""}</span>
+          <svg class="gw__chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>
+        </summary>
+        <ol class="feed">${g.items.map(feedItem).join("")}</ol>
+      </details>`;
+    }).join("") : `<p class="empty">Quiet window. No ${feedFilter === "all" ? "" : feedFilter.replace("_", " ") + " "}moves yet.</p>`;
+    $$(".gw", el).forEach((d) => d.addEventListener("toggle", () => {
+      d.open ? openLegs.add(+d.dataset.leg) : openLegs.delete(+d.dataset.leg);
+    }));
+  }
+  $$("#transfers-filters .chip").forEach((c) => c.addEventListener("click", () => {
+    feedFilter = c.dataset.filter;
+    $$("#transfers-filters .chip").forEach((x) => { x.classList.toggle("is-active", x === c); x.setAttribute("aria-pressed", String(x === c)); });
     renderFeed();
   }));
-  $("#feedMore")?.addEventListener("click", () => { feedShown += 12; renderFeed(); });
+
+  // sidebar: FAAB left, biggest spenders, busiest clubs, window totals
+  function renderMarket() {
+    if (!$("#mkFaab")) return;
+    const budget = (state.league.settings && state.league.settings.waiver_budget) || 0;
+    const T = state.teams;
+    const paid = {}, moves = {};
+    state.txns.forEach((t) => {
+      t.roster_ids.forEach((id) => (moves[id] = (moves[id] || 0) + 1));
+      if (t.type === "waiver" && t.settings && t.settings.waiver_bid) paid[t.roster_ids[0]] = (paid[t.roster_ids[0]] || 0) + 1;
+    });
+    const spent = T.reduce((s, t) => s + t.faabUsed, 0);
+    const topBid = Math.max(0, ...state.txns.map((t) => (t.type === "waiver" && t.settings && t.settings.waiver_bid) || 0));
+    const stat = (v, l) => `<div class="mk-stat"><b>${v}</b><small>${l}</small></div>`;
+    $("#mkTotals").innerHTML = stat("$" + spent.toLocaleString(), "FAAB spent") + stat(state.txns.length, "Moves") +
+      stat(state.txns.filter((t) => t.type === "trade").length, "Trades") + stat("$" + topBid, "Top bid");
+
+    const bar = (t, value, max, label, extra = "") => `<li class="mk-row">
+        ${crest(t)}<span class="mk-row__name">${esc(t.name)}</span><span class="mk-row__val">${label}</span>
+        <span class="mk-bar" aria-hidden="true"><span style="--w:${max ? Math.max(0, Math.min(1, value / max)) : 0}"></span></span>${extra}
+      </li>`;
+    $("#mkFaab").innerHTML = [...T].sort((a, b) => (budget - b.faabUsed) - (budget - a.faabUsed))
+      .map((t) => bar(t, Math.max(0, budget - t.faabUsed), budget, `$${Math.max(0, budget - t.faabUsed)} left`)).join("");
+    const maxSpend = Math.max(1, ...T.map((t) => t.faabUsed));
+    $("#mkSpend").innerHTML = [...T].sort((a, b) => b.faabUsed - a.faabUsed).slice(0, 5)
+      .map((t) => bar(t, t.faabUsed, maxSpend, `$${t.faabUsed}`, `<small class="mk-row__sub">${paid[t.rosterId] || 0} paid signing${(paid[t.rosterId] || 0) === 1 ? "" : "s"}</small>`)).join("");
+    const maxMoves = Math.max(1, ...Object.values(moves));
+    $("#mkBusy").innerHTML = [...T].sort((a, b) => (moves[b.rosterId] || 0) - (moves[a.rosterId] || 0)).slice(0, 5)
+      .map((t) => bar(t, moves[t.rosterId] || 0, maxMoves, `${moves[t.rosterId] || 0} moves`)).join("");
+    $("#mkBudget").textContent = `of $${budget}`;
+  }
 
   function renderTicker() {
     if (!$("#ticker")) return;
@@ -631,6 +750,7 @@
     if (leader) items.unshift(`${esc(leader.name)} top the table on ${leader.w} wins`);
     const hot = streakLeader();
     if (hot) items.push(`${esc(hot.name)} on a ${esc(hot.streak)} streak`);
+    state.derbies.forEach((d) => items.push(`${esc(d.name)}: ${esc(derbyVerdict(d).text)}`));
     items.push("Site in development: matchups &amp; the McQueen Cup coming soon");
     // two identical copies so the -50% marquee loop is seamless; the copy is hidden from screen readers
     $("#ticker").innerHTML = items.map((s) => `<span>${s}</span>`).join("") + items.map((s) => `<span aria-hidden="true">${s}</span>`).join("");
@@ -656,8 +776,19 @@
     wave: '<path d="M2 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0"/>',
     ruler: '<path d="M3 12h18"/><path d="M7 8v8M12 6v12M17 8v8"/>',
   };
+  // record categories drive the scoreboard colours and filters
+  const CATS = { glory: "Glory", shame: "Shame", market: "Transfer market", matchday: "Matchday" };
+  const CAT_OF = {
+    "Golden Boot": "glory", "Tactical Genius": "glory", "Longest Winning Streak": "glory", "In Form": "glory",
+    "Highest Score of the Season": "glory", "Most Consistent Scorer": "glory",
+    "Tinkerman Award": "shame", "Hard Luck FC": "shame", "Longest Losing Streak": "shame", "Wooden Spoon": "shame",
+    "Most Inconsistent Scorer": "shame", "Costliest Bench Blunder": "shame", "Robbed by the Bench": "shame",
+    "Chequebook Manager": "market", "Record Signing": "market", "Super Agent": "market",
+    "Biggest Blowout": "matchday", "Closest Game": "matchday", "Lowest Winning Score": "matchday",
+    "Highest Scoring Matchup": "matchday", "Lowest Scoring Matchup": "matchday",
+  };
   function renderRecords() {
-    if (!$("#awardsGrid")) return;
+    if (!$("#recRows")) return;
     const T = state.teams;
     const top = (f) => [...T].sort((a, b) => f(b) - f(a))[0];
     const cards = [];
@@ -744,17 +875,136 @@
     const unlocked = new Set(cards.map((c) => c.title));
     const locked = LOCKED.filter((l) => !unlocked.has(l));
 
-    $("#awardsGrid").innerHTML = cards.map((c) => `
-      <article class="award award--${c.tone}">
-        <div class="award__icon"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[c.icon]}</svg></div>
-        <h3>${c.title}</h3>
-        <div class="award__who">${[...new Set(c.who)].slice(0, 3).map((t) => crest(t)).join("")}<strong>${[...new Set(c.who)].map((t) => esc(t.name)).join(" & ")}</strong></div>
-        <div class="award__val">${esc(c.val)}</div>
-        <p>${esc(c.blurb)}</p>
-      </article>`).join("");
-    $("#lockedRecords").hidden = !locked.length;
-    $("#lockedList").innerHTML = locked.map((l) => `<li>${l}</li>`).join("");
+    // ---- render as a stadium scoreboard: a rotating spotlight plus a split-flap board ----
+    cards.forEach((c) => (c.cat = CAT_OF[c.title] || "glory"));
+    const lockedRows = locked.map((title) => ({ title, cat: CAT_OF[title] || "matchday", locked: true }));
+    recState.cards = cards;
+    recState.rows = [...cards, ...lockedRows];
+    renderRecordRows();
+    setSpot(recState.spot < cards.length ? recState.spot : 0, false);
+    startSpot();
   }
+
+  // --- split-flap tiles ---
+  const FLAP_DIGITS = "0123456789", FLAP_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  function flaps(text) {
+    return `<span class="flaps" aria-hidden="true">${String(text).toUpperCase().split("").map((ch) =>
+      ch === " " ? `<span class="flap flap--gap"></span>` : `<span class="flap" data-c="${esc(ch)}">${esc(ch)}</span>`).join("")}</span>`;
+  }
+  // each tile cycles through random characters, then lands on its own, left to right
+  function spinFlaps(root, delay = 0) {
+    if (reduceMotion()) return;
+    $$(".flap[data-c]", root).forEach((tile, i) => {
+      const final = tile.dataset.c;
+      const pool = /\d/.test(final) ? FLAP_DIGITS : /[A-Z]/.test(final) ? FLAP_LETTERS : null;
+      if (!pool) return;
+      clearTimeout(tile._t);
+      let n = 5 + i * 2;
+      tile.classList.add("is-spin");
+      const tick = () => {
+        if (n-- <= 0) { tile.textContent = final; tile.classList.remove("is-spin"); tile.classList.add("is-land"); setTimeout(() => tile.classList.remove("is-land"), 250); return; }
+        tile.textContent = pool[(Math.random() * pool.length) | 0];
+        tile._t = setTimeout(tick, 42);
+      };
+      tile._t = setTimeout(tick, delay + i * 28);
+    });
+  }
+
+  const recState = { cards: [], rows: [], spot: 0, filter: "all", timer: 0, paused: false, hover: false };
+  const who = (c) => [...new Set(c.who)];
+  function renderRecordRows() {
+    const el = $("#recRows");
+    if (!el) return;
+    const rows = recState.rows.filter((r) => recState.filter === "all" || r.cat === recState.filter);
+    el.innerHTML = rows.map((r) => r.locked
+      ? `<li class="rec-row is-locked cat-${r.cat}">
+          <span class="rec-row__light" aria-hidden="true"></span>
+          <span class="rec-row__title">${esc(r.title)}</span>
+          <span class="rec-row__who"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Needs matchups</span>
+          <span class="rec-row__val">${flaps("---")}</span>
+        </li>`
+      : `<li><button type="button" class="rec-row cat-${r.cat}${recState.cards.indexOf(r) === recState.spot ? " is-on" : ""}" data-i="${recState.cards.indexOf(r)}" aria-label="${esc(r.title)}: ${esc(who(r).map((t) => t.name).join(" and "))}, ${esc(r.val)}. Show in spotlight">
+          <span class="rec-row__light" aria-hidden="true"></span>
+          <span class="rec-row__title">${esc(r.title)}</span>
+          <span class="rec-row__who">${who(r).slice(0, 2).map((t) => crest(t)).join("")}<span>${who(r).map((t) => esc(t.name)).join(" & ")}</span></span>
+          <span class="rec-row__val">${flaps(r.val)}</span>
+        </button></li>`).join("");
+    if (el.dataset.seen) $$(".rec-row", el).forEach((row, i) => spinFlaps(row, i * 70));
+  }
+  function setSpot(i, manual) {
+    const spot = $("#recSpot");
+    if (!spot || !recState.cards.length) return;
+    recState.spot = (i + recState.cards.length) % recState.cards.length;
+    const c = recState.cards[recState.spot];
+    spot.dataset.cat = c.cat;
+    $("#spotCat").textContent = CATS[c.cat];
+    $("#spotTitle").textContent = c.title;
+    $("#spotVal").innerHTML = flaps(c.val);
+    $("#spotVal").setAttribute("aria-label", c.val);
+    $("#spotWho").innerHTML = who(c).slice(0, 3).map((t) => crest(t, "lg")).join("") + `<b>${who(c).map((t) => esc(t.name)).join(" & ")}</b>`;
+    $("#spotBlurb").textContent = c.blurb;
+    $("#spotCount").textContent = `${recState.spot + 1} / ${recState.cards.length}`;
+    $("#spotIcon").innerHTML = ICONS[c.icon] || "";
+    spot.setAttribute("aria-live", manual ? "polite" : "off");
+    const body = $(".rec-spot__body", spot);
+    body.classList.remove("is-in"); void body.offsetWidth; body.classList.add("is-in");
+    spinFlaps($("#spotVal"));
+    const prog = $("#spotProg"); prog.classList.remove("is-run"); void prog.offsetWidth;
+    if (spotRunning()) prog.classList.add("is-run");
+    $$(".rec-row[data-i]").forEach((r) => r.classList.toggle("is-on", +r.dataset.i === recState.spot));
+  }
+  const SPOT_MS = 7000;
+  const spotRunning = () => !recState.paused && !recState.hover && !reduceMotion() && recState.cards.length > 1;
+  function startSpot() {
+    clearInterval(recState.timer);
+    const prog = $("#spotProg");
+    if (!prog) return;
+    prog.classList.remove("is-run"); void prog.offsetWidth;
+    if (!spotRunning()) return;
+    prog.classList.add("is-run");
+    recState.timer = setInterval(() => setSpot(recState.spot + 1, false), SPOT_MS);
+  }
+  function bindRecords() {
+    const spot = $("#recSpot");
+    if (!spot) return;
+    $("#spotPrev").addEventListener("click", () => { setSpot(recState.spot - 1, true); startSpot(); });
+    $("#spotNext").addEventListener("click", () => { setSpot(recState.spot + 1, true); startSpot(); });
+    const pause = $("#spotPause");
+    pause.hidden = reduceMotion();
+    pause.addEventListener("click", () => {
+      recState.paused = !recState.paused;
+      pause.setAttribute("aria-pressed", String(recState.paused));
+      pause.setAttribute("aria-label", recState.paused ? "Play spotlight rotation" : "Pause spotlight rotation");
+      pause.innerHTML = recState.paused ? '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 3l9 5-9 5z"/></svg>' : '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg>';
+      startSpot();
+    });
+    // rotation holds while the pointer or keyboard focus is on the spotlight
+    const hold = (v) => { recState.hover = v; startSpot(); };
+    spot.addEventListener("pointerenter", () => hold(true));
+    spot.addEventListener("pointerleave", () => hold(false));
+    spot.addEventListener("focusin", () => hold(true));
+    spot.addEventListener("focusout", (e) => { if (!spot.contains(e.relatedTarget)) hold(false); });
+    $("#recRows").addEventListener("click", (e) => {
+      const row = e.target.closest(".rec-row[data-i]");
+      if (!row) return;
+      setSpot(+row.dataset.i, true); startSpot();
+      const r = spot.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > innerHeight) spot.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "center" });
+    });
+    $$("#recFilters .chip").forEach((c) => c.addEventListener("click", () => {
+      recState.filter = c.dataset.filter;
+      $$("#recFilters .chip").forEach((x) => { x.classList.toggle("is-active", x === c); x.setAttribute("aria-pressed", String(x === c)); });
+      renderRecordRows();
+    }));
+    // flip the whole board the first time it scrolls into view
+    new IntersectionObserver(([e], io) => {
+      if (!e.isIntersecting) return;
+      $("#recRows").dataset.seen = "1";
+      $$(".rec-row", $("#recRows")).forEach((row, i) => spinFlaps(row, i * 70));
+      io.disconnect();
+    }, { threshold: 0.15 }).observe($("#recRows"));
+  }
+  bindRecords();
 
   // ---------- McQUEEN CUP ----------
   const ROUND_BY_TIES = { 8: "Round of 16", 4: "Quarterfinals", 2: "Semifinals", 1: "Final" };
@@ -798,27 +1048,71 @@
     }));
     return levels;
   }
+  // the McQueen Cup itself: gold gradient, with a glint that sweeps across it
+  const CUP_PARTS = `
+    <path d="M30 10h60v26c0 22-13 38-30 38S30 58 30 36z"/>
+    <path d="M30 18H15c0 20 6 31 19 33l2-8c-7-2-11-9-11-17h5z"/>
+    <path d="M90 18h15c0 20-6 31-19 33l-2-8c7-2 11-9 11-17h-5z"/>
+    <path d="M54 72h12v22H54z"/>
+    <path d="M44 94h32l4 8H40z"/>
+    <rect x="34" y="102" width="52" height="26" rx="3"/>
+    <rect x="28" y="128" width="64" height="10" rx="2"/>`;
+  const TROPHY = `<svg class="final-trophy" viewBox="0 0 120 142" aria-hidden="true">
+    <defs>
+      <linearGradient id="cupGold" x1="0" x2="1" y1="0" y2="0">
+        <stop offset="0" stop-color="#7a5b1c"/><stop offset=".3" stop-color="#e9c874"/><stop offset=".5" stop-color="#fff0c2"/>
+        <stop offset=".7" stop-color="#d4a843"/><stop offset="1" stop-color="#6e5118"/>
+      </linearGradient>
+      <linearGradient id="cupShine" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <clipPath id="cupClip">${CUP_PARTS}</clipPath>
+    </defs>
+    <g fill="url(#cupGold)">${CUP_PARTS}</g>
+    <rect x="40" y="108" width="40" height="12" rx="1.5" fill="#0b1f3a" opacity=".55"/>
+    <text x="60" y="117" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-size="7" font-weight="700" letter-spacing="1" fill="#e9c874">McQUEEN CUP</text>
+    <path d="M60 24l3.2 6.5 7.2 1-5.2 5 1.2 7.1L60 40.2l-6.4 3.4 1.2-7.1-5.2-5 7.2-1z" fill="#fff4d6" opacity=".85"/>
+    <g clip-path="url(#cupClip)"><polygon class="final-trophy__shine" points="0,0 22,0 -8,142 -30,142" fill="url(#cupShine)"/></g>
+  </svg>`;
+
+  function tieCard(t) {
+    const CHECK = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>`;
+    if (!t.real) {
+      const wk = Object.keys(t.weeks).sort().map((l) => `Leg ${l} · GW ${t.weeks[l]}`).join(" · ");
+      return `<div class="tie tie--tbd"><div class="tie__row"><span class="tie__crest"></span><span class="tie__name">TBD</span><span class="tie__agg">–</span></div>
+        <div class="tie__row"><span class="tie__crest"></span><span class="tie__name">TBD</span><span class="tie__agg">–</span></div>
+        <p class="tie__meta">${wk || "Awaiting random draw"}</p></div>`;
+    }
+    const legs = t.legs.map((l) => `Leg ${l.leg}: ${num(l.aPts)}–${num(l.bPts)}`).join(" · ");
+    const meta = t.complete ? (t.winner ? `Won on aggregate · ${legs}` : `Level on aggregate · ${legs}`) : `${legs} · Leg ${t.legs.length + 1} pending`;
+    return `<div class="tie">${t.ids.map((id) => `<div class="tie__row ${t.winner === id ? "is-win" : t.winner ? "is-out" : ""}">
+        ${crest(state.byRoster[id])}<span class="tie__name">${esc(teamName(id))}${t.winner === id ? `<span class="visually-hidden"> (through)</span>` : ""}</span>
+        <span class="tie__agg">${num(t.agg[id])}</span>${t.winner === id ? CHECK : ""}</div>`).join("")}
+      <p class="tie__meta">${meta}</p></div>`;
+  }
   function renderCup() {
     if (!$("#bracket")) return;
-    const CHECK = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>`;
-    $("#bracket").innerHTML = state.cupLevels.map((lv, li) => `
-      <div class="bracket__round">
+    const last = state.cupLevels.length - 1;
+    $("#bracket").innerHTML = state.cupLevels.map((lv, li) => {
+      if (li === last) {
+        const t = lv.ties[0];
+        const champ = t && t.winner ? state.byRoster[t.winner] : null;
+        return `<div class="bracket__round bracket__round--final">
+          <div class="final-stage${champ ? " is-crowned" : ""}">
+            <span class="final-stage__flashes" aria-hidden="true"></span>
+            <span class="spot spot--l" aria-hidden="true"></span><span class="spot spot--r" aria-hidden="true"></span><span class="spot spot--m" aria-hidden="true"></span>
+            <span class="final-stage__pool" aria-hidden="true"></span>
+            <p class="final-stage__kicker"><span class="live-dot"></span>${esc(lv.name)}</p>
+            ${TROPHY}
+            <p class="final-stage__title">${champ ? `${esc(champ.name)} lift the cup` : "One tie. One cup."}</p>
+            ${t ? tieCard(t) : ""}
+            <p class="final-stage__meta">Two legs. The aggregate winner lifts the McQueen Cup.</p>
+          </div>
+        </div>`;
+      }
+      return `<div class="bracket__round">
         <p class="bracket__name">${lv.name}</p>
-        <div class="bracket__ties">${lv.ties.map((t) => {
-          if (!t.real) {
-            const wk = Object.keys(t.weeks).sort().map((l) => `Leg ${l} · GW ${t.weeks[l]}`).join(" · ");
-            return `<div class="tie tie--tbd"><div class="tie__row"><span class="tie__crest"></span><span class="tie__name">TBD</span><span class="tie__agg">–</span></div>
-              <div class="tie__row"><span class="tie__crest"></span><span class="tie__name">TBD</span><span class="tie__agg">–</span></div>
-              <p class="tie__meta">${wk || "Awaiting random draw"}</p></div>`;
-          }
-          const legs = t.legs.map((l) => `Leg ${l.leg}: ${num(l.aPts)}–${num(l.bPts)}`).join(" · ");
-          const meta = t.complete ? (t.winner ? `Won on aggregate · ${legs}` : `Level on aggregate · ${legs}`) : `${legs} · Leg ${t.legs.length + 1} pending`;
-          return `<div class="tie">${t.ids.map((id) => `<div class="tie__row ${t.winner === id ? "is-win" : t.winner ? "is-out" : ""}">
-              ${crest(state.byRoster[id])}<span class="tie__name">${esc(teamName(id))}${t.winner === id ? `<span class="visually-hidden"> (through)</span>` : ""}</span>
-              <span class="tie__agg">${num(t.agg[id])}</span>${t.winner === id ? CHECK : ""}</div>`).join("")}
-            <p class="tie__meta">${meta}</p></div>`;
-        }).join("")}</div>
-      </div>${li < state.cupLevels.length - 1 ? `<div class="bracket__link" aria-hidden="true"></div>` : ""}`).join("");
+        <div class="bracket__ties">${lv.ties.map(tieCard).join("")}</div>
+      </div><div class="bracket__link" aria-hidden="true"></div>`;
+    }).join("");
   }
 
   // ---------- VICTORY ROAD ----------
@@ -963,12 +1257,12 @@
       entries.forEach((e) => {
         if (!e.isIntersecting) return;
         const siblings = [...e.target.parentElement.children];
-        e.target.style.transitionDelay = e.target.matches(".club-card, .award") ? `${Math.min(siblings.indexOf(e.target), 10) * 50}ms` : "";
+        e.target.style.transitionDelay = e.target.matches(".club-card, .derby") ? `${Math.min(siblings.indexOf(e.target), 10) * 50}ms` : "";
         e.target.classList.add("is-in");
         io.unobserve(e.target);
       });
     }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
-    $$(".reveal:not(.is-in), .club-card:not(.is-in), .award:not(.is-in)").forEach((el) => io.observe(el));
+    $$(".reveal:not(.is-in), .club-card:not(.is-in)").forEach((el) => io.observe(el));
   }
 
   // mobile menu
@@ -1004,6 +1298,7 @@
       state.week = sportState.display_week || sportState.week || (league.settings && league.settings.leg) || 1;
       state.teams = rank(buildTeams(users, rosters));
       state.byRoster = Object.fromEntries(state.teams.map((t) => [t.rosterId, t]));
+      state.derbies = buildDerbies();
       state.results = loadResults();
       state.hasResults = state.results.length > 0;
       deriveFromResults();
@@ -1016,6 +1311,7 @@
       renderClubs();
       renderH2HPicker();
       renderMatrix();
+      renderDerbies();
       renderCup();
       renderVictoryRoad();
       renderLineupChart();
@@ -1040,9 +1336,16 @@
       renderFeed();
       renderTicker();
       renderRecords();
+      renderMarket();
       renderHomeSnap();
       observeReveals();
 
+      const dh = location.hash.match(/^#derby-([\w-]+)$/);
+      if (dh && $(`#derby-${dh[1]}`)) {
+        const card = $(`#derby-${dh[1]}`);
+        card.classList.add("is-in", "is-target");
+        card.scrollIntoView({ block: "center" });
+      }
       const m = location.hash.match(/^#club-(\d+)$/);
       if (m) openClub(+m[1], true);
 

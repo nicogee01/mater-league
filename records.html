@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=16" />
+  <link rel="stylesheet" href="css/styles.css?v=19" />
 </head>
 <body data-page="records">
   <main id="main">
@@ -23,20 +23,45 @@
     </header>
 
     <section class="section section--page" aria-label="Hall of Records">
-      <div class="awards" id="awardsGrid"></div>
-      <div class="locked reveal" id="lockedRecords" hidden>
-        <p class="locked__title">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-          Unlocks once matchups are logged
-        </p>
-        <ul class="locked__list" id="lockedList"></ul>
+      <section class="rec-spot" id="recSpot" aria-roledescription="carousel" aria-label="Record spotlight" data-cat="glory">
+        <span class="rec-spot__lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <div class="rec-spot__body">
+          <p class="rec-spot__cat"><span class="rec-spot__icon"><svg viewBox="0 0 24 24" aria-hidden="true" id="spotIcon"></svg></span><span id="spotCat">Glory</span></p>
+          <h2 class="rec-spot__title" id="spotTitle">Loading records…</h2>
+          <div class="rec-spot__val" id="spotVal" role="img"></div>
+          <div class="rec-spot__who" id="spotWho"></div>
+          <p class="rec-spot__blurb" id="spotBlurb"></p>
+        </div>
+        <div class="rec-spot__controls">
+          <button type="button" class="rec-spot__btn" id="spotPrev" aria-label="Previous record"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg></button>
+          <button type="button" class="rec-spot__btn" id="spotPause" aria-pressed="false" aria-label="Pause spotlight rotation"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="3" height="10"/><rect x="9" y="3" width="3" height="10"/></svg></button>
+          <button type="button" class="rec-spot__btn" id="spotNext" aria-label="Next record"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></button>
+          <span class="rec-spot__count" id="spotCount"></span>
+        </div>
+        <span class="rec-spot__prog" id="spotProg" aria-hidden="true"></span>
+      </section>
+
+      <div class="rec-board reveal">
+        <div class="rec-board__bar">
+          <p class="rec-board__title">The records board</p>
+          <div class="filters" id="recFilters" role="group" aria-label="Filter records">
+            <button class="chip is-active" data-filter="all" aria-pressed="true">All</button>
+            <button class="chip" data-filter="glory" aria-pressed="false">Glory</button>
+            <button class="chip" data-filter="shame" aria-pressed="false">Shame</button>
+            <button class="chip" data-filter="market" aria-pressed="false">Transfer market</button>
+            <button class="chip" data-filter="matchday" aria-pressed="false">Matchday</button>
+          </div>
+        </div>
+        <ol class="rec-rows" id="recRows"></ol>
+        <p class="rec-board__note">Pick any record to put it in the spotlight. Locked rows unlock once matchups are logged.</p>
       </div>
     </section>
   </main>
 
-  <script src="js/layout.js?v=16"></script>
-  <script src="data/results.js?v=16"></script>
-  <script src="js/motion.js?v=16"></script>
-  <script src="js/app.js?v=16"></script>
+  <script src="js/layout.js?v=19"></script>
+  <script src="data/league.js?v=19"></script>
+  <script src="data/results.js?v=19"></script>
+  <script src="js/motion.js?v=19"></script>
+  <script src="js/app.js?v=19"></script>
 </body>
 </html>
