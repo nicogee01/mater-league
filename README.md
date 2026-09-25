@@ -20,9 +20,6 @@ Then open http://localhost:5173.
 2. Go to repo **Settings → Pages**, then deploy from branch `main`, folder `/ (root)`.
 3. The site goes live at `https://<your-username>.github.io/Mater-League/`.
 
-`.github/workflows/snapshot.yml` runs daily and logs new league results into
-`data/results.js` (enable Actions on the repo). You can also run it by hand from the Actions tab.
-
 ## What's live vs. logged
 
 | Section            | Source |
@@ -31,26 +28,41 @@ Then open http://localhost:5173.
 | Clubs: XI, squad, photos, per-90 projections, record transfer | Live (rosters, weekly stats, Wikipedia) |
 | Transfer window, ticker | Live (Sleeper transactions) |
 | Hall of Records: Golden Boot, streaks, spending, … | Live |
-| Hall of Records: blowouts, closest game, consistency, bench blunders | `data/results.js` → `matches` |
-| All-Play, Home/Away, Std dev, Optimal record, Nemesis/Cupcake, H2H | `data/results.js` → `matches` |
-| The McQueen Cup | `data/results.js` → `cup` |
-| Victory Road | `data/results.js` → `honours` |
+| Hall of Records: blowouts, closest game, consistency, bench blunders | `data/matchups.csv` |
+| All-Play, Home/Away, Std dev, Optimal record, Nemesis/Cupcake, H2H | `data/matchups.csv` |
+| The McQueen Cup | `data/cup.csv` |
+| Victory Road | `data/league.js` → `honours` |
 | Analytics: points vs best lineup | Live |
 | Analytics: standings by week | Exact with `matches`; wins-only estimate before then |
 
-### data/results.js
+### Match data (CSV)
 
-Sleeper's public API doesn't return soccer matchups, so match-level data lives
-here. The comment at the top of the file shows the format for each field:
+Sleeper's public API doesn't return soccer matchups, so match results are
+kept in two CSV files. Teams are named by **Sleeper username**:
+treyclif3, austinclifton, nicog01, BottomCap, nictrn, KingAbes, officialmaje, GlenM22.
 
-- **matches**: `{ week, home, away, homePts, awayPts, homeBest?, awayBest? }`. `home`/`away` are roster IDs (listed under `teams`).
-  `homeBest`/`awayBest` are optional best-lineup scores and unlock the bench records.
-- **cup**: `{ round: "Quarterfinals" | "Semifinals" | "Final", leg, a, b, aPts, bPts, week }`.
-  Leave `a`/`b` off to schedule a leg before the draw.
-- **honours**: `{ league: [{ year, champion, runnerUp }], cup: [...] }`, using roster IDs or `null` for TBD.
+`data/matchups.csv` has one row per league match:
 
-`scripts/snapshot.mjs` fills `matches` automatically from GW6 on by diffing each
-club's points-for/against week to week (`node scripts/snapshot.mjs`).
+```
+week,home,away,home_pts,away_pts,home_best,away_best
+6,treyclif3,austinclifton,92.5,81.25,104.0,
+```
+
+`home_best` / `away_best` (best possible lineup) are optional. When present, they
+unlock the bench records and optimal-lineup stats.
+
+`data/cup.csv` has one row per McQueen Cup leg. Leave the scores blank until it's played:
+
+```
+round,leg,week,home,away,home_pts,away_pts
+Quarterfinals,1,7,nicog01,BottomCap,,
+```
+
+Past champions (Victory Road) are in `data/league.js` under `honours`.
+
+**Check before publishing:** `node scripts/check-matchups.mjs` confirms every
+result agrees with Sleeper's week-by-week W/L record for both teams, and (once
+all scored weeks are in) that each club's season points for/against match Sleeper.
 
 ## Files
 
@@ -64,9 +76,10 @@ css/styles.css        "matchday programme" theme tokens at the top, then compone
 js/layout.js          shared nav + footer (edit PAGES here to add or rename a tab)
 js/motion.js          hero video, pause button, nav ball
 js/app.js             Sleeper data → whatever sections the current page has
-data/league.js        league lore: the four derbies (edit names, stories, pairings here)
-data/results.js       logged matchups, cup, honours
-scripts/snapshot.mjs  weekly result logger (Node 18+)
+data/league.js        league lore: the four derbies and past champions
+data/matchups.csv     league results, one row per match
+data/cup.csv          McQueen Cup legs
+scripts/check-matchups.mjs  verifies matchups.csv against Sleeper (Node 18+)
 media/                hero videos + posters (originals/ is git-ignored)
 ```
 

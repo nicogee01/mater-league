@@ -10,7 +10,7 @@
   const PLAYER_CACHE_KEY = "nym-players-v2";
   const PLAYER_CACHE_TTL = 12 * 60 * 60 * 1000;
   const PHOTO_CACHE = "nym-photo-";
-  const DATA = window.NYM_RESULTS || {};
+  const LORE = window.MATER_LEAGUE || {};
 
   // categorical order validated for dark surfaces (CVD-safe adjacent pairs); colour follows roster ID
   const SERIES = ["#00a35a", "#9460c9", "#b8860b", "#4a78d0", "#d0601c", "#1592b0", "#d6246f", "#8c8c2a"];
@@ -365,8 +365,60 @@
   });
 
   // ---------- HEAD-TO-HEAD ----------
-  function loadResults() {
-    return (DATA.matches || []).filter((m) => state.byRoster[m.home] && state.byRoster[m.away]);
+  // ---------- CSV DATA (data/matchups.csv, data/cup.csv) ----------
+  // Small CSV reader: handles quoted fields, blank lines and a header row.
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], field = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+        else if (c === '"') q = false;
+        else field += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(field); field = "";
+        if (row.some((x) => x.trim() !== "")) rows.push(row);
+        row = [];
+      } else field += c;
+    }
+    row.push(field);
+    if (row.some((x) => x.trim() !== "")) rows.push(row);
+    const head = (rows.shift() || []).map((h) => h.trim().toLowerCase());
+    return rows.map((r) => Object.fromEntries(head.map((h, i) => [h, (r[i] || "").trim()])));
+  }
+  async function getCSV(path) {
+    try {
+      const r = await fetch(path, { cache: "no-cache" });
+      return r.ok ? parseCSV(await r.text()) : [];
+    } catch (_) { return []; }
+  }
+  // rows name teams by Sleeper username; turn those into roster IDs
+  const rosterOf = (username) => {
+    const t = state.teams.find((x) => x.manager.toLowerCase() === String(username || "").trim().toLowerCase());
+    return t ? t.rosterId : null;
+  };
+  const numOrNull = (v) => (v === "" || v == null || isNaN(+v) ? null : +v);
+  function loadResults(rows) {
+    return rows.map((r) => ({
+      week: +r.week, home: rosterOf(r.home), away: rosterOf(r.away),
+      homePts: numOrNull(r.home_pts), awayPts: numOrNull(r.away_pts),
+      homeBest: numOrNull(r.home_best) ?? undefined, awayBest: numOrNull(r.away_best) ?? undefined,
+    })).filter((m) => {
+      const ok = m.week && m.home && m.away && m.homePts != null && m.awayPts != null;
+      if (!ok) console.warn("Skipping matchups.csv row", m);
+      return ok;
+    });
+  }
+  function loadCupRows(rows) {
+    return rows.map((r) => ({
+      round: r.round, leg: +r.leg || 1, week: numOrNull(r.week),
+      a: rosterOf(r.home), b: rosterOf(r.away), aPts: numOrNull(r.home_pts) ?? 0, bPts: numOrNull(r.away_pts) ?? 0,
+      played: r.home_pts !== "" && r.away_pts !== "",
+    }));
   }
   function h2h(a, b) {
     const games = state.results.filter((m) => (m.home === a && m.away === b) || (m.home === b && m.away === a));
@@ -1068,7 +1120,7 @@
   // ---------- McQUEEN CUP ----------
   const ROUND_BY_TIES = { 8: "Round of 16", 4: "Quarterfinals", 2: "Semifinals", 1: "Final" };
   function buildCup() {
-    const rows = DATA.cup || [];
+    const rows = state.cupRows || [];
     const levels = [];
     for (let ties = state.teams.length / 2; ties >= 1; ties /= 2) {
       const name = ROUND_BY_TIES[ties] || `Round of ${ties * 2}`;
@@ -1084,8 +1136,9 @@
       const real = [...map.values()].map((t) => {
         t.legs.sort((x, y) => x.leg - y.leg);
         const agg = { [t.ids[0]]: 0, [t.ids[1]]: 0 };
-        t.legs.forEach((l) => { agg[l.a] += Number(l.aPts) || 0; agg[l.b] += Number(l.bPts) || 0; });
-        const complete = t.legs.length >= 2;
+        const played = t.legs.filter((l) => l.played !== false);
+        played.forEach((l) => { agg[l.a] += Number(l.aPts) || 0; agg[l.b] += Number(l.bPts) || 0; });
+        const complete = played.length >= 2;
         const [a, b] = t.ids;
         const winner = complete && agg[a] !== agg[b] ? (agg[a] > agg[b] ? a : b) : null;
         return { real: true, ids: t.ids, legs: t.legs, agg, complete, winner };
@@ -1140,8 +1193,11 @@
         <div class="tie__row"><span class="tie__crest"></span><span class="tie__name">TBD</span><span class="tie__agg">–</span></div>
         <p class="tie__meta">${wk || "Awaiting random draw"}</p></div>`;
     }
-    const legs = t.legs.map((l) => `Leg ${l.leg}: ${num(l.aPts)}–${num(l.bPts)}`).join(" · ");
-    const meta = t.complete ? (t.winner ? `Won on aggregate · ${legs}` : `Level on aggregate · ${legs}`) : `${legs} · Leg ${t.legs.length + 1} pending`;
+    const legs = t.legs.map((l) => (l.played === false
+      ? `Leg ${l.leg}${l.week ? ` · GW ${l.week}` : ""}`
+      : `Leg ${l.leg}: ${num(l.aPts)}–${num(l.bPts)}`)).join(" · ");
+    const meta = t.complete ? (t.winner ? `Won on aggregate · ${legs}` : `Level on aggregate · ${legs}`)
+      : t.legs.length < 2 ? `${legs} · Leg 2 to come` : legs;
     return `<div class="tie">${t.ids.map((id) => `<div class="tie__row ${t.winner === id ? "is-win" : t.winner ? "is-out" : ""}">
         ${crest(state.byRoster[id])}<span class="tie__name">${esc(teamName(id))}${t.winner === id ? `<span class="visually-hidden"> (through)</span>` : ""}</span>
         <span class="tie__agg">${num(t.agg[id])}</span>${t.winner === id ? CHECK : ""}</div>`).join("")}
@@ -1177,12 +1233,12 @@
   // ---------- VICTORY ROAD ----------
   function renderVictoryRoad() {
     if (!$("#victoryRoad")) return;
-    const H = DATA.honours || {};
+    const H = LORE.honours || {};
     const col = (label, list, pending) => `
       <div class="vr__col reveal">
         <p class="vr__label">${label}</p>
         ${(list && list.length ? [...list].sort((a, b) => b.year - a.year) : [{ year: new Date().getFullYear(), champion: null }]).map((s) => {
-          const champ = state.byRoster[s.champion], ru = state.byRoster[s.runnerUp];
+          const champ = state.byRoster[rosterOf(s.champion)], ru = state.byRoster[rosterOf(s.runnerUp)];
           return `<div class="vr__season ${champ ? "is-won" : ""}">
             <span class="vr__year">${s.year}</span>
             <svg class="vr__trophy" viewBox="0 0 60 70" aria-hidden="true"><use href="#trophy"/></svg>
@@ -1350,15 +1406,17 @@
 
   async function boot() {
     try {
-      const [league, users, rosters, sportState] = await Promise.all([
+      const [league, users, rosters, sportState, matchRows, cupRows] = await Promise.all([
         get(`/league/${LEAGUE_ID}`), get(`/league/${LEAGUE_ID}/users`), get(`/league/${LEAGUE_ID}/rosters`), get(`/state/${SPORT}`).catch(() => ({})),
+        getCSV("data/matchups.csv"), getCSV("data/cup.csv"),
       ]);
       state.league = league;
       state.week = sportState.display_week || sportState.week || (league.settings && league.settings.leg) || 1;
       state.teams = rank(buildTeams(users, rosters));
       state.byRoster = Object.fromEntries(state.teams.map((t) => [t.rosterId, t]));
       state.derbies = buildDerbies();
-      state.results = loadResults();
+      state.results = loadResults(matchRows);
+      state.cupRows = loadCupRows(cupRows);
       state.hasResults = state.results.length > 0;
       deriveFromResults();
       state.rankHistory = buildRankHistory();
