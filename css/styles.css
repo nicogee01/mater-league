@@ -1279,6 +1279,8 @@ button { cursor: pointer; touch-action: manipulation; }
 .leaders { margin-top: var(--s6); padding: var(--s5); border-radius: 20px; background: var(--surface); border: 1px solid var(--line); }
 .leaders__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3); padding-bottom: var(--s3); margin-bottom: var(--s3); border-bottom: 3px double var(--ink); }
 .leaders__head .subhead { margin: 0; font-size: 30px; }
+.leaders__ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); }
+.fa-tag { display: inline-block; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .leaders__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px var(--s5); }
 .lead-row { display: grid; grid-template-columns: 26px 40px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: 8px 6px; border-radius: 10px; }
 .lead-row.is-mine { background: rgba(176, 138, 62, 0.14); }

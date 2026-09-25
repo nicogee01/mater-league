@@ -1691,7 +1691,7 @@
     { group: "Discipline", key: "rc", label: "Red cards", dp: 0, good: -1 },
     { group: "Discipline", key: "dis", label: "Times dispossessed", dp: 0, good: -1 },
   ];
-  const hub = { team: null, compare: "avg", scope: "xi", lead: "g" };
+  const hub = { team: null, compare: "avg", scope: "xi", lead: "g", pool: "all" };
 
   // season totals per player (raw stats + fantasy points under this league's scoring)
   function buildPlayerTotals(statsByWeek, scoring) {
@@ -1790,16 +1790,19 @@
     const m = HUB_METRICS.find((x) => x.key === hub.lead) || HUB_METRICS[2];
     const owner = {};
     state.teams.forEach((t) => t.players.forEach((pid) => (owner[pid] = t)));
-    const list = Object.keys(owner)
+    // every player Sleeper has stats for: rostered clubs plus free agents
+    const pool = hub.pool === "fa" ? Object.keys(state.playerTotals).filter((pid) => !owner[pid])
+      : hub.pool === "rostered" ? Object.keys(owner) : [...new Set([...Object.keys(owner), ...Object.keys(state.playerTotals)])];
+    const list = pool
       .map((pid) => ({ pid, p: state.players[pid], v: (state.playerTotals[pid] || {})[m.key] || 0 }))
-      .filter((x) => x.p && (!m.pos || x.p.p === m.pos))
+      .filter((x) => x.p && (!m.pos || x.p.p === m.pos) && (m.good !== -1 || (state.playerTotals[x.pid] || {}).min > 0))
       .sort((a, b) => (m.good === -1 ? a.v - b.v : b.v - a.v))
       .slice(0, 10);
     el.innerHTML = list.map((x, i) => `
       <li class="lead-row${owner[x.pid] === (state.byRoster[hub.team] || state.teams[0]) ? " is-mine" : ""}">
         <span class="lead-row__rank">${i + 1}</span>
         <span class="lead-row__photo" data-photo="${x.pid}" aria-hidden="true"><span>${esc(initials(x.p.n))}</span></span>
-        <span class="lead-row__name">${esc(x.p.n)}<small>${clubLogo(x.p.t)}${esc(x.p.c)} · ${esc(x.p.p)} · ${crest(owner[x.pid])}${club(owner[x.pid])}</small></span>
+        <span class="lead-row__name">${esc(x.p.n)}<small>${clubLogo(x.p.t)}${esc(x.p.c)} · ${esc(x.p.p)} · ${owner[x.pid] ? `${crest(owner[x.pid])}${club(owner[x.pid])}` : `<span class="fa-tag">Free agent</span>`}</small></span>
         <span class="lead-row__val">${num(x.v, m.dp)}</span>
       </li>`).join("");
     loadPhotos(list.map((x) => x.pid), el);
@@ -1823,6 +1826,11 @@
     }));
     $("#leadMetric").innerHTML = HUB_METRICS.filter((m) => m.key !== "min").map((m) => `<option value="${m.key}"${m.key === hub.lead ? " selected" : ""}>${esc(m.label)}</option>`).join("");
     $("#leadMetric").addEventListener("change", (e) => { hub.lead = e.target.value; renderLeaders(); });
+    $$("#leadPool .chip").forEach((c) => c.addEventListener("click", () => {
+      hub.pool = c.dataset.pool;
+      $$("#leadPool .chip").forEach((x) => { x.classList.toggle("is-active", x === c); x.setAttribute("aria-pressed", String(x === c)); });
+      renderLeaders();
+    }));
     bindTip($("#hubGroups"), ".hub-dot", (d) => {
       const t = state.byRoster[d.dataset.id];
       const r = hubRowsCache.find((x) => x.m.key === d.dataset.m);
