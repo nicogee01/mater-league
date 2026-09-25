@@ -61,7 +61,7 @@ js/motion.js          hero animation: running players, ball, turf, nav ball
 js/app.js             Sleeper data → every section
 data/results.js       logged matchups, cup, honours
 scripts/snapshot.mjs  weekly result logger (Node 18+)
-Mater_Index.html      the original prototype page (reference)
+media/                hero videos, images and animations
 ```
 
 ## Tweaks
