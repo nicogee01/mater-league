@@ -1,0 +1,41 @@
+# Records every club's starting XI from Sleeper just after each gameweek's last match,
+# then fills in points, projections and benches. See scripts/snapshot-lineups.mjs.
+name: Snapshot lineups
+
+on:
+  schedule:
+    - cron: "17 * * * *"   # hourly; the script only writes in the hours right after a gameweek ends
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshot-lineups
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Snapshot finished gameweek
+        run: node scripts/snapshot-lineups.mjs
+      - name: Add points, projections and benches
+        if: ${{ hashFiles('data/lineups.csv') != '' }}
+        run: |
+          if ! git diff --quiet data/lineups.csv; then
+            node scripts/build-lineups.mjs || echo "::warning::build-lineups reported problems (usually just scores not logged yet)"
+          fi
+      - name: Commit
+        run: |
+          if git diff --quiet; then echo "Nothing new."; exit 0; fi
+          git config user.name "mater-league-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/lineups.csv
+          git commit -m "Snapshot lineups from Sleeper"
+          git push

@@ -76,6 +76,16 @@ minutes, rebuilds each bench from the draft plus every transaction up to that
 gameweek's last kickoff (so a bench only shows players on the roster at the time),
 and checks each XI adds up to its score in matchups.csv.
 
+**Automatic lineups:** `.github/workflows/snapshot-lineups.yml` runs
+`scripts/snapshot-lineups.mjs` every hour. In the hours right after a gameweek's last
+match it records every club's starting XI from Sleeper (roster `starters` + that week's
+formation), runs build-lineups, and commits. `node scripts/snapshot-lineups.mjs --dry-run`
+shows what it would record right now. Screen recordings are only needed for weeks it missed.
+
+**The Gazette** (`gazette.html`, home page strip, Matchups headlines) is written in
+`js/app.js` from the scores and lineups: headline pools per story type, rotating award
+titles, and a Team of the Week. Add wordings to `G_HEADLINES` / `G_AWARDS` to keep it fresh.
+
 ## Files
 
 ```
@@ -85,6 +95,7 @@ h2h.html              head-to-head            transfers.html      transfer windo
 records.html          Hall of Records         cup.html            The McQueen Cup
 victory-road.html     champions               analytics.html      charts
 matchups.html         fixtures + team sheets by gameweek
+gazette.html          headlines, match reports, awards, Team of the Week
 css/styles.css        "matchday programme" theme tokens at the top, then components
 js/layout.js          shared nav + footer (edit PAGES here to add or rename a tab)
 js/motion.js          hero video, pause button, nav ball
@@ -95,6 +106,7 @@ data/cup.csv          McQueen Cup legs
 data/lineups.csv      starting XIs + rebuilt benches per gameweek
 scripts/check-matchups.mjs  verifies matchups.csv against Sleeper (Node 18+)
 scripts/build-lineups.mjs   fills points/projections/benches into lineups.csv
+scripts/snapshot-lineups.mjs  records starting XIs from Sleeper after each gameweek
 media/                hero videos + posters (originals/ is git-ignored)
 ```
 
