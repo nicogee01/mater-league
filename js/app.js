@@ -7,7 +7,7 @@
   const SPORT = "clubsoccer:epl";
   const API = "https://api.sleeper.app/v1";
   const PLAYOFF_SPOTS = 6;
-  const PLAYER_CACHE_KEY = "nym-players-v1";
+  const PLAYER_CACHE_KEY = "nym-players-v2";
   const PLAYER_CACHE_TTL = 12 * 60 * 60 * 1000;
   const PHOTO_CACHE = "nym-photo-";
   const DATA = window.NYM_RESULTS || {};
@@ -47,6 +47,8 @@
         l: x.last_name || x.full_name || "",
         c: x.team_abbr || "",
         p: (x.fantasy_positions && x.fantasy_positions[0]) || x.position || "",
+        ps: x.fantasy_positions || [],
+        t: x.team || "",
         i: x.injury_status || "",
       };
     }
@@ -93,19 +95,21 @@
     try { localStorage.setItem(key, JSON.stringify({ u: url, t: Date.now() })); } catch (_) {}
     return url;
   }
-  // run photo lookups a few at a time so Wikipedia isn't hammered
+  const sleeperHeadshot = (pid) => `https://sleepercdn.com/content/clubsoccer/players/${pid}.jpg`;
+  const clubLogo = (teamId) => (teamId ? `<img class="club-logo" src="https://sleepercdn.com/images/team_logos/clubsoccer/${esc(teamId)}.png" alt="" width="16" height="16" loading="lazy" onerror="this.remove()">` : "");
+  const loadImage = (url) => new Promise((res) => { const img = new Image(); img.onload = () => res(true); img.onerror = () => res(false); img.src = url; });
+  // Sleeper's headshot first; fall back to Wikipedia (a few lookups at a time) for the handful Sleeper lacks
   async function loadPhotos(pids, root) {
     const queue = [...pids];
+    const paint = (pid, url) => $$(`[data-photo="${pid}"]`, root).forEach((el) => { el.style.backgroundImage = `url("${url}")`; el.classList.add("has-photo"); });
     const worker = async () => {
       while (queue.length) {
         const pid = queue.shift();
         const p = state.players[pid];
-        if (!p) continue;
+        if (!p || !root.isConnected) continue;
+        if (await loadImage(sleeperHeadshot(pid))) { paint(pid, sleeperHeadshot(pid)); continue; }
         const url = await playerPhoto(p.n);
-        if (!url || !root.isConnected) continue;
-        const img = new Image();
-        img.onload = () => $$(`[data-photo="${pid}"]`, root).forEach((el) => { el.style.backgroundImage = `url("${url}")`; el.classList.add("has-photo"); });
-        img.src = url;
+        if (url && root.isConnected && (await loadImage(url))) paint(pid, url);
       }
     };
     await Promise.all([worker(), worker(), worker(), worker()]);
@@ -170,10 +174,52 @@
         record: (r.metadata && r.metadata.record) || "",
         streak: (r.metadata && r.metadata.streak) || "",
         starters: (r.starters || []).filter((id) => id && id !== "0"),
+        slots: r.starters || [],
+        formations: parseFormations(r.metadata && r.metadata.formation),
         players: r.players || [],
         reserve: r.reserve || [],
       };
     });
+  }
+
+  // roster metadata stores {"gameweek": "D-M-F"} for each week the manager changed shape
+  function parseFormations(raw) {
+    try {
+      const obj = typeof raw === "string" ? JSON.parse(raw) : raw || {};
+      return Object.entries(obj).map(([wk, f]) => ({ wk: +wk, f: String(f) })).filter((x) => /^\d-\d-\d$/.test(x.f)).sort((a, b) => a.wk - b.wk);
+    } catch (_) { return []; }
+  }
+  // the formation in force for a week is the latest one set on or before it
+  const formationFor = (t, week) => [...t.formations].reverse().find((x) => x.wk <= week) || t.formations[0] || null;
+
+  // Put the XI on the lines the way Sleeper does: fixed slots stay put, flex slots
+  // fill whatever the chosen formation still needs, preferring the player's own position.
+  const FLEX = { FM_FLEX: ["F", "M"], MD_FLEX: ["M", "D"], FMD_FLEX: ["F", "M", "D"] };
+  function lineUp(t, formation) {
+    const lines = { GK: [], D: [], M: [], F: [] };
+    const pl = (pid) => state.players[pid] || { n: `Player ${pid}`, l: pid, c: "", p: "", ps: [], i: "" };
+    const slotNames = ((state.league && state.league.roster_positions) || []).filter((s) => s !== "BN" && s !== "IR");
+    if (!formation || !slotNames.length) {
+      t.starters.forEach((pid) => { const p = pl(pid); (lines[p.p] || lines.M).push({ ...p, id: pid }); });
+      return lines;
+    }
+    const [d, m, f] = formation.split("-").map(Number);
+    const need = { GK: 1, D: d, M: m, F: f };
+    const flex = [];
+    t.slots.forEach((pid, i) => {
+      if (!pid || pid === "0") return;
+      const slot = slotNames[i];
+      if (lines[slot]) { lines[slot].push({ ...pl(pid), id: pid }); need[slot]--; }
+      else flex.push({ pid, allowed: FLEX[slot] || ["M"] });
+    });
+    flex.forEach(({ pid, allowed }) => {
+      const p = pl(pid);
+      const own = (p.ps && p.ps.length ? p.ps : [p.p]).filter((x) => allowed.includes(x) && need[x] > 0);
+      const line = own[0] || allowed.find((x) => need[x] > 0) || (lines[p.p] ? p.p : "M");
+      lines[line].push({ ...p, id: pid });
+      need[line]--;
+    });
+    return lines;
   }
 
   function rank(teams) {
@@ -492,15 +538,27 @@
     const starters = new Set(t.starters), reserve = new Set(t.reserve);
 
     // group the XI by line, GK at the bottom of the pitch
-    const lines = { GK: [], D: [], M: [], F: [] };
-    t.starters.forEach((pid) => { const p = pl(pid); (lines[p.p] || lines.M).push({ ...p, id: pid }); });
-    const shape = [lines.D.length, lines.M.length, lines.F.length].filter(Boolean).join("-");
+    const current = formationFor(t, state.week);
+    const lines = lineUp(t, current && current.f);
+    const shape = current ? current.f : [lines.D.length, lines.M.length, lines.F.length].filter(Boolean).join("-");
+    // "3-4-3 (GW1–4) · 3-5-2 (GW5–)" style history of the shapes this manager has used
+    // merge back-to-back weeks with the same shape into one span
+    const spans = t.formations.reduce((acc, x) => {
+      if (acc.length && acc[acc.length - 1].f === x.f) return acc;
+      acc.push({ ...x });
+      return acc;
+    }, []);
+    const shapeHistory = spans.map((x, i) => {
+      const next = spans[i + 1];
+      const end = next ? next.wk - 1 : null;
+      return `${x.f} <small>(GW${x.wk}${end === x.wk ? "" : end ? `–${end}` : "–"})</small>`;
+    }).join(" · ");
     let delay = 0;
     const row = (arr) => `<div class="pitch__row">${arr.map((p) => `
       <div class="pl" style="animation-delay:${(delay++) * 45}ms">
         <span class="pl__photo" data-photo="${p.id}"><span>${esc(initials(p.n))}</span></span>
         ${pj(p.id) ? `<span class="pl__proj">${pj(p.id)}</span>` : ""}
-        <span class="pl__name">${esc(p.l)}</span><span class="pl__club">${esc(p.c)}</span>
+        <span class="pl__name">${esc(p.l)}</span><span class="pl__club">${clubLogo(p.t)}${esc(p.c)}</span>
       </div>`).join("")}</div>`;
 
     const squad = [...t.players].sort((a, b) => {
@@ -583,7 +641,8 @@
             <span class="box"></span><span class="box box--six"></span>
             ${row(lines.GK)}${row(lines.D)}${row(lines.M)}${row(lines.F)}
           </div>
-          <p class="formation__note">Green tag = projected points per 90 minutes (per game for players under 90 minutes this season).</p>
+          ${shapeHistory ? `<p class="formation__hist"><b>Formations used:</b> ${shapeHistory}</p>` : ""}
+          <p class="formation__note">Formation as set in Sleeper. Red tag = projected points per 90 minutes (per game for players under 90 minutes this season).</p>
         </div>
         <div class="squad">
           <h4>Squad (${t.players.length})</h4>
@@ -595,7 +654,7 @@
             const sp = state.seasonPts[pid];
             return `<li><span class="posb ${esc(p.p)}">${esc(p.p || "–")}</span>
               <span class="sq__photo" data-photo="${pid}" aria-hidden="true"></span>
-              <span class="nm">${esc(p.n)}<small>${esc(p.c)}${sp != null ? ` · ${num(sp)} pts` : ""}${pj(pid) ? ` · ${pj(pid)}` : ""}</small></span>${tag}</li>`;
+              <span class="nm">${esc(p.n)}<small>${clubLogo(p.t)}${esc(p.c)}${sp != null ? ` · ${num(sp)} pts` : ""}${pj(pid) ? ` · ${pj(pid)}` : ""}</small></span>${tag}</li>`;
           }).join("")}</ul>
         </div>
 
