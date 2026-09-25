@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analytics · The Mater League</title>
+  <meta name="description" content="How each club got here." />
+  <meta name="theme-color" content="#1b0020" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%2300ff85'/%3E%3Cpath d='M16 9l6 4.4-2.3 7h-7.4L10 13.4z' fill='%2337003c'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=16" />
+</head>
+<body data-page="analytics">
+  <main id="main">
+    <header class="page-hero">
+      <div class="page-hero__inner">
+        <p class="eyebrow">Under the hood</p>
+        <h1>Analytics</h1>
+        <p class="page-hero__lede">How each club got here.</p>
+      </div>
+    </header>
+
+    <section class="section section--page" aria-label="Analytics">
+      <div class="charts">
+        <figure class="chart-card reveal">
+          <figcaption>
+            <h3 class="chart-title">Points scored vs. best possible lineup</h3>
+            <p class="chart-sub">Solid bar: points scored. Outline: the most the club could have scored with a perfect lineup.</p>
+          </figcaption>
+          <div class="lineup-chart" id="lineupChart"></div>
+        </figure>
+        <figure class="chart-card reveal">
+          <figcaption>
+            <h3 class="chart-title">Standings by week</h3>
+            <p class="chart-sub">League position after each matchweek. Higher is better.</p>
+          </figcaption>
+          <div class="rank-chart" id="rankChart"></div>
+        </figure>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/layout.js?v=16"></script>
+  <script src="data/results.js?v=16"></script>
+  <script src="js/motion.js?v=16"></script>
+  <script src="js/app.js?v=16"></script>
+</body>
+</html>

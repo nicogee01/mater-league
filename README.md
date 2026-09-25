@@ -55,10 +55,15 @@ club's points-for/against week to week (`node scripts/snapshot.mjs`).
 ## Files
 
 ```
-index.html            page structure
-css/styles.css        design tokens, layout, animations
-js/motion.js          hero video (wide vs phone clip), pause button, nav ball
-js/app.js             Sleeper data → every section
+index.html            home: hero video, ticker, table snapshot, latest transfers, page links
+table.html            league table            clubs.html          club profiles
+h2h.html              head-to-head            transfers.html      transfer window
+records.html          Hall of Records         cup.html            The McQueen Cup
+victory-road.html     champions               analytics.html      charts
+css/styles.css        "matchday programme" theme tokens at the top, then components
+js/layout.js          shared nav + footer (edit PAGES here to add or rename a tab)
+js/motion.js          hero video, pause button, nav ball
+js/app.js             Sleeper data → whatever sections the current page has
 data/results.js       logged matchups, cup, honours
 scripts/snapshot.mjs  weekly result logger (Node 18+)
 media/                hero videos + posters (originals/ is git-ignored)
@@ -67,6 +72,6 @@ media/                hero videos + posters (originals/ is git-ignored)
 ## Tweaks
 
 - **Remove the IN DEVELOPMENT sign:** delete the `<div class="dev-sign">` block in `index.html`.
-- **Colours:** use the tokens at the top of `css/styles.css`.
+- **Colours:** use the tokens at the top of `css/styles.css` (paper, navy ink, programme red, old gold).
 - **Playoff line:** `PLAYOFF_SPOTS` in `js/app.js`.
-- **After edits:** bump the `?v=` number on the CSS/JS links in `index.html` so browsers pick up the change.
+- **After edits:** bump the `?v=` number on the CSS/JS links in every `.html` page so browsers pick up the change.

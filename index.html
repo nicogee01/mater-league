@@ -10,52 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=14" />
+  <link rel="stylesheet" href="css/styles.css?v=16" />
 </head>
-<body>
-  <a class="skip-link" href="#main">Skip to content</a>
-
-  <!-- ===== NAV ===== -->
-  <header class="nav" id="nav">
-    <div class="nav__inner">
-      <a class="brand" href="#top" aria-label="The Mater League home">
-        <svg class="brand__ball" viewBox="0 0 40 40" aria-hidden="true"><use href="#ball" /></svg>
-        <span class="brand__word">MATER<em>LEAGUE</em></span>
-      </a>
-      <nav class="nav__links" aria-label="Primary">
-        <a href="#table">Table</a>
-        <a href="#clubs">Clubs</a>
-        <a href="#h2h">H2H</a>
-        <a href="#transfers">Transfers</a>
-        <a href="#records">Records</a>
-        <a href="#cup">McQueen Cup</a>
-        <a href="#victory-road">Victory Road</a>
-        <a href="#analytics">Analytics</a>
-      </nav>
-      <a class="nav__cta" href="https://sleeper.com/leagues/1390750210698780672" target="_blank" rel="noopener">
-        Sleeper <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg>
-      </a>
-      <button class="nav__toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
-        <span></span><span></span>
-      </button>
-    </div>
-    <!-- ball rolls along as you scroll -->
-    <div class="nav__progress" aria-hidden="true">
-      <div class="nav__track"></div>
-      <svg class="nav__roller" id="roller" viewBox="0 0 40 40"><use href="#ball" /></svg>
-    </div>
-    <nav class="mobile-menu" id="mobileMenu" aria-label="Mobile" hidden>
-      <a href="#table">Table</a>
-      <a href="#clubs">Clubs</a>
-      <a href="#h2h">Head-to-Head</a>
-      <a href="#transfers">Transfers</a>
-      <a href="#records">Hall of Records</a>
-      <a href="#cup">The McQueen Cup</a>
-      <a href="#victory-road">Victory Road</a>
-      <a href="#analytics">Analytics</a>
-    </nav>
-  </header>
-
+<body data-page="home">
   <!-- ===== HERO ===== -->
   <section class="hero" id="top" aria-labelledby="heroTitle">
     <div class="hero__stage" aria-hidden="true">
@@ -86,11 +43,11 @@
       </h1>
       <p class="hero__sub">8 teams · 2026 season · Where friendships go to die</p>
       <div class="hero__ctas">
-        <a class="cta" href="#table">
+        <a class="cta" href="table.html">
           <span class="cta__label">Check the table <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg></span>
           <span class="cta__hint">Live standings</span>
         </a>
-        <a class="cta" href="#cup">
+        <a class="cta" href="cup.html">
           <span class="cta__label">The McQueen Cup <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg></span>
           <span class="cta__hint">Two-legged knockout</span>
         </a>
@@ -117,201 +74,62 @@
   </div>
 
   <main id="main">
-    <!-- ===== TABLE ===== -->
-    <section class="section" id="table" aria-labelledby="tableTitle">
-      <div class="section__head reveal">
-        <p class="eyebrow">Matchweek <span id="tableWeek">–</span></p>
-        <h2 id="tableTitle">League table</h2>
-        <p class="section__lede">Top six make the playoffs. Pick a club for its full profile. Column headers sort the table.</p>
+    <section class="section home" aria-label="League snapshot">
+      <div class="home__grid">
+        <article class="home-card reveal">
+          <header class="home-card__head">
+            <div><p class="eyebrow">Matchweek <span class="js-week">–</span></p><h2>League table</h2></div>
+            <a class="more" href="table.html">Full table <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg></a>
+          </header>
+          <div class="mini-head" aria-hidden="true"><span>Pos</span><span>Club</span><span>W-D-L</span><span>PF</span></div>
+          <ol class="mini-table" id="homeTable"><li><div class="skeleton" style="height:240px"></div></li></ol>
+        </article>
+        <article class="home-card reveal">
+          <header class="home-card__head">
+            <div><p class="eyebrow">Deadline day, every day</p><h2>Latest transfers</h2></div>
+            <a class="more" href="transfers.html">All transfers <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg></a>
+          </header>
+          <ol class="mini-feed" id="homeFeed"><li><div class="skeleton" style="height:240px"></div></li></ol>
+        </article>
       </div>
-      <div class="table-wrap reveal">
-        <div class="table-scroll">
-        <table class="league-table">
-          <thead>
-            <tr>
-              <th scope="col" class="c-pos">Pos</th>
-              <th scope="col" class="c-club">Club</th>
-              <th scope="col" aria-sort="descending"><button type="button" class="sort" data-sort="rank">W-D-L</button></th>
-              <th scope="col" aria-sort="none" class="hide-sm"><button type="button" class="sort" data-sort="winpct">Win%</button></th>
-              <th scope="col" aria-sort="none"><button type="button" class="sort" data-sort="pf">PF</button></th>
-              <th scope="col" aria-sort="none" class="hide-sm"><button type="button" class="sort" data-sort="pa">PA</button></th>
-              <th scope="col" aria-sort="none" class="hide-md"><button type="button" class="sort" data-sort="diff">+/-</button></th>
-              <th scope="col" aria-sort="none" class="hide-md"><button type="button" class="sort" data-sort="allplay" title="Record if you played every club every week">All-Play</button></th>
-              <th scope="col" aria-sort="none" class="hide-md"><button type="button" class="sort" data-sort="eff" title="Points scored vs best possible lineup">Eff.</button></th>
-              <th scope="col" class="c-form hide-sm">Form</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-            <tr><td colspan="10"><div class="skeleton"></div></td></tr>
-          </tbody>
-        </table>
-        </div>
-        <p class="table-legend"><span class="key key--ucl"></span> Playoffs (1–6) <span class="key key--rel"></span> Wooden spoon</p>
-      </div>
-    </section>
-
-    <!-- ===== CLUBS ===== -->
-    <section class="section section--alt" id="clubs" aria-labelledby="clubsTitle">
-      <div class="section__head reveal">
-        <p class="eyebrow">The eight</p>
-        <h2 id="clubsTitle">Clubs</h2>
-        <p class="section__lede">Starting XI with player photos and projections, splits, nemesis, cupcake and record transfer.</p>
-      </div>
-      <div class="club-grid" id="clubGrid"></div>
-      <article class="club-profile" id="clubProfile" hidden aria-live="polite"></article>
-    </section>
-
-    <!-- ===== HEAD TO HEAD ===== -->
-    <section class="section" id="h2h" aria-labelledby="h2hTitle">
-      <div class="section__head reveal">
-        <p class="eyebrow">Rivalries</p>
-        <h2 id="h2hTitle">Head-to-head</h2>
-        <p class="section__lede">Pick two clubs to see their record against each other.</p>
-      </div>
-
-      <div class="versus reveal">
-        <div class="versus__side">
-          <label for="h2hA">Home</label>
-          <select id="h2hA"></select>
-          <div class="versus__crest" id="h2hCrestA"></div>
-        </div>
-        <div class="versus__mid">
-          <div class="versus__score" id="h2hScore">
-            <span id="h2hWinsA">0</span><i>–</i><span id="h2hWinsB">0</span>
-          </div>
-          <p class="versus__meta" id="h2hMeta">No meetings yet</p>
-        </div>
-        <div class="versus__side">
-          <label for="h2hB">Away</label>
-          <select id="h2hB"></select>
-          <div class="versus__crest" id="h2hCrestB"></div>
-        </div>
-      </div>
-      <ol class="meetings reveal" id="h2hMeetings"></ol>
-
-      <div class="matrix-wrap reveal">
-        <h3 class="subhead">Every rivalry at a glance</h3>
-        <p class="matrix-note">Read across a row: that club's wins–losses against each club in the columns.</p>
-        <div class="matrix-scroll" tabindex="0" aria-label="Head-to-head grid, scrollable"><table class="matrix" id="h2hMatrix"></table></div>
-        <p class="pending-note" id="h2hEmpty" hidden></p>
-      </div>
-    </section>
-
-    <!-- ===== TRANSFERS ===== -->
-    <section class="section section--alt" id="transfers" aria-labelledby="transfersTitle">
-      <div class="section__head reveal">
-        <p class="eyebrow">Deadline day, every day</p>
-        <h2 id="transfersTitle">Transfer window</h2>
-        <p class="section__lede">Every completed waiver claim, free-agent signing and trade.</p>
-      </div>
-      <div class="filters reveal" role="group" aria-label="Filter transfers">
-        <button class="chip is-active" data-filter="all" aria-pressed="true">All</button>
-        <button class="chip" data-filter="waiver" aria-pressed="false">Waivers</button>
-        <button class="chip" data-filter="free_agent" aria-pressed="false">Free agents</button>
-        <button class="chip" data-filter="trade" aria-pressed="false">Trades</button>
-      </div>
-      <ol class="feed" id="feed"><li class="feed__item"><div class="skeleton"></div></li></ol>
-      <button class="btn-more" id="feedMore" hidden>Load more</button>
-    </section>
-
-    <!-- ===== HALL OF RECORDS ===== -->
-    <section class="section" id="records" aria-labelledby="recordsTitle">
-      <div class="section__head reveal">
-        <p class="eyebrow">Silverware &amp; shame</p>
-        <h2 id="recordsTitle">Hall of Records</h2>
-        <p class="section__lede">The numbers worth bragging about, or never living down.</p>
-      </div>
-      <div class="awards" id="awardsGrid"></div>
-      <div class="locked reveal" id="lockedRecords" hidden>
-        <p class="locked__title">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-          Unlocks once matchups are logged
-        </p>
-        <ul class="locked__list" id="lockedList"></ul>
-      </div>
-    </section>
-
-    <!-- ===== McQUEEN CUP ===== -->
-    <section class="section section--alt section--cup" id="cup" aria-labelledby="cupTitle">
-      <div class="section__head reveal">
-        <p class="eyebrow">Knockout</p>
-        <h2 id="cupTitle">The McQueen Cup</h2>
-        <p class="section__lede">Will there be a Cinderella story, or a dominant domestic double? Two-legged ties, decided on aggregate. Each round is a random draw.</p>
-      </div>
-      <div class="bracket reveal" id="bracket"></div>
-    </section>
-
-    <!-- ===== VICTORY ROAD ===== -->
-    <section class="section" id="victory-road" aria-labelledby="vrTitle">
-      <div class="section__head reveal">
-        <p class="eyebrow">Hall of Fame</p>
-        <h2 id="vrTitle">Victory Road</h2>
-        <p class="section__lede">Every champion the league has crowned, and the cup winners who survived the knockout.</p>
-      </div>
-      <div class="vr" id="victoryRoad"></div>
-    </section>
-
-    <!-- ===== ANALYTICS ===== -->
-    <section class="section section--alt" id="analytics" aria-labelledby="anTitle">
-      <div class="section__head reveal">
-        <p class="eyebrow">Under the hood</p>
-        <h2 id="anTitle">Analytics</h2>
-        <p class="section__lede">How each club got here.</p>
-      </div>
-      <div class="charts">
-        <figure class="chart-card reveal">
-          <figcaption>
-            <h3 class="chart-title">Points scored vs. best possible lineup</h3>
-            <p class="chart-sub">Solid bar: points scored. Outline: the most the club could have scored with a perfect lineup.</p>
-          </figcaption>
-          <div class="lineup-chart" id="lineupChart"></div>
-        </figure>
-        <figure class="chart-card reveal">
-          <figcaption>
-            <h3 class="chart-title">Standings by week</h3>
-            <p class="chart-sub">League position after each matchweek. Higher is better.</p>
-          </figcaption>
-          <div class="rank-chart" id="rankChart"></div>
-        </figure>
-      </div>
+      <nav class="home-links" aria-label="Explore the league">
+        <a class="home-link reveal" href="clubs.html">
+          <span class="home-link__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/></svg></span>
+          <span class="home-link__text"><b>Clubs</b><small>Starting XIs, squads and profiles</small></span>
+          <svg class="home-link__arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg>
+        </a>
+        <a class="home-link reveal" href="h2h.html">
+          <span class="home-link__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/></svg></span>
+          <span class="home-link__text"><b>Head-to-head</b><small>Rivalries and the full grid</small></span>
+          <svg class="home-link__arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg>
+        </a>
+        <a class="home-link reveal" href="records.html">
+          <span class="home-link__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/><path d="M12 15v4"/></svg></span>
+          <span class="home-link__text"><b>Hall of Records</b><small>Silverware and shame</small></span>
+          <svg class="home-link__arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg>
+        </a>
+        <a class="home-link reveal" href="cup.html">
+          <span class="home-link__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h4v4H3zM3 15h4v4H3zM17 10h4v4h-4z"/><path d="M7 7h3v10H7M10 12h7"/></svg></span>
+          <span class="home-link__text"><b>The McQueen Cup</b><small>Two-legged knockout bracket</small></span>
+          <svg class="home-link__arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg>
+        </a>
+        <a class="home-link reveal" href="victory-road.html">
+          <span class="home-link__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg></span>
+          <span class="home-link__text"><b>Victory Road</b><small>Every champion crowned</small></span>
+          <svg class="home-link__arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg>
+        </a>
+        <a class="home-link reveal" href="analytics.html">
+          <span class="home-link__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></span>
+          <span class="home-link__text"><b>Analytics</b><small>Charts behind the table</small></span>
+          <svg class="home-link__arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg>
+        </a>
+      </nav>
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="footer__inner">
-      <span class="brand__word">MATER<em>LEAGUE</em></span>
-      <p>Mater League, running since 2026. Created by Pep Guardiola's successor, Nico.</p>
-      <p>Live data from the Sleeper API. Not affiliated with the Premier League or Sleeper.</p>
-      <p class="footer__updated" id="updated" aria-live="polite"></p>
-    </div>
-  </footer>
-
-  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
-
-  <!-- shared SVG symbols -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <defs>
-      <symbol id="ball" viewBox="0 0 40 40">
-        <circle cx="20" cy="20" r="18.5" fill="#fff" stroke="#15001a" stroke-width="1.5" />
-        <path d="M20 12.5l7 5.1-2.7 8.3h-8.6L13 17.6z" fill="#15001a" />
-        <path d="M20 12.5V4.2M27 17.6l7.6-2.6M24.3 25.9l4.6 6.6M15.7 25.9l-4.6 6.6M13 17.6l-7.6-2.6" stroke="#15001a" stroke-width="1.4" fill="none" />
-        <path d="M16.5 2.2l3.5 2 3.5-2A18.5 18.5 0 0 0 16.5 2.2zM37.6 13.4l-3 1.6.7 4.8 2.9 1.2a18.5 18.5 0 0 0-.6-7.6zM31.9 34.2l-3-1.7-4.2 2.6.1 3.6a18.5 18.5 0 0 0 7.1-4.5zM8.1 34.2l3-1.7 4.2 2.6-.1 3.6a18.5 18.5 0 0 1-7.1-4.5zM2.4 13.4l3 1.6-.7 4.8-2.9 1.2a18.5 18.5 0 0 1 .6-7.6z" fill="#15001a" />
-      </symbol>
-      <symbol id="trophy" viewBox="0 0 60 70">
-        <g fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round">
-          <path d="M14 8Q14 34 30 34Q46 34 46 8Z"/>
-          <path d="M14 14Q-2 14-2 28Q-2 42 14 40"/>
-          <path d="M46 14Q62 14 62 28Q62 42 46 40"/>
-          <path d="M30 34V52"/>
-          <path d="M18 52H42L37 62H23Z"/>
-          <rect x="12" y="62" width="36" height="6" rx="1.5"/>
-        </g>
-      </symbol>
-    </defs>
-  </svg>
-
-  <script src="data/results.js?v=14"></script>
-  <script src="js/motion.js?v=14"></script>
-  <script src="js/app.js?v=14"></script>
+  <script src="js/layout.js?v=16"></script>
+  <script src="data/results.js?v=16"></script>
+  <script src="js/motion.js?v=16"></script>
+  <script src="js/app.js?v=16"></script>
 </body>
 </html>

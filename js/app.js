@@ -112,9 +112,10 @@
   }
 
   // ---------- club identity ----------
+  // classic kit pairs (both dark enough for white text on the banner gradient)
   const KITS = [
-    ["#6c1d78", "#ff2882"], ["#003c71", "#04f5ff"], ["#0b6b3a", "#00ff85"], ["#8a1538", "#ffd166"],
-    ["#1f2a44", "#ff5a36"], ["#4b0f5a", "#00ff85"], ["#00463a", "#ffd166"], ["#5a0f2c", "#04f5ff"],
+    ["#0b1f3a", "#c8102e"], ["#670e36", "#2a6db0"], ["#034694", "#0b1f3a"], ["#1b5e3b", "#9a7a34"],
+    ["#8b0d1a", "#1a1a1a"], ["#132257", "#5a6f9c"], ["#7a263a", "#b08a3e"], ["#274488", "#c8102e"],
   ];
   function hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
   function initials(name) {
@@ -249,12 +250,13 @@
 
   // ---------- HERO ----------
   function renderHero() {
+    $$(".js-week").forEach((el) => (el.textContent = state.week));
+    if (!$("#sbTop")) return;
     const T = state.teams;
     const row = (t) => `<li class="sb__row"><span class="sb__pos">${t.pos}</span><span class="sb__name">${esc(t.name)}</span><strong>${t.w}-${t.l}${t.d ? "-" + t.d : ""}</strong></li>`;
     $("#sbTop").innerHTML = T.slice(0, 3).map(row).join("");
     $("#sbBottom").innerHTML = T.slice(-2).map(row).join("");
     $("#heroEyebrow").textContent = `The Mater League · Matchweek ${state.week}`;
-    $("#tableWeek").textContent = state.week;
   }
   function streakLeader() {
     const val = (t) => (t.streak.endsWith("W") ? parseInt(t.streak, 10) : 0);
@@ -276,6 +278,7 @@
   };
   let tableSort = { key: "rank", dir: -1 };
   function renderTable() {
+    if (!$("#tableBody")) return;
     const n = state.teams.length;
     const rows = [...state.teams].sort((a, b) => (SORTS[tableSort.key](b) - SORTS[tableSort.key](a)) * -tableSort.dir || a.pos - b.pos);
     const byRank = tableSort.key === "rank" && tableSort.dir === -1;
@@ -310,9 +313,9 @@
     tableSort = tableSort.key === key ? { key, dir: -tableSort.dir } : { key, dir: -1 };
     renderTable();
   }));
-  $("#tableBody").addEventListener("click", (e) => {
+  $("#tableBody")?.addEventListener("click", (e) => {
     const tr = e.target.closest("tr[data-roster]");
-    if (tr && !e.target.closest("button")) openClub(+tr.dataset.roster, true);
+    if (tr && !e.target.closest("button")) location.href = `clubs.html#club-${tr.dataset.roster}`;
   });
 
   // ---------- HEAD-TO-HEAD ----------
@@ -330,6 +333,7 @@
     return { games, wa, wb, dr };
   }
   function renderH2HPicker() {
+    if (!$("#h2hA")) return;
     const opts = state.teams.map((t) => `<option value="${t.rosterId}">${esc(t.name)}</option>`).join("");
     const A = $("#h2hA"), B = $("#h2hB");
     A.innerHTML = opts; B.innerHTML = opts;
@@ -359,6 +363,7 @@
         <span class="${g.awayPts > g.homePts ? "win" : ""}">${esc(teamName(g.away))}</span></li>`).join("");
   }
   function renderMatrix() {
+    if (!$("#h2hMatrix")) return;
     const T = state.teams;
     const head = `<thead><tr><th scope="col"><span class="visually-hidden">Club</span></th>${T.map((t) => `<th scope="col" title="${esc(t.name)}">${crest(t)}<span class="visually-hidden">${esc(t.name)}</span></th>`).join("")}</tr></thead>`;
     const body = T.map((row) => `<tr><th scope="row">${crest(row)}${esc(row.name)}</th>${T.map((col) => {
@@ -379,6 +384,7 @@
   // ---------- CLUBS ----------
   const POS_ORDER = { GK: 0, D: 1, M: 2, F: 3 };
   function renderClubs() {
+    if (!$("#clubGrid")) return;
     $("#clubGrid").innerHTML = state.teams.map((t) => `
       <button type="button" class="club-card" data-open="${t.rosterId}" aria-pressed="false" aria-controls="clubProfile" style="--c1:${t.kit[0]};--c2:${t.kit[1]}">
         <span class="top">${crest(t, "lg")}<span class="rank" aria-label="Position ${t.pos}">${String(t.pos).padStart(2, "0")}</span></span>
@@ -545,12 +551,13 @@
     const open = $('.club-card[aria-pressed="true"]');
     el.hidden = true;
     $$(".club-card").forEach((c) => c.setAttribute("aria-pressed", "false"));
-    history.replaceState(null, "", "#clubs");
+    history.replaceState(null, "", location.pathname);
     open && open.focus();
   }
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-open]");
     if (!b) return;
+    if (!$("#clubProfile")) { location.href = `clubs.html#club-${b.dataset.open}`; return; }
     if (b.classList.contains("club-card") && b.getAttribute("aria-pressed") === "true") return closeClub();
     openClub(+b.dataset.open, true);
   });
@@ -592,6 +599,7 @@
     return new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
   function renderFeed() {
+    if (!$("#feed")) return;
     const list = state.txns.filter((t) => feedFilter === "all" || t.type === feedFilter);
     const shown = list.slice(0, feedShown);
     $("#feed").innerHTML = shown.length ? shown.map((tx, i) => {
@@ -611,9 +619,10 @@
     $$(".filters .chip").forEach((x) => { x.classList.toggle("is-active", x === c); x.setAttribute("aria-pressed", String(x === c)); });
     renderFeed();
   }));
-  $("#feedMore").addEventListener("click", () => { feedShown += 12; renderFeed(); });
+  $("#feedMore")?.addEventListener("click", () => { feedShown += 12; renderFeed(); });
 
   function renderTicker() {
+    if (!$("#ticker")) return;
     const items = state.txns.slice(0, 10).map((tx) => {
       const bid = tx.type === "waiver" && tx.settings && tx.settings.waiver_bid ? ` for $${tx.settings.waiver_bid}` : "";
       return txnSummary(tx).head + bid;
@@ -648,6 +657,7 @@
     ruler: '<path d="M3 12h18"/><path d="M7 8v8M12 6v12M17 8v8"/>',
   };
   function renderRecords() {
+    if (!$("#awardsGrid")) return;
     const T = state.teams;
     const top = (f) => [...T].sort((a, b) => f(b) - f(a))[0];
     const cards = [];
@@ -789,6 +799,7 @@
     return levels;
   }
   function renderCup() {
+    if (!$("#bracket")) return;
     const CHECK = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>`;
     $("#bracket").innerHTML = state.cupLevels.map((lv, li) => `
       <div class="bracket__round">
@@ -812,6 +823,7 @@
 
   // ---------- VICTORY ROAD ----------
   function renderVictoryRoad() {
+    if (!$("#victoryRoad")) return;
     const H = DATA.honours || {};
     const col = (label, list, pending) => `
       <div class="vr__col reveal">
@@ -851,6 +863,7 @@
     const T = [...state.teams].sort((a, b) => b.pf - a.pf);
     const max = Math.max(...T.map((t) => t.pp || t.pf));
     const el = $("#lineupChart");
+    if (!el) return;
     el.innerHTML = `<ul class="lc" role="list">${T.map((t) => `
       <li class="lc__row" tabindex="0" data-id="${t.rosterId}" aria-label="${esc(t.name)}: ${num(t.pf)} of ${num(t.pp)} possible, ${Math.round(eff(t) * 100)}%">
         <span class="lc__name">${esc(t.name)}</span>
@@ -870,6 +883,7 @@
   function renderRankChart() {
     const { weeks, hist, exact } = state.rankHistory;
     const el = $("#rankChart");
+    if (!el) return;
     const n = state.teams.length;
     if (!weeks.length) { el.innerHTML = `<p class="pending-note">No matchweeks played yet.</p>`; return; }
     const W = 720, H = 340, L = 34, R = 20, Tp = 16, B = 32;
@@ -918,6 +932,31 @@
     svg.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
   }
 
+  // ---------- HOME SNAPSHOT ----------
+  function renderHomeSnap() {
+    const table = $("#homeTable");
+    if (table) {
+      table.innerHTML = state.teams.map((t) => `
+        <li class="mini-row${t.pos <= PLAYOFF_SPOTS ? " is-po" : ""}${t.pos === state.teams.length ? " is-spoon" : ""}">
+          <a href="clubs.html#club-${t.rosterId}">
+            <span class="mini-pos">${t.pos}</span>${crest(t)}<span class="mini-name">${esc(t.name)}</span>
+            <span class="mini-rec">${t.w}-${t.d}-${t.l}</span><span class="mini-pts">${num(t.pf)}</span>
+          </a>
+        </li>`).join("");
+    }
+    const feed = $("#homeFeed");
+    if (feed && state.txns.length) {
+      feed.innerHTML = state.txns.slice(0, 4).map((tx) => {
+        const { head, main } = txnSummary(tx);
+        const bid = tx.type === "waiver" && tx.settings && tx.settings.waiver_bid;
+        const label = { waiver: "Waiver", free_agent: "Free agent", trade: "Trade" }[tx.type] || tx.type;
+        return `<li class="mini-feed__item">${main ? crest(main) : ""}
+          <span class="mini-feed__body"><span class="feed__type ${tx.type}">${label}</span><span class="mini-feed__head">${head}</span></span>
+          <span class="mini-feed__side">${bid ? `<b>$${bid}</b>` : ""}<small>${when(tx.status_updated || tx.created)}</small></span></li>`;
+      }).join("");
+    }
+  }
+
   // ---------- reveal + nav state ----------
   function observeReveals() {
     const io = new IntersectionObserver((entries) => {
@@ -931,18 +970,6 @@
     }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
     $$(".reveal:not(.is-in), .club-card:not(.is-in), .award:not(.is-in)").forEach((el) => io.observe(el));
   }
-  const navLinks = $$(".nav__links a");
-  const sectionSpy = new IntersectionObserver((entries) => {
-    entries.forEach((e) => {
-      if (!e.isIntersecting) return;
-      navLinks.forEach((a) => {
-        const on = a.getAttribute("href") === "#" + e.target.id;
-        a.classList.toggle("is-active", on);
-        on ? a.setAttribute("aria-current", "true") : a.removeAttribute("aria-current");
-      });
-    });
-  }, { rootMargin: "-45% 0px -50% 0px" });
-  $$("main > section").forEach((s) => sectionSpy.observe(s));
 
   // mobile menu
   const toggle = $("#navToggle"), menu = $("#mobileMenu");
@@ -957,15 +984,15 @@
     if (e.key !== "Escape") return;
     hideTip();
     if (!menu.hidden) { toggle.click(); toggle.focus(); }
-    else if (!$("#clubProfile").hidden) closeClub();
+    else if ($("#clubProfile") && !$("#clubProfile").hidden) closeClub();
   });
 
   // ---------- boot ----------
   function showError(err) {
     console.error(err);
     const box = `<div class="error-box" role="alert"><strong>Couldn't reach Sleeper.</strong> Check your connection and try again.<br><button type="button" onclick="location.reload()">Retry</button></div>`;
-    $("#tableBody").innerHTML = `<tr><td colspan="10">${box}</td></tr>`;
-    $("#feed").innerHTML = `<li>${box}</li>`;
+    const target = $("main .section") || $("main");
+    if (target) target.insertAdjacentHTML("afterbegin", box);
   }
 
   async function boot() {
@@ -984,6 +1011,7 @@
       state.cupLevels = buildCup();
 
       renderHero();
+      renderHomeSnap();
       renderTable();
       renderClubs();
       renderH2HPicker();
@@ -1000,7 +1028,7 @@
       const season = league.season || sportState.season;
       const [players, statsWeeks, ...txnLegs] = await Promise.all([
         loadPlayers().catch(() => ({})),
-        Promise.all(Array.from({ length: scored }, (_, i) => get(`/stats/${SPORT}/regular/${season}/${i + 1}`).catch(() => ({})))),
+        Promise.all(Array.from({ length: $("#clubGrid") ? scored : 0 }, (_, i) => get(`/stats/${SPORT}/regular/${season}/${i + 1}`).catch(() => ({})))),
         ...Array.from({ length: legs }, (_, i) => get(`/league/${LEAGUE_ID}/transactions/${i + 1}`).catch(() => [])),
       ]);
       state.players = players;
@@ -1012,6 +1040,7 @@
       renderFeed();
       renderTicker();
       renderRecords();
+      renderHomeSnap();
       observeReveals();
 
       const m = location.hash.match(/^#club-(\d+)$/);

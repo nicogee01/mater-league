@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>League table · The Mater League</title>
+  <meta name="description" content="Top six make the playoffs. Pick a club for its full profile. Column headers sort the table." />
+  <meta name="theme-color" content="#1b0020" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%2300ff85'/%3E%3Cpath d='M16 9l6 4.4-2.3 7h-7.4L10 13.4z' fill='%2337003c'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=16" />
+</head>
+<body data-page="table">
+  <main id="main">
+    <header class="page-hero">
+      <div class="page-hero__inner">
+        <p class="eyebrow">Matchweek <span class="js-week">–</span></p>
+        <h1>League table</h1>
+        <p class="page-hero__lede">Top six make the playoffs. Pick a club for its full profile. Column headers sort the table.</p>
+      </div>
+    </header>
+
+    <section class="section section--page" aria-label="League table">
+      <div class="table-wrap reveal">
+        <div class="table-scroll">
+        <table class="league-table">
+          <thead>
+            <tr>
+              <th scope="col" class="c-pos">Pos</th>
+              <th scope="col" class="c-club">Club</th>
+              <th scope="col" aria-sort="descending"><button type="button" class="sort" data-sort="rank">W-D-L</button></th>
+              <th scope="col" aria-sort="none" class="hide-sm"><button type="button" class="sort" data-sort="winpct">Win%</button></th>
+              <th scope="col" aria-sort="none"><button type="button" class="sort" data-sort="pf">PF</button></th>
+              <th scope="col" aria-sort="none" class="hide-sm"><button type="button" class="sort" data-sort="pa">PA</button></th>
+              <th scope="col" aria-sort="none" class="hide-md"><button type="button" class="sort" data-sort="diff">+/-</button></th>
+              <th scope="col" aria-sort="none" class="hide-md"><button type="button" class="sort" data-sort="allplay" title="Record if you played every club every week">All-Play</button></th>
+              <th scope="col" aria-sort="none" class="hide-md"><button type="button" class="sort" data-sort="eff" title="Points scored vs best possible lineup">Eff.</button></th>
+              <th scope="col" class="c-form hide-sm">Form</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="10"><div class="skeleton"></div></td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="table-legend"><span class="key key--ucl"></span> Playoffs (1–6) <span class="key key--rel"></span> Wooden spoon</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/layout.js?v=16"></script>
+  <script src="data/results.js?v=16"></script>
+  <script src="js/motion.js?v=16"></script>
+  <script src="js/app.js?v=16"></script>
+</body>
+</html>

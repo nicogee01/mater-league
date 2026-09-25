@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Head-to-head · The Mater League</title>
+  <meta name="description" content="Pick two clubs to see their record against each other." />
+  <meta name="theme-color" content="#1b0020" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%2300ff85'/%3E%3Cpath d='M16 9l6 4.4-2.3 7h-7.4L10 13.4z' fill='%2337003c'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=16" />
+</head>
+<body data-page="h2h">
+  <main id="main">
+    <header class="page-hero">
+      <div class="page-hero__inner">
+        <p class="eyebrow">Rivalries</p>
+        <h1>Head-to-head</h1>
+        <p class="page-hero__lede">Pick two clubs to see their record against each other.</p>
+      </div>
+    </header>
+
+    <section class="section section--page" aria-label="Head-to-head">
+      <div class="versus reveal">
+        <div class="versus__side">
+          <label for="h2hA">Home</label>
+          <select id="h2hA"></select>
+          <div class="versus__crest" id="h2hCrestA"></div>
+        </div>
+        <div class="versus__mid">
+          <div class="versus__score" id="h2hScore">
+            <span id="h2hWinsA">0</span><i>–</i><span id="h2hWinsB">0</span>
+          </div>
+          <p class="versus__meta" id="h2hMeta">No meetings yet</p>
+        </div>
+        <div class="versus__side">
+          <label for="h2hB">Away</label>
+          <select id="h2hB"></select>
+          <div class="versus__crest" id="h2hCrestB"></div>
+        </div>
+      </div>
+      <ol class="meetings reveal" id="h2hMeetings"></ol>
+
+      <div class="matrix-wrap reveal">
+        <h3 class="subhead">Every rivalry at a glance</h3>
+        <p class="matrix-note">Read across a row: that club's wins–losses against each club in the columns.</p>
+        <div class="matrix-scroll" tabindex="0" aria-label="Head-to-head grid, scrollable"><table class="matrix" id="h2hMatrix"></table></div>
+        <p class="pending-note" id="h2hEmpty" hidden></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/layout.js?v=16"></script>
+  <script src="data/results.js?v=16"></script>
+  <script src="js/motion.js?v=16"></script>
+  <script src="js/app.js?v=16"></script>
+</body>
+</html>
