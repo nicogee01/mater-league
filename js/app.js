@@ -1214,30 +1214,9 @@
     }));
     return levels;
   }
-  // the McQueen Cup itself: gold gradient, with a glint that sweeps across it
-  const CUP_PARTS = `
-    <path d="M30 10h60v26c0 22-13 38-30 38S30 58 30 36z"/>
-    <path d="M30 18H15c0 20 6 31 19 33l2-8c-7-2-11-9-11-17h5z"/>
-    <path d="M90 18h15c0 20-6 31-19 33l-2-8c7-2 11-9 11-17h-5z"/>
-    <path d="M54 72h12v22H54z"/>
-    <path d="M44 94h32l4 8H40z"/>
-    <rect x="34" y="102" width="52" height="26" rx="3"/>
-    <rect x="28" y="128" width="64" height="10" rx="2"/>`;
-  const TROPHY = `<svg class="final-trophy" viewBox="0 0 120 142" aria-hidden="true">
-    <defs>
-      <linearGradient id="cupGold" x1="0" x2="1" y1="0" y2="0">
-        <stop offset="0" stop-color="#7a5b1c"/><stop offset=".3" stop-color="#e9c874"/><stop offset=".5" stop-color="#fff0c2"/>
-        <stop offset=".7" stop-color="#d4a843"/><stop offset="1" stop-color="#6e5118"/>
-      </linearGradient>
-      <linearGradient id="cupShine" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-      <clipPath id="cupClip">${CUP_PARTS}</clipPath>
-    </defs>
-    <g fill="url(#cupGold)">${CUP_PARTS}</g>
-    <rect x="40" y="108" width="40" height="12" rx="1.5" fill="#0b1f3a" opacity=".55"/>
-    <text x="60" y="117" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-size="7" font-weight="700" letter-spacing="1" fill="#e9c874">McQUEEN CUP</text>
-    <path d="M60 24l3.2 6.5 7.2 1-5.2 5 1.2 7.1L60 40.2l-6.4 3.4 1.2-7.1-5.2-5 7.2-1z" fill="#fff4d6" opacity=".85"/>
-    <g clip-path="url(#cupClip)"><polygon class="final-trophy__shine" points="0,0 22,0 -8,142 -30,142" fill="url(#cupShine)"/></g>
-  </svg>`;
+  // the McQueen Cup itself (media/mcqueen-cup.png, background removed); a glint sweeps across it
+  const CUP_IMG = "media/mcqueen-cup.png";
+  const TROPHY = `<span class="final-trophy" aria-hidden="true"><img src="${CUP_IMG}" alt="" width="289" height="497"></span>`;
 
   function tieCard(t) {
     const CHECK = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>`;
@@ -1343,21 +1322,21 @@
   function renderVictoryRoad() {
     if (!$("#victoryRoad")) return;
     const H = LORE.honours || {};
-    const col = (label, list, pending) => `
+    const col = (label, list, pending, cupImage) => `
       <div class="vr__col reveal">
         <p class="vr__label">${label}</p>
         ${(list && list.length ? [...list].sort((a, b) => b.year - a.year) : [{ year: new Date().getFullYear(), champion: null }]).map((s) => {
           const champ = state.byRoster[rosterOf(s.champion)], ru = state.byRoster[rosterOf(s.runnerUp)];
           return `<div class="vr__season ${champ ? "is-won" : ""}">
             <span class="vr__year">${s.year}</span>
-            <svg class="vr__trophy" viewBox="0 0 60 70" aria-hidden="true"><use href="#trophy"/></svg>
+            ${cupImage ? `<img class="vr__trophy vr__trophy--img" src="${CUP_IMG}" alt="" width="289" height="497">` : `<svg class="vr__trophy" viewBox="0 0 60 70" aria-hidden="true"><use href="#trophy"/></svg>`}
             <div class="vr__champ">${champ ? crest(champ) : ""}<b>${champ ? club(champ) : "TBD"}</b></div>
             <p class="vr__ru">Runner-up · ${ru ? club(ru) : "TBD"}</p>
             ${champ ? "" : `<span class="vr__status">${pending}</span>`}
           </div>`;
         }).join("")}
       </div>`;
-    $("#victoryRoad").innerHTML = col("Mater League Champions", H.league, "Season in progress") + col("McQueen Cup Champions", H.cup, "Bracket in progress");
+    $("#victoryRoad").innerHTML = col("Mater League Champions", H.league, "Season in progress") + col("McQueen Cup Champions", H.cup, "Bracket in progress", true);
   }
 
   // ---------- ANALYTICS ----------
