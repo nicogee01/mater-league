@@ -1587,10 +1587,24 @@
     if (!el) return;
     const data = pr.viewing === pr.week ? pr.results : pr.archive;
     const wk = pr.viewing;
-    $("#prRound").innerHTML = `<b>Gameweek ${wk} rankings</b> · ${wk === pr.week ? `<span class="pr-open">Voting open</span> until Gameweek ${wk + 1} is scored` : "Final"} · ${data ? data.ballots : 0} of ${state.teams.length} ballots in`;
-    if (!data) { el.innerHTML = `<p class="pending-note">Couldn't load results. Try refreshing.</p>`; return; }
-    if (!data.teams.length) {
-      el.innerHTML = `<div class="pr-empty"><b>${data.ballots} of ${state.teams.length} ballots in.</b> Results appear once ${data.min_ballots} clubs have voted, which keeps everyone's ballot private.</div>`;
+    if (!data) {
+      $("#prRound").innerHTML = `<b>Gameweek ${wk} rankings</b>`;
+      el.innerHTML = `<p class="pending-note">Couldn't load results. Try refreshing.</p>`;
+      return;
+    }
+    const voters = data.voters || state.teams.length;
+    const revealAt = data.reveal_at ? new Date(data.reveal_at) : null;
+    const when = (d) => d.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    $("#prRound").innerHTML = `<b>Gameweek ${wk} rankings</b> · ${data.revealed ? "Revealed" : data.closed ? "Voting closed" : `<span class="pr-open">Voting open</span>`} · ${data.ballots} of ${voters} ballots in`;
+    if (!data.revealed) {
+      el.innerHTML = `<div class="pr-empty">
+        <p class="pr-empty__big">${data.ballots} of ${voters} ballots in</p>
+        ${data.closed
+          ? `<p>Voting has closed, but results stay hidden because fewer than ${data.min_ballots} clubs voted. Showing them would give away how those clubs voted.</p>`
+          : revealAt
+            ? `<p>The rankings are revealed when all ${voters} clubs have voted, or on <b>${when(revealAt)}</b> (the day before Gameweek ${wk + 1}), whichever comes first. Voting closes at the reveal.</p>`
+            : `<p>The rankings are revealed once all ${voters} clubs have voted.</p>`}
+      </div>`;
       return;
     }
     const prevRank = {};
@@ -1635,6 +1649,10 @@
         rpc("get_rounds"),
       ]);
       pr.results = cur; pr.prev = prev; pr.rounds = rounds;
+      const closed = cur && cur.closed;
+      $("#ballot").hidden = closed;
+      $("#ballotClosed").hidden = !closed;
+      if (closed) $("#ballotClosed").innerHTML = `<b>Voting for Gameweek ${pr.week} has closed.</b> The Gameweek ${pr.week + 1} ballot opens once Sleeper has scored Gameweek ${pr.week + 1}.`;
     } catch (e) {
       console.error(e);
       pr.results = null;
@@ -1819,12 +1837,13 @@
   // latest round with public results (3+ ballots) decides who wears the crown and the poo
   async function loadEmblems() {
     try {
-      const rounds = await rpc("get_rounds");
-      const round = rounds.find((r) => r.ballots >= 3);
-      if (!round) return null;
-      const res = await rpc("get_results", { p_week: round.week });
-      if (!res.teams || res.teams.length < 2) return null;
-      return { week: round.week, top: res.teams[0].manager, bottom: res.teams[res.teams.length - 1].manager };
+      const rounds = (await rpc("get_rounds")).filter((r) => r.ballots >= 3).slice(0, 3);
+      for (const round of rounds) {
+        const res = await rpc("get_results", { p_week: round.week });
+        if (res.revealed && res.teams && res.teams.length >= 2)
+          return { week: round.week, top: res.teams[0].manager, bottom: res.teams[res.teams.length - 1].manager };
+      }
+      return null;
     } catch (_) { return null; }
   }
 
