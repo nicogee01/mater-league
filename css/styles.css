@@ -455,10 +455,10 @@ button { cursor: pointer; touch-action: manipulation; }
 .formation__label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--s3); }
 .formation__label b { font-family: var(--f-display); font-weight: 400; font-size: 26px; color: var(--accent); }
 .pitch {
-  position: relative; aspect-ratio: 68 / 80; border-radius: 16px; overflow: hidden;
+  position: relative; min-height: 520px; border-radius: 16px; overflow: hidden; gap: 14px;
   background: repeating-linear-gradient(180deg, #0c5c2d 0 10%, #0f6c36 10% 20%);
   border: 2px solid rgba(255,255,255,0.55);
-  display: flex; flex-direction: column-reverse; justify-content: space-around; padding: 6% 2%;
+  display: flex; flex-direction: column-reverse; justify-content: space-around; padding: 36px 2% 44px;
 }
 .pitch::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 0; border-top: 2px solid rgba(255,255,255,0.55); }
 .pitch::after { content: ""; position: absolute; left: 50%; top: 0; width: 28%; aspect-ratio: 1; border: 2px solid rgba(255,255,255,0.55); border-radius: 50%; transform: translate(-50%, -50%); }
@@ -470,7 +470,7 @@ button { cursor: pointer; touch-action: manipulation; }
 .pl__shirt path { fill: var(--c1, var(--ink)); stroke: #fff; stroke-width: 1.5; }
 .pl__name {
   font-size: 12px; font-weight: 700; line-height: 1.15; padding: 2px 6px; border-radius: 4px;
-  background: rgba(11,31,58,0.88); max-width: 100%; overflow-wrap: anywhere;
+  background: rgba(11,31,58,0.88); max-width: 100%; overflow-wrap: normal; word-break: normal; hyphens: manual;
 }
 .pl__club { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 600; }
 .club-logo { width: 14px; height: 14px; object-fit: contain; flex: none; }
@@ -1359,6 +1359,12 @@ button { cursor: pointer; touch-action: manipulation; }
   .cp__banner { padding: var(--s5); gap: var(--s4); }
   .cp__banner .crest--xl { width: 72px; height: 72px; }
   .cp__body { padding: var(--s4); }
+  .pitch { min-height: 0; gap: 12px; padding: 28px 4px 36px; }
+  .pl { width: 25%; gap: 3px; }
+  .pl__photo { width: 40px; height: 40px; font-size: 13px; }
+  .pl__proj { font-size: 10px; padding: 1px 4px; margin-top: -8px; }
+  .pl__name { font-size: 11px; padding: 2px 4px; }
+  .pl__club { font-size: 10px; }
   .section__head::before, .section__head::after { display: none; }
   .motion-toggle { left: auto; right: var(--s4); bottom: auto; top: calc(var(--nav-h) + var(--s2)); }
   .dev-sign { padding-top: 0; }
