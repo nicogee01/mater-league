@@ -1340,6 +1340,76 @@
     $("#victoryRoad").innerHTML = col("Mater League Champions", H.league, "Season in progress", LEAGUE_IMG) + col("McQueen Cup Champions", H.cup, "Bracket in progress", CUP_IMG);
   }
 
+  // ---------- MATCHUPS ----------
+  // Fixtures come from matchups.csv; starting XIs (where logged) from lineups.csv, read off Sleeper's matchup screens.
+  const SLOT_ORDER = ["GK", "DEF", "MID", "FWD"];
+  const mu = { week: null };
+  function sheetFor(id, week) {
+    return (state.lineups || []).filter((r) => +r.week === week && rosterOf(r.manager) === id)
+      .map((r) => ({ pid: r.player_id, name: r.player, slot: r.slot, pts: +r.pts }))
+      .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
+  }
+  const shape = (xi) => ["DEF", "MID", "FWD"].map((s) => xi.filter((p) => p.slot === s).length).join("-");
+  function renderSheet(xi, star) {
+    let last = null;
+    return `<ol class="mu-sheet__list">${xi.map((p) => {
+      const head = p.slot !== last ? `<li class="mu-line" aria-hidden="true">${{ GK: "Goalkeeper", DEF: "Defence", MID: "Midfield", FWD: "Attack" }[p.slot]}</li>` : "";
+      last = p.slot;
+      return `${head}<li class="mu-p${p === star ? " is-star" : ""}${p.pts <= 0 ? " is-blank" : ""}">
+        <span class="mu-p__photo" data-photo="${esc(p.pid)}" aria-hidden="true"><span>${esc(initials(p.name))}</span></span>
+        <span class="mu-p__name">${esc(p.name)}<small>${esc(p.slot)}${p === star ? " · Top scorer" : ""}</small></span>
+        <span class="mu-p__pts">${num(p.pts)}</span>
+      </li>`;
+    }).join("")}</ol>`;
+  }
+  function renderMatchups() {
+    const list = $("#muList");
+    if (!list) return;
+    const weeks = [...new Set(state.results.map((m) => m.week))].sort((a, b) => a - b);
+    if (!weeks.length) { list.innerHTML = `<p class="pending-note">No gameweeks logged yet.</p>`; return; }
+    const withXI = new Set((state.lineups || []).map((r) => +r.week));
+    if (mu.week == null) mu.week = [...weeks].reverse().find((w) => withXI.has(w)) ?? weeks[weeks.length - 1];
+    $("#muWeeks").innerHTML = weeks.map((w) => `<button type="button" class="chip${w === mu.week ? " is-active" : ""}" data-week="${w}" aria-pressed="${w === mu.week}">GW${w}${withXI.has(w) ? `<i class="mu-dot" title="Lineups logged"></i>` : ""}</button>`).join("");
+    const games = state.results.filter((m) => m.week === mu.week);
+    list.innerHTML = games.map((m) => {
+      const H = state.byRoster[m.home], A = state.byRoster[m.away];
+      const hx = sheetFor(m.home, m.week), ax = sheetFor(m.away, m.week);
+      const all = [...hx, ...ax];
+      const star = all.length ? all.reduce((a, b) => (b.pts > a.pts ? b : a)) : null;
+      const hw = m.homePts > m.awayPts, aw = m.awayPts > m.homePts;
+      const side = (t, pts, win, xi, align) => `
+        <div class="mu-side mu-side--${align}${win ? " is-win" : ""}">
+          ${crest(t)}<span class="mu-side__name">${club(t)}<small>${xi.length ? shape(xi) : "&nbsp;"}</small></span>
+          <b class="mu-side__pts">${num(pts, 2)}</b>
+        </div>`;
+      return `<article class="mu-card reveal" aria-label="${esc(H.name)} ${num(m.homePts, 2)}, ${esc(A.name)} ${num(m.awayPts, 2)}">
+        <header class="mu-card__head">
+          ${side(H, m.homePts, hw, hx, "home")}
+          <span class="mu-card__ft">FT</span>
+          ${side(A, m.awayPts, aw, ax, "away")}
+        </header>
+        ${all.length ? `
+          <p class="mu-card__motm"><span>Top scorer</span> ${esc(star.name)} <b>${num(star.pts)}</b> for ${club(hx.includes(star) ? H : A)}</p>
+          <div class="mu-sheets">
+            <section class="mu-sheet" aria-label="${esc(H.name)} starting XI">${renderSheet(hx, star)}</section>
+            <section class="mu-sheet" aria-label="${esc(A.name)} starting XI">${renderSheet(ax, star)}</section>
+          </div>`
+          : `<p class="mu-card__none">Starting XIs for this gameweek aren't logged yet.</p>`}
+      </article>`;
+    }).join("");
+    $("#muNote").textContent = withXI.has(mu.week)
+      ? "Starting XIs are read from Sleeper's matchup screens and add up to each club's score. Positions are the slot each player filled."
+      : "";
+    if (Object.keys(state.players || {}).length) loadPhotos(games.flatMap((m) => [...sheetFor(m.home, m.week), ...sheetFor(m.away, m.week)]).map((p) => p.pid), list);
+    observeReveals();
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("#muWeeks .chip");
+    if (!b) return;
+    mu.week = +b.dataset.week;
+    renderMatchups();
+  });
+
   // ---------- ANALYTICS ----------
   const tip = $("#tooltip");
   function showTip(html, x, y) {
@@ -2242,10 +2312,11 @@
 
   async function boot() {
     try {
-      const [league, users, rosters, sportState, matchRows, cupRows, emblems] = await Promise.all([
+      const [league, users, rosters, sportState, matchRows, cupRows, emblems, lineupRows] = await Promise.all([
         get(`/league/${LEAGUE_ID}`), get(`/league/${LEAGUE_ID}/users`), get(`/league/${LEAGUE_ID}/rosters`), get(`/state/${SPORT}`).catch(() => ({})),
-        getCSV("data/matchups.csv"), getCSV("data/cup.csv"), loadEmblems(),
+        getCSV("data/matchups.csv"), getCSV("data/cup.csv"), loadEmblems(), $("#muList") ? getCSV("data/lineups.csv") : [],
       ]);
+      state.lineups = lineupRows;
       state.league = league;
       state.week = sportState.display_week || sportState.week || (league.settings && league.settings.leg) || 1;
       state.teams = rank(buildTeams(users, rosters));
@@ -2274,6 +2345,7 @@
       renderCup();
       renderVictoryRoad();
       renderWeekly();
+      renderMatchups();
       initPower();
       observeReveals();
 
@@ -2287,6 +2359,7 @@
         ...Array.from({ length: legs }, (_, i) => get(`/league/${LEAGUE_ID}/transactions/${i + 1}`).catch(() => [])),
       ]);
       state.players = players;
+      renderMatchups();
       const { proj, season: seasonPts } = buildProjections(statsWeeks, league.scoring_settings || {});
       state.projections = proj;
       state.seasonPts = seasonPts;

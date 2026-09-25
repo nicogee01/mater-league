@@ -663,6 +663,42 @@ button { cursor: pointer; touch-action: manipulation; }
 .badge--fav { display: inline-flex; align-items: center; gap: 5px; color: #fbf7ee; }
 .badge--fav .club-logo { width: 14px; height: 14px; }
 
+/* ================= MATCHUPS ================= */
+.mu-weeks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: var(--s5); }
+.mu-weeks .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
+.mu-dot { width: 7px; height: 7px; border-radius: 50%; background: #b08a3e; }
+.mu-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); align-items: start; }
+.mu-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; min-width: 0; box-shadow: 0 1px 0 rgba(11, 31, 58, 0.06); }
+.mu-card__head { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--s3); padding: var(--s4) var(--s5); border-bottom: 3px double var(--ink); }
+.mu-side { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "crest name" "pts pts"; gap: 6px 10px; align-items: center; min-width: 0; }
+.mu-side--away { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name crest" "pts pts"; text-align: right; }
+.mu-side .crest { grid-area: crest; width: 36px; height: 36px; }
+.mu-side__name { grid-area: name; font-weight: 700; font-size: 15px; line-height: 1.2; overflow-wrap: break-word; min-width: 0; }
+.mu-side__name small { display: block; font-weight: 500; font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.mu-side__pts { grid-area: pts; font-family: var(--f-display); font-weight: 400; font-size: clamp(34px, 4vw, 44px); line-height: 1; color: var(--faint); font-variant-numeric: tabular-nums; }
+.mu-side.is-win .mu-side__pts { color: var(--text); }
+.mu-side.is-win .mu-side__name { color: var(--text); }
+.mu-card__ft { font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; color: var(--bg); background: var(--ink); padding: 4px 8px; border-radius: 6px; }
+.mu-card__motm { margin: 0; padding: 10px var(--s5); background: var(--surface-2); font-size: 14px; color: var(--muted); }
+.mu-card__motm span { font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-right: 4px; }
+.mu-card__motm b { color: var(--text); font-variant-numeric: tabular-nums; }
+.mu-card__none { margin: 0; padding: var(--s4) var(--s5); color: var(--muted); font-size: 14px; }
+.mu-sheets { display: grid; grid-template-columns: 1fr 1fr; }
+.mu-sheet { padding: var(--s2) var(--s3) var(--s4); min-width: 0; }
+.mu-sheet + .mu-sheet { border-left: 1px solid var(--line); }
+.mu-sheet__list { list-style: none; margin: 0; padding: 0; }
+.mu-line { margin: var(--s3) 6px 2px; font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+.mu-p { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 8px; }
+.mu-p__photo { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2) center 6% / 150% auto no-repeat; font-family: var(--f-display); font-size: 11px; color: var(--muted); }
+.mu-p__photo.has-photo { background-color: #fff; }
+.mu-p__photo.has-photo span { display: none; }
+.mu-p__name { font-size: 14px; font-weight: 600; line-height: 1.2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mu-p__name small { display: block; font-size: 11px; font-weight: 500; color: var(--faint); }
+.mu-p__pts { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mu-p.is-blank .mu-p__pts { color: var(--faint); font-weight: 500; }
+.mu-p.is-star { background: rgba(176, 138, 62, 0.16); box-shadow: inset 3px 0 0 #b08a3e; }
+.mu-p.is-star .mu-p__name small { color: var(--gold); font-weight: 700; }
+
 /* ================= VICTORY ROAD ================= */
 .vr { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s5); }
 .vr__label { margin: 0 0 var(--s4); font-family: var(--f-label); font-weight: 700; font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
@@ -1451,6 +1487,7 @@ button { cursor: pointer; touch-action: manipulation; }
   .lc__row { grid-template-columns: 1fr auto; }
   .lc__name { grid-column: 1 / -1; }
   .charts--wk { grid-template-columns: 1fr; }
+  .mu-list { grid-template-columns: 1fr; }
   .wk__tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lk__row { grid-template-columns: 1fr 52px; }
   .lk__track { grid-column: 1 / -1; grid-row: 2; }
@@ -1486,6 +1523,14 @@ button { cursor: pointer; touch-action: manipulation; }
   .cp__kpis { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
+  .mu-card__head { padding: var(--s3) var(--s4); gap: var(--s2); }
+  .mu-side .crest { width: 30px; height: 30px; }
+  .mu-side__name { font-size: 14px; }
+  .mu-card__motm { padding: 10px var(--s4); }
+  .mu-sheet { padding: var(--s2) 4px var(--s3); }
+  .mu-p { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  .mu-p__photo { display: none; }
+  .mu-p__name { font-size: 13px; }
   .section, .section--alt { padding: var(--s8) var(--s4); }
   .hero { padding-left: var(--s4); padding-right: var(--s4); }
   .hero__ctas { gap: var(--s5); margin-top: var(--s6); flex-wrap: wrap; }

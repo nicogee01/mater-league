@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>The McQueen Cup · The Mater League</title>
-  <meta name="description" content="Will there be a Cinderella story, or a dominant domestic double? Two-legged ties, decided on aggregate. Each round is a random draw." />
+  <title>Matchups · The Mater League</title>
+  <meta name="description" content="Every gameweek fixture, with both starting XIs and what each player scored." />
   <meta name="theme-color" content="#1b0020" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%2300ff85'/%3E%3Cpath d='M16 9l6 4.4-2.3 7h-7.4L10 13.4z' fill='%2337003c'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -12,25 +12,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css?v=45" />
 </head>
-<body data-page="cup">
+<body data-page="matchups">
   <main id="main">
     <header class="page-hero">
       <div class="page-hero__inner">
-        <p class="eyebrow">Knockout</p>
-        <h1>The McQueen Cup</h1>
-        <p class="page-hero__lede">Will there be a Cinderella story, or a dominant domestic double? Two-legged ties, decided on aggregate. Each round is a random draw.</p>
+        <p class="eyebrow">Team sheets</p>
+        <h1>Matchups</h1>
+        <p class="page-hero__lede">Every fixture, gameweek by gameweek: the score, both starting XIs and what each player put up.</p>
       </div>
     </header>
 
-    <section class="section section--page section--cup" aria-label="The McQueen Cup">
-      <p class="bracket-hint">Swipe to see the whole bracket →</p>
-      <div class="bracket reveal" id="bracket"></div>
-
-      <div class="cal reveal">
-        <h2 class="subhead">Marquee calendar</h2>
-        <p class="section__lede">One cup leg is the marquee match each gameweek, from Gameweek 19 to the final in Gameweek 38. A leg is decided by each club's league score that week; the tie goes to the higher aggregate over both legs.</p>
-        <ol class="cal__list" id="cupCal"></ol>
-      </div>
+    <section class="section section--page" aria-label="Matchups">
+      <div class="mu-weeks reveal" id="muWeeks" role="group" aria-label="Gameweek"></div>
+      <div class="mu-list" id="muList"><div class="skeleton" style="height:240px"></div></div>
+      <p class="chart-note" id="muNote"></p>
     </section>
   </main>
 
