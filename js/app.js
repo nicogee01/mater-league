@@ -1665,7 +1665,7 @@
   }
   const fill = (tpl, v) => tpl.replace(/\{(\w+)\}/g, (_, k) => (v[k] != null ? v[k] : ""));
   const possessive = (t) => t.replace(/s's/g, "s'");
-  const gp = (n) => (Number.isInteger(n) ? String(n) : num(n, 2).replace(/(.d)0$/, "$1"));
+  const gp = (n) => (Number.isInteger(n) ? String(n) : num(n, 2).replace(/(\.\d)0$/, "$1"));
 
   function weekSquads(week) {
     const out = {};
