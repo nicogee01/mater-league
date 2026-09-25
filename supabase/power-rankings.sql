@@ -7,8 +7,8 @@
 --   * The site can only call the functions at the bottom:
 --       check_code, submit_ballot, get_my_ballot, get_results, get_rounds
 --   * Club codes are stored as salted SHA-256 hashes, never in plain text.
---   * Results are anonymous (averages, best/worst vote, notes without names)
---     and stay hidden until at least 3 ballots are in for that round.
+--   * Results are anonymous (averages, best/worst vote, notes without names).
+--     When they're revealed is set by pr-reveal.sql (run it after this file).
 --
 -- The eight club logins (pr_voters rows) are NOT in this file. They live in
 -- private/paste-into-supabase.sql, which is kept out of git.

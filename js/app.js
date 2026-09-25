@@ -1600,7 +1600,7 @@
       el.innerHTML = `<div class="pr-empty">
         <p class="pr-empty__big">${data.ballots} of ${voters} ballots in</p>
         ${data.closed
-          ? `<p>Voting has closed, but results stay hidden because fewer than ${data.min_ballots} clubs voted. Showing them would give away how those clubs voted.</p>`
+          ? `<p>Voting has closed and no ballots were cast this round.</p>`
           : revealAt
             ? `<p>The rankings are revealed when all ${voters} clubs have voted, or on <b>${when(revealAt)}</b> (the day before Gameweek ${wk + 1}), whichever comes first. Voting closes at the reveal.</p>`
             : `<p>The rankings are revealed once all ${voters} clubs have voted.</p>`}
@@ -1837,7 +1837,7 @@
   // latest round with public results (3+ ballots) decides who wears the crown and the poo
   async function loadEmblems() {
     try {
-      const rounds = (await rpc("get_rounds")).filter((r) => r.ballots >= 3).slice(0, 3);
+      const rounds = (await rpc("get_rounds")).slice(0, 3);
       for (const round of rounds) {
         const res = await rpc("get_results", { p_week: round.week });
         if (res.revealed && res.teams && res.teams.length >= 2)

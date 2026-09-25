@@ -5,8 +5,8 @@
 --
 -- Round N = rankings after gameweek N.
 --   * Results are revealed when every club has voted, OR one day before the
---     gameweek N+1 deadline, whichever comes first.
---   * With fewer than 3 ballots nothing is ever shown (it would expose voters).
+--     gameweek N+1 deadline, whichever comes first (as long as anyone voted).
+--   * Which clubs voted is never shown, only how many ballots are in.
 --   * Voting for a round closes the moment its results are revealed.
 -- Deadlines are the official Premier League ones (FPL API, 2026/27 season).
 -- =========================================================
@@ -73,9 +73,9 @@ declare
   reveal_at timestamptz := coalesce(next_dl - interval '1 day', this_dl + interval '8 days');
   revealed  boolean;
 begin
-  revealed := ballots >= voters or (reveal_at is not null and now() >= reveal_at and ballots >= 3);
+  revealed := ballots >= voters or (reveal_at is not null and now() >= reveal_at and ballots >= 1);
   return jsonb_build_object(
-    'ballots', ballots, 'voters', voters, 'min_ballots', 3,
+    'ballots', ballots, 'voters', voters,
     'reveal_at', reveal_at, 'next_deadline', next_dl,
     'revealed', revealed,
     'closed', revealed or (reveal_at is not null and now() >= reveal_at)
