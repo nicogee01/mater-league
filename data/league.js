@@ -19,17 +19,17 @@ window.MATER_LEAGUE = {
     },
     {
       "slug": "brothers",
-      "name": "The Brothers' Derby",
-      "tag": "Blood brothers",
+      "name": "The Bloodline Clásico",
+      "tag": "Same blood, no mercy",
       "managers": ["nicog01", "BottomCap"],
-      "story": "Brothers first, rivals every gameweek. Whoever loses hears about it at every family dinner."
+      "story": "Brothers by blood, rivals by choice. Raised in the same house, now fighting over the same bragging rights, and the loser hears about it at every family dinner."
     },
     {
       "slug": "upstate",
-      "name": "The Upstate Derby",
+      "name": "The Snow Belt Derby",
       "tag": "Upstate New York",
       "managers": ["nictrn", "KingAbes"],
-      "story": "Old friends from upstate New York. Hometown pride on the line, and no hiding from it back home."
+      "story": "Old friends from upstate New York, where the lake-effect snow never stops and neither does the trash talk. Hometown pride on the line, and no hiding from it back home."
     },
     {
       "slug": "i95",
