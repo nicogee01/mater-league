@@ -68,6 +68,14 @@ Past champions (Victory Road) are in `data/league.js` under `honours`.
 result agrees with Sleeper's week-by-week W/L record for both teams, and (once
 all scored weeks are in) that each club's season points for/against match Sleeper.
 
+**Lineups (Matchups tab):** `data/lineups.csv` lists each week's starting XIs,
+read off Sleeper's matchup screens (Sleeper has no public soccer matchups API).
+Add only the starters (`week,manager,slot,player_id,player` with slot GK/DEF/MID/FWD),
+then run `node scripts/build-lineups.mjs`. It fills in points, Sleeper projections and
+minutes, rebuilds each bench from the draft plus every transaction up to that
+gameweek's last kickoff (so a bench only shows players on the roster at the time),
+and checks each XI adds up to its score in matchups.csv.
+
 ## Files
 
 ```
@@ -76,6 +84,7 @@ table.html            league table            clubs.html          club profiles
 h2h.html              head-to-head            transfers.html      transfer window
 records.html          Hall of Records         cup.html            The McQueen Cup
 victory-road.html     champions               analytics.html      charts
+matchups.html         fixtures + team sheets by gameweek
 css/styles.css        "matchday programme" theme tokens at the top, then components
 js/layout.js          shared nav + footer (edit PAGES here to add or rename a tab)
 js/motion.js          hero video, pause button, nav ball
@@ -83,7 +92,9 @@ js/app.js             Sleeper data → whatever sections the current page has
 data/league.js        league lore: derbies, favourite Premier League clubs, past champions
 data/matchups.csv     league results, one row per match
 data/cup.csv          McQueen Cup legs
+data/lineups.csv      starting XIs + rebuilt benches per gameweek
 scripts/check-matchups.mjs  verifies matchups.csv against Sleeper (Node 18+)
+scripts/build-lineups.mjs   fills points/projections/benches into lineups.csv
 media/                hero videos + posters (originals/ is git-ignored)
 ```
 

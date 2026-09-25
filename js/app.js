@@ -1341,26 +1341,43 @@
   }
 
   // ---------- MATCHUPS ----------
-  // Fixtures come from matchups.csv; starting XIs (where logged) from lineups.csv, read off Sleeper's matchup screens.
+  // Fixtures come from matchups.csv. lineups.csv holds, per week, the starting XIs (read off Sleeper's
+  // matchup screens) plus bench rows (slot BN) that scripts/build-lineups.mjs rebuilds from the draft
+  // and transactions, so a bench only ever shows players on that roster at the time.
   const SLOT_ORDER = ["GK", "DEF", "MID", "FWD"];
-  const mu = { week: null };
-  function sheetFor(id, week) {
-    return (state.lineups || []).filter((r) => +r.week === week && rosterOf(r.manager) === id)
-      .map((r) => ({ pid: r.player_id, name: r.player, slot: r.slot, pts: +r.pts }))
-      .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
+  const SLOT_NAME = { GK: "Goalkeeper", DEF: "Defence", MID: "Midfield", FWD: "Attack" };
+  const mu = { week: null, open: new Set() };
+  const optNum = (v) => (v === "" || v == null || isNaN(+v) ? null : +v);
+  function squadFor(id, week) {
+    const rows = (state.lineups || []).filter((r) => +r.week === week && rosterOf(r.manager) === id)
+      .map((r) => ({ pid: r.player_id, name: r.player, slot: r.slot, pts: +r.pts || 0, proj: optNum(r.proj), min: +r.min || 0 }));
+    return {
+      xi: rows.filter((p) => p.slot !== "BN").sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot)),
+      bench: rows.filter((p) => p.slot === "BN"),
+    };
   }
   const shape = (xi) => ["DEF", "MID", "FWD"].map((s) => xi.filter((p) => p.slot === s).length).join("-");
-  function renderSheet(xi, star) {
-    let last = null;
-    return `<ol class="mu-sheet__list">${xi.map((p) => {
-      const head = p.slot !== last ? `<li class="mu-line" aria-hidden="true">${{ GK: "Goalkeeper", DEF: "Defence", MID: "Midfield", FWD: "Attack" }[p.slot]}</li>` : "";
-      last = p.slot;
-      return `${head}<li class="mu-p${p === star ? " is-star" : ""}${p.pts <= 0 ? " is-blank" : ""}">
+  const projTotal = (xi) => (xi.some((p) => p.proj != null) ? xi.reduce((a, p) => a + (p.proj || 0), 0) : null);
+  const playerRow = (p, star, extra = "") => `
+    <li class="mu-p${p === star ? " is-star" : ""}${p.pts <= 0 ? " is-blank" : ""}${extra}">
+      <button type="button" class="mu-p__btn" data-pid="${esc(p.pid)}" aria-label="${esc(p.name)}: ${num(p.pts)} points. Open recent games">
         <span class="mu-p__photo" data-photo="${esc(p.pid)}" aria-hidden="true"><span>${esc(initials(p.name))}</span></span>
-        <span class="mu-p__name">${esc(p.name)}<small>${esc(p.slot)}${p === star ? " · Top scorer" : ""}</small></span>
-        <span class="mu-p__pts">${num(p.pts)}</span>
-      </li>`;
-    }).join("")}</ol>`;
+        <span class="mu-p__name">${esc(p.name)}<small>${p.slot === "BN" ? (p.min ? `${p.min}′ played` : "Did not play") : esc(p.slot)}${p === star ? " · Top scorer" : ""}</small></span>
+        <span class="mu-p__pts">${num(p.pts)}<small>${p.proj != null ? `proj ${num(p.proj)}` : "&nbsp;"}</small></span>
+      </button>
+    </li>`;
+  function renderSheet(sq, star) {
+    let last = null;
+    const xi = sq.xi.map((p) => {
+      const head = p.slot !== last ? `<li class="mu-line" aria-hidden="true">${SLOT_NAME[p.slot]}</li>` : "";
+      last = p.slot;
+      return head + playerRow(p, star);
+    }).join("");
+    const benchPts = sq.bench.reduce((a, p) => a + p.pts, 0);
+    const bench = sq.bench.length ? `
+      <li class="mu-line mu-line--bench"><span>Bench</span><small>${num(benchPts)} pts not counted</small></li>
+      ${sq.bench.map((p) => playerRow(p, null, " is-bench")).join("")}` : "";
+    return `<ol class="mu-sheet__list">${xi}${bench}</ol>`;
   }
   function renderMatchups() {
     const list = $("#muList");
@@ -1371,43 +1388,109 @@
     if (mu.week == null) mu.week = [...weeks].reverse().find((w) => withXI.has(w)) ?? weeks[weeks.length - 1];
     $("#muWeeks").innerHTML = weeks.map((w) => `<button type="button" class="chip${w === mu.week ? " is-active" : ""}" data-week="${w}" aria-pressed="${w === mu.week}">GW${w}${withXI.has(w) ? `<i class="mu-dot" title="Lineups logged"></i>` : ""}</button>`).join("");
     const games = state.results.filter((m) => m.week === mu.week);
-    list.innerHTML = games.map((m) => {
+    list.innerHTML = games.map((m, gi) => {
       const H = state.byRoster[m.home], A = state.byRoster[m.away];
-      const hx = sheetFor(m.home, m.week), ax = sheetFor(m.away, m.week);
-      const all = [...hx, ...ax];
+      const hs = squadFor(m.home, m.week), as = squadFor(m.away, m.week);
+      const all = [...hs.xi, ...as.xi];
       const star = all.length ? all.reduce((a, b) => (b.pts > a.pts ? b : a)) : null;
-      const hw = m.homePts > m.awayPts, aw = m.awayPts > m.homePts;
-      const side = (t, pts, win, xi, align) => `
-        <div class="mu-side mu-side--${align}${win ? " is-win" : ""}">
-          ${crest(t)}<span class="mu-side__name">${club(t)}<small>${xi.length ? shape(xi) : "&nbsp;"}</small></span>
-          <b class="mu-side__pts">${num(pts, 2)}</b>
+      const key = `${m.week}-${m.home}`, open = mu.open.has(key);
+      const side = (t, pts, win, sq, align) => {
+        const pj = projTotal(sq.xi);
+        return `<div class="mu-side mu-side--${align}${win ? " is-win" : ""}">
+          ${crest(t)}<span class="mu-side__name">${club(t)}<small>${sq.xi.length ? shape(sq.xi) : "&nbsp;"}</small></span>
+          <span class="mu-side__score"><b>${num(pts, 2)}</b>${pj != null ? `<small>proj ${num(pj, 2)}</small>` : ""}</span>
         </div>`;
-      return `<article class="mu-card reveal" aria-label="${esc(H.name)} ${num(m.homePts, 2)}, ${esc(A.name)} ${num(m.awayPts, 2)}">
-        <header class="mu-card__head">
-          ${side(H, m.homePts, hw, hx, "home")}
-          <span class="mu-card__ft">FT</span>
-          ${side(A, m.awayPts, aw, ax, "away")}
-        </header>
-        ${all.length ? `
-          <p class="mu-card__motm"><span>Top scorer</span> ${esc(star.name)} <b>${num(star.pts)}</b> for ${club(hx.includes(star) ? H : A)}</p>
+      };
+      const body = all.length ? `
+          <p class="mu-card__motm"><span>Top scorer</span> ${esc(star.name)} <b>${num(star.pts)}</b> for ${club(hs.xi.includes(star) ? H : A)}</p>
           <div class="mu-sheets">
-            <section class="mu-sheet" aria-label="${esc(H.name)} starting XI">${renderSheet(hx, star)}</section>
-            <section class="mu-sheet" aria-label="${esc(A.name)} starting XI">${renderSheet(ax, star)}</section>
+            <section class="mu-sheet" aria-label="${esc(H.name)} team sheet">${renderSheet(hs, star)}</section>
+            <section class="mu-sheet" aria-label="${esc(A.name)} team sheet">${renderSheet(as, star)}</section>
           </div>`
-          : `<p class="mu-card__none">Starting XIs for this gameweek aren't logged yet.</p>`}
+        : `<p class="mu-card__none">Starting XIs for this gameweek aren't logged yet.</p>`;
+      return `<article class="mu-card reveal${open ? " is-open" : ""}">
+        <h2 class="visually-hidden">${esc(H.name)} v ${esc(A.name)}</h2>
+        <button type="button" class="mu-card__head" aria-expanded="${open}" aria-controls="mu-body-${gi}" data-key="${key}">
+          ${side(H, m.homePts, m.homePts > m.awayPts, hs, "home")}
+          <span class="mu-card__mid"><span class="mu-card__ft">FT</span><span class="mu-card__chev" aria-hidden="true"></span></span>
+          ${side(A, m.awayPts, m.awayPts > m.homePts, as, "away")}
+        </button>
+        <div class="mu-card__body" id="mu-body-${gi}"${open ? "" : " hidden"}>${body}</div>
       </article>`;
     }).join("");
     $("#muNote").textContent = withXI.has(mu.week)
-      ? "Starting XIs are read from Sleeper's matchup screens and add up to each club's score. Positions are the slot each player filled."
+      ? "Tap a fixture to open both team sheets, then tap any player for recent games. Starting XIs come from Sleeper's matchup screens and add up to each club's score; benches show only players on that roster at the end of the gameweek. Projections are Sleeper's."
       : "";
-    if (Object.keys(state.players || {}).length) loadPhotos(games.flatMap((m) => [...sheetFor(m.home, m.week), ...sheetFor(m.away, m.week)]).map((p) => p.pid), list);
     observeReveals();
   }
+  function paintMatchPhotos(card) {
+    if (Object.keys(state.players || {}).length) loadPhotos($$("[data-photo]", card).map((el) => el.dataset.photo), card);
+  }
+
+  // ---- player drawer: recent gameweeks from Sleeper's weekly stats ----
+  const STAT_LINE = [["g", "G"], ["at", "A"], ["sot", "SOT"], ["sat", "Shots"], ["kp", "KP"], ["tkw", "TKW"], ["int", "INT"], ["clr", "CLR"],
+    ["bs", "BS"], ["aer", "AER"], ["cs", "CS"], ["sv", "SV"], ["ga", "GA"], ["yc", "YC"], ["rc", "RC"], ["og", "OG"]];
+  let weeklyStats = null;
+  function loadWeeklyStats() {
+    if (weeklyStats) return weeklyStats;
+    const season = state.league.season, last = (state.league.settings && state.league.settings.last_scored_leg) || Math.max(1, state.week - 1);
+    const wk = (kind, w) => get(`/${kind}/${SPORT}/regular/${season}/${w}`).catch(() => ({}));
+    weeklyStats = Promise.all(Array.from({ length: last }, (_, i) => Promise.all([wk("stats", i + 1), wk("projections", i + 1)])
+      .then(([stats, proj]) => ({ week: i + 1, stats, proj }))));
+    return weeklyStats;
+  }
+  const scorePts = (line) => { const sc = state.league.scoring_settings || {}; let p = 0; for (const [k, v] of Object.entries(line || {})) if (sc[k] !== undefined && typeof v === "number") p += v * sc[k]; return Math.round(p * 100) / 100; };
+  async function openPlayer(pid, fallbackName) {
+    const dlg = $("#playerDlg");
+    const p = state.players[pid] || {};
+    const name = p.n || fallbackName || "Player";
+    const owner = state.teams.find((t) => (t.players || []).includes(pid));
+    $("#playerDlgBody").innerHTML = `
+      <header class="pd__head">
+        <span class="pd__photo" data-photo="${esc(pid)}" aria-hidden="true"><span>${esc(initials(name))}</span></span>
+        <div><h2 class="pd__name" id="playerDlgTitle">${esc(name)}</h2>
+          <p class="pd__meta">${clubLogo(p.t)}${esc(p.c || "")}${p.p ? ` · ${esc(p.p)}` : ""} · ${owner ? `${crest(owner)}${club(owner)}` : `<span class="fa-tag">Free agent</span>`}</p></div>
+      </header>
+      <div class="pd__body"><div class="skeleton" style="height:160px"></div></div>`;
+    dlg.showModal();
+    loadPhotos([pid], dlg);
+    const weeks = await loadWeeklyStats();
+    if (!dlg.open) return;
+    const rows = weeks.map(({ week, stats, proj }) => ({ week, line: stats[pid], pts: scorePts(stats[pid]), proj: proj[pid] ? scorePts(proj[pid]) : null }))
+      .filter((r) => r.line || r.proj != null).reverse();
+    const played = rows.filter((r) => r.line && r.line.min > 0);
+    const total = played.reduce((a, r) => a + r.pts, 0);
+    const statTxt = (l) => STAT_LINE.filter(([k]) => l && l[k] > 0).map(([k, lab]) => `${l[k]} ${lab}`).join(", ") || "–";
+    $(".pd__body", dlg).innerHTML = `
+      <div class="pd__tiles">
+        <div class="stat-tile"><span class="stat-tile__label">Season points</span><b class="stat-tile__v">${num(total)}</b></div>
+        <div class="stat-tile"><span class="stat-tile__label">Per game</span><b class="stat-tile__v">${played.length ? num(total / played.length) : "–"}</b></div>
+        <div class="stat-tile"><span class="stat-tile__label">Games played</span><b class="stat-tile__v">${played.length}</b></div>
+      </div>
+      <h3 class="pd__sub">Recent gameweeks</h3>
+      ${rows.length ? `<div class="table-scroll"><table class="data-table pd__table">
+        <thead><tr><th scope="col">GW</th><th scope="col">Min</th><th scope="col">Pts</th><th scope="col">Proj</th><th scope="col">Stats</th></tr></thead>
+        <tbody>${rows.map((r) => `<tr${r.line && r.line.min > 0 ? "" : ' class="is-dnp"'}>
+          <th scope="row">GW${r.week}</th><td>${r.line ? r.line.min || 0 : 0}</td><td><b>${r.line && r.line.min > 0 ? num(r.pts) : "DNP"}</b></td>
+          <td>${r.proj != null ? num(r.proj) : "–"}</td><td class="pd__stats">${r.line && r.line.min > 0 ? statTxt(r.line) : "Did not play"}</td></tr>`).join("")}</tbody>
+      </table></div>` : `<p class="pending-note">No Premier League minutes recorded this season.</p>`}`;
+  }
   document.addEventListener("click", (e) => {
-    const b = e.target.closest("#muWeeks .chip");
-    if (!b) return;
-    mu.week = +b.dataset.week;
-    renderMatchups();
+    const wb = e.target.closest("#muWeeks .chip");
+    if (wb) { mu.week = +wb.dataset.week; renderMatchups(); return; }
+    const head = e.target.closest(".mu-card__head");
+    if (head) {
+      const card = head.closest(".mu-card"), open = !card.classList.contains("is-open");
+      card.classList.toggle("is-open", open);
+      head.setAttribute("aria-expanded", String(open));
+      $(".mu-card__body", card).hidden = !open;
+      open ? mu.open.add(head.dataset.key) : mu.open.delete(head.dataset.key);
+      if (open) paintMatchPhotos(card);
+      return;
+    }
+    const pb = e.target.closest(".mu-p__btn");
+    if (pb) { openPlayer(pb.dataset.pid, $(".mu-p__name", pb).firstChild.textContent.trim()); return; }
+    if (e.target.id === "playerDlg" || e.target.closest(".pd__close")) $("#playerDlg").close();
   });
 
   // ---------- ANALYTICS ----------
