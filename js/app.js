@@ -497,7 +497,7 @@
     if (!$("#h2hMatrix")) return;
     const T = state.teams;
     const head = `<thead><tr><th scope="col"><span class="visually-hidden">Club</span></th>${T.map((t) => `<th scope="col" title="${esc(t.name)}">${crest(t)}<span class="visually-hidden">${esc(t.name)}</span></th>`).join("")}</tr></thead>`;
-    const body = T.map((row) => `<tr><th scope="row">${crest(row)}${club(row)}</th>${T.map((col) => {
+    const body = T.map((row) => `<tr><th scope="row" title="${esc(row.name)}">${crest(row)}<span class="matrix__name">${club(row)}</span></th>${T.map((col) => {
       if (row === col) return `<td class="self" aria-label="Same club"></td>`;
       const r = h2h(row.rosterId, col.rosterId);
       const derby = row.derby && row.derby === col.derby;
@@ -915,7 +915,6 @@
     state.derbies.forEach((d) => items.push(`${esc(d.name)}: ${esc(derbyVerdict(d).text)}`));
     const nextCup = (state.cupRows || []).find((r) => r.week >= state.week && !r.played);
     if (nextCup) items.push(`McQueen Cup: ${esc(nextCup.round.replace(/s$/, ""))} ${nextCup.round === "Final" ? "" : nextCup.tie + " "}leg ${nextCup.leg} is the Gameweek ${nextCup.week} marquee`);
-    items.push("Site in development: matchups &amp; the McQueen Cup coming soon");
     // two identical copies so the -50% marquee loop is seamless; the copy is hidden from screen readers
     $("#ticker").innerHTML = items.map((s) => `<span>${s}</span>`).join("") + items.map((s) => `<span aria-hidden="true">${s}</span>`).join("");
     $("#ticker").style.setProperty("--marquee", Math.max(30, items.length * 7) + "s");
@@ -1277,9 +1276,12 @@
     for (let i = 0; i < rounds.length - 1; i++) {
       rounds[i + 1].forEach((next, k) => {
         const to = rect(next.el), toX = next.edge != null ? next.edge : to.l;
-        [rounds[i][2 * k], rounds[i][2 * k + 1]].filter(Boolean).forEach((from) => {
+        const feeders = [rounds[i][2 * k], rounds[i][2 * k + 1]].filter(Boolean);
+        // into the final stage, meet exactly halfway between the two semi-finals, like a printed bracket
+        const toY = next.edge != null && feeders.length === 2 ? (rect(feeders[0].el).m + rect(feeders[1].el).m) / 2 : to.m;
+        feeders.forEach((from) => {
           const a = rect(from.el), mid = (a.r + toX) / 2;
-          const path = `M${a.r} ${a.m}H${mid}V${to.m}H${toX}`;
+          const path = `M${a.r} ${a.m}H${mid}V${toY}H${toX}`;
           from.winner ? (gold += path) : (d += path);
         });
       });

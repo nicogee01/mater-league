@@ -393,6 +393,7 @@ button { cursor: pointer; touch-action: manipulation; }
 .matrix th, .matrix td { padding: 10px; text-align: center; border: 1px solid var(--line); font-size: 15px; }
 .matrix thead th { background: var(--ink); }
 .matrix th[scope="row"] { text-align: left; background: var(--bg-2); white-space: nowrap; font-weight: 600; }
+.matrix th[scope="row"], .matrix thead th:first-child { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--line-2); }
 .matrix .crest { width: 30px; height: 30px; margin: 0 auto; display: block; }
 .matrix th[scope="row"] .crest { display: inline-block; vertical-align: middle; margin: 0 8px 0 0; }
 .matrix td.self { background: repeating-linear-gradient(45deg, transparent 0 6px, rgba(11,31,58,0.06) 6px 12px); }
@@ -1603,6 +1604,11 @@ button { cursor: pointer; touch-action: manipulation; }
   .hero__ctas { gap: var(--s5); margin-top: var(--s6); flex-wrap: wrap; }
   .hide-sm { display: none; }
   .league-table th, .league-table td { padding: 10px 6px; }
+  .matrix { min-width: 0; }
+  .matrix th, .matrix td { padding: 8px 6px; font-size: 14px; }
+  .matrix th[scope="row"] { text-align: center; }
+  .matrix th[scope="row"] .crest { margin: 0; }
+  .matrix__name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .club-cell .mgr { display: none; }
   .crest { width: 32px; height: 32px; }
   .meetings li { grid-template-columns: 1fr auto 1fr; }
