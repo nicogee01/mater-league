@@ -33,10 +33,10 @@ window.MATER_LEAGUE = {
     },
     {
       "slug": "i95",
-      "name": "The I-95 Derby",
-      "tag": "Maryland vs New York",
+      "name": "El Clásico de las Américas",
+      "tag": "Ecuador vs Honduras",
       "managers": ["officialmaje", "GlenM22"],
-      "story": "Online friends split by the I-95, one in Maryland and one in New York. The league's long-distance rivalry."
+      "story": "La Tri against La H, South America against Central America. An Ecuadorian in New York and a Honduran in Maryland, online friends who've never let a few hundred miles of I-95 get in the way of a rivalry."
     }
   ],
   "honours": {
