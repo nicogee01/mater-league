@@ -10,6 +10,7 @@
     { id: "h2h", href: "h2h.html", label: "H2H", long: "Head-to-Head" },
     { id: "transfers", href: "transfers.html", label: "Transfers" },
     { id: "records", href: "records.html", label: "Records", long: "Hall of Records" },
+    { id: "power", href: "power.html", label: "Power Rankings" },
     { id: "cup", href: "cup.html", label: "McQueen Cup", long: "The McQueen Cup" },
     { id: "victory-road", href: "victory-road.html", label: "Victory Road" },
     { id: "analytics", href: "analytics.html", label: "Analytics" },

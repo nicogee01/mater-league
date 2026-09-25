@@ -1,2 +1,5 @@
 # Full-size source videos (too large for GitHub; kept locally only)
 media/originals/
+
+# Club voting codes and the SQL that loads them (never publish)
+private/

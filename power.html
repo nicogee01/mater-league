@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Power Rankings · The Mater League</title>
+  <meta name="description" content="Weekly Mater League power rankings voted on by the managers." />
+  <meta name="theme-color" content="#1b0020" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%2300ff85'/%3E%3Cpath d='M16 9l6 4.4-2.3 7h-7.4L10 13.4z' fill='%2337003c'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=30" />
+</head>
+<body data-page="power">
+  <main id="main">
+    <header class="page-hero">
+      <div class="page-hero__inner">
+        <p class="eyebrow">Voted by the managers</p>
+        <h1>Power Rankings</h1>
+        <p class="page-hero__lede">Every club ranks the other seven after each gameweek. Ballots are private: only the average, the best and worst vote, and anonymous notes are shown.</p>
+      </div>
+    </header>
+
+    <section class="section section--page" aria-label="Power rankings">
+      <div class="pr-bar reveal">
+        <p class="pr-round" id="prRound">Loading…</p>
+        <label class="hub-field hub-field--inline"><span>Round</span><select id="prArchive"></select></label>
+      </div>
+      <div class="pr-results" id="prResults"><div class="skeleton" style="height:320px"></div></div>
+
+      <div class="pr-ballot" id="ballot">
+        <div class="pr-step" data-step="1">
+          <p class="eyebrow">Gameweek <span class="js-pr-week">–</span> ballot</p>
+          <h2 class="subhead">Cast your ballot</h2>
+          <p class="section__lede">Pick your club and enter the code Nico sent you. You'll rank the other seven clubs, and you can change your ballot until Gameweek <span class="js-pr-next">–</span> is scored.</p>
+          <p class="pr-label" id="prWhoLabel">Which club are you?</p>
+          <div class="pr-who" id="prWho" role="radiogroup" aria-labelledby="prWhoLabel"></div>
+          <div class="pr-login">
+            <label class="hub-field"><span>Your club code</span>
+              <input id="prCode" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="ABCD-1234"></label>
+            <label class="pr-check"><input type="checkbox" id="prRemember" checked> Remember me on this device</label>
+            <button type="button" class="pr-btn" id="prGo">Start ranking</button>
+          </div>
+          <p class="pr-error" id="prErr1" role="alert"></p>
+        </div>
+
+        <div class="pr-step" data-step="2" hidden>
+          <div class="pr-step__head">
+            <div>
+              <p class="eyebrow">Gameweek <span class="js-pr-week">–</span> ballot</p>
+              <h2 class="subhead">Rank the other seven</h2>
+            </div>
+            <p class="pr-me" id="prMe"></p>
+          </div>
+          <p class="section__lede">1 is the best. Drag a card by its handle or use the arrows. Look past the table: hard-luck losses are defeats where the club still outscored that week's median.</p>
+          <p class="pr-saved" id="prSavedNote"></p>
+          <ol class="pr-list" id="prList"></ol>
+          <p class="visually-hidden" id="prStatus" aria-live="polite"></p>
+          <div class="pr-actions">
+            <button type="button" class="pr-btn pr-btn--ghost" id="prBack">Change club</button>
+            <button type="button" class="pr-btn" id="prSubmit">Submit ballot</button>
+          </div>
+          <p class="pr-error" id="prErr2" role="alert"></p>
+        </div>
+
+        <div class="pr-step" data-step="3" hidden>
+          <p class="eyebrow">Ballot in</p>
+          <h2 class="subhead">Thanks, your ballot's in</h2>
+          <p class="section__lede">Here's how you voted. Nobody else can see it. You can change it until Gameweek <span class="js-pr-next">–</span> is scored.</p>
+          <ol class="pr-done" id="prDoneList"></ol>
+          <div class="pr-actions">
+            <button type="button" class="pr-btn pr-btn--ghost" id="prEdit">Edit my ballot</button>
+            <a class="pr-btn" href="#main">See the rankings</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/layout.js?v=30"></script>
+  <script src="data/league.js?v=30"></script>
+  <script src="js/motion.js?v=30"></script>
+  <script src="js/app.js?v=30"></script>
+</body>
+</html>

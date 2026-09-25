@@ -1527,6 +1527,313 @@
     });
   }
 
+  // ---------- POWER RANKINGS ----------
+  // Ballots live in Supabase behind functions that only accept a club's code and only
+  // return anonymous results (see supabase/power-rankings.sql). The publishable key is
+  // meant to be public; it can call those functions and nothing else.
+  const SUPABASE_URL = "https://jhnjoxqhxspmrwzrnycy.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_4ByLBCAe8R6uaOUnWwEjhg_9QaRUPJS";
+  const PR_STORE = "mater-pr-voter";
+  async function rpc(fn, args = {}) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+    if (!r.ok) throw new Error(`${fn} → ${r.status}`);
+    return r.json();
+  }
+
+  const pr = { week: 0, voter: null, code: "", order: [], notes: {}, results: null, prev: null, rounds: [] };
+  const teamByManager = (m) => state.byRoster[rosterOf(m)];
+
+  // context shown on each ballot card, so votes aren't just the table order
+  function weekMedians() {
+    const by = {};
+    state.results.forEach((m) => { (by[m.week] ||= []).push(m.homePts, m.awayPts); });
+    const med = {};
+    for (const [w, arr] of Object.entries(by)) {
+      const s = [...arr].sort((a, b) => a - b), n = s.length;
+      med[w] = n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+    }
+    return med;
+  }
+  function prContext(t, med) {
+    const played = t.w + t.l + t.d;
+    const best = t.games.length ? Math.max(...t.games.map((g) => g.score)) : null;
+    const hardLuck = t.games.filter((g) => g.res === "L" && g.score > med[g.week]).length;
+    return { played, avg: played ? t.pf / played : 0, best, hardLuck };
+  }
+  function miniSpark(games) {
+    if (games.length < 2) return "";
+    const W = 120, H = 30, vals = games.map((g) => g.score), lo = Math.min(...vals), hi = Math.max(...vals);
+    const x = (i) => 3 + (i * (W - 6)) / (games.length - 1), y = (v) => H - 4 - ((v - lo) / (hi - lo || 1)) * (H - 8);
+    return `<svg class="pr-spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${games.map((g, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(g.score).toFixed(1)}`).join("")}"/>
+      ${games.map((g, i) => `<circle cx="${x(i)}" cy="${y(g.score)}" r="2.6" class="${g.res}"/>`).join("")}</svg>`;
+  }
+
+  // ---- results ----
+  function renderPRResults() {
+    const el = $("#prResults");
+    if (!el) return;
+    const data = pr.viewing === pr.week ? pr.results : pr.archive;
+    const wk = pr.viewing;
+    $("#prRound").innerHTML = `<b>Gameweek ${wk} rankings</b> · ${wk === pr.week ? `<span class="pr-open">Voting open</span> until Gameweek ${wk + 1} is scored` : "Final"} · ${data ? data.ballots : 0} of ${state.teams.length} ballots in`;
+    if (!data) { el.innerHTML = `<p class="pending-note">Couldn't load results. Try refreshing.</p>`; return; }
+    if (!data.teams.length) {
+      el.innerHTML = `<div class="pr-empty"><b>${data.ballots} of ${state.teams.length} ballots in.</b> Results appear once ${data.min_ballots} clubs have voted, which keeps everyone's ballot private.</div>`;
+      return;
+    }
+    const prevRank = {};
+    if (wk === pr.week && pr.prev && pr.prev.teams.length) pr.prev.teams.forEach((x, i) => (prevRank[x.manager] = i + 1));
+    const max = state.teams.length - 1;
+    const pct = (v) => ((v - 1) / (max - 1)) * 100;
+    el.innerHTML = `<ol class="pr-table">${data.teams.map((x, i) => {
+      const t = teamByManager(x.manager);
+      if (!t) return "";
+      const was = prevRank[x.manager];
+      const mv = was ? was - (i + 1) : null;
+      const move = mv == null ? `<span class="pr-move">–</span>` : mv > 0 ? `<span class="pr-move is-up" title="Up ${mv}">▲${mv}</span>` : mv < 0 ? `<span class="pr-move is-down" title="Down ${-mv}">▼${-mv}</span>` : `<span class="pr-move" title="No change">=</span>`;
+      return `<li class="pr-row">
+        <span class="pr-row__pos">${i + 1}</span>${move}
+        <span class="pr-row__club">${crest(t)}<span><b>${esc(t.name)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)} in the table</small></span></span>
+        <span class="pr-range" role="img" aria-label="Average ${num(x.avg, 2)}, best vote ${ordinal(x.best)}, worst vote ${ordinal(x.worst)}">
+          <span class="pr-range__track"></span>
+          <span class="pr-range__span" style="left:${pct(x.best)}%;width:${pct(x.worst) - pct(x.best)}%"></span>
+          <span class="pr-range__avg" style="left:${pct(x.avg)}%"></span>
+          <span class="pr-range__lbl pr-range__lbl--best" style="left:${pct(x.best)}%">${ordinal(x.best)}</span>
+          <span class="pr-range__lbl pr-range__lbl--worst" style="left:${pct(x.worst)}%">${ordinal(x.worst)}</span>
+        </span>
+        <span class="pr-row__avg"><b>${num(x.avg, 2)}</b><small>avg of ${x.votes}</small></span>
+        ${x.notes.length ? `<button type="button" class="pr-notes-btn" aria-expanded="false" aria-controls="prn-${x.manager}">${x.notes.length} note${x.notes.length > 1 ? "s" : ""}</button>` : `<span class="pr-notes-btn is-empty">No notes</span>`}
+        ${x.notes.length ? `<ul class="pr-notes" id="prn-${x.manager}" hidden>${x.notes.map((n) => `<li>“${esc(n)}”</li>`).join("")}</ul>` : ""}
+      </li>`;
+    }).join("")}</ol>
+    <p class="chart-note">Each club is ranked by the other ${max} (nobody votes on themselves). The bar runs from a club's best vote to its worst; the dot is the average. Notes are anonymous.</p>`;
+    $$(".pr-notes-btn[aria-controls]", el).forEach((b) => b.addEventListener("click", () => {
+      const list = $("#" + b.getAttribute("aria-controls"));
+      const open = b.getAttribute("aria-expanded") !== "true";
+      b.setAttribute("aria-expanded", String(open));
+      list.hidden = !open;
+    }));
+  }
+
+  async function loadPRResults() {
+    try {
+      const [cur, prev, rounds] = await Promise.all([
+        rpc("get_results", { p_week: pr.week }),
+        pr.week > 1 ? rpc("get_results", { p_week: pr.week - 1 }) : null,
+        rpc("get_rounds"),
+      ]);
+      pr.results = cur; pr.prev = prev; pr.rounds = rounds;
+    } catch (e) {
+      console.error(e);
+      pr.results = null;
+    }
+    const sel = $("#prArchive");
+    const weeks = [...new Set([pr.week, ...(pr.rounds || []).map((r) => r.week)])].sort((a, b) => b - a);
+    sel.innerHTML = weeks.map((w) => `<option value="${w}"${w === pr.viewing ? " selected" : ""}>Gameweek ${w}${w === pr.week ? " (current)" : ""}</option>`).join("");
+    renderPRResults();
+  }
+
+  // ---- ballot: step 1, who are you ----
+  function prStep(n) {
+    $$(".pr-step").forEach((s) => (s.hidden = +s.dataset.step !== n));
+    const heading = $(`.pr-step[data-step="${n}"] h2, .pr-step[data-step="${n}"] h3`);
+    if (heading) { heading.setAttribute("tabindex", "-1"); heading.focus({ preventScroll: true }); }
+  }
+  function renderWho() {
+    const el = $("#prWho");
+    el.innerHTML = state.teams.map((t) => `<button type="button" class="pr-who__club" role="radio" aria-checked="${pr.voter === t.manager.toLowerCase()}" data-m="${esc(t.manager.toLowerCase())}">
+      ${crest(t)}<span><b>${esc(t.name)}</b><small>${esc(t.manager)}</small></span></button>`).join("");
+    $$(".pr-who__club", el).forEach((b) => b.addEventListener("click", () => {
+      pr.voter = b.dataset.m;
+      $$(".pr-who__club", el).forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      $("#prErr1").textContent = "";
+      $("#prCode").focus();
+    }));
+  }
+  async function startBallot() {
+    const err = $("#prErr1"), btn = $("#prGo");
+    const code = $("#prCode").value.trim();
+    if (!pr.voter) { err.textContent = "Pick your club first."; return; }
+    if (!code) { err.textContent = "Enter your club code."; $("#prCode").focus(); return; }
+    btn.disabled = true; btn.textContent = "Checking…"; err.textContent = "";
+    try {
+      const res = await rpc("get_my_ballot", { p_week: pr.week, p_voter: pr.voter, p_code: code });
+      if (!res.ok) { err.textContent = res.error; $("#prCode").focus(); return; }
+      pr.code = code;
+      try {
+        if ($("#prRemember").checked) localStorage.setItem(PR_STORE, JSON.stringify({ voter: pr.voter, code }));
+        else localStorage.removeItem(PR_STORE);
+      } catch (_) {}
+      const others = state.teams.filter((t) => t.manager.toLowerCase() !== pr.voter);
+      const saved = res.ballot;
+      pr.order = saved ? saved.rankings.map((m) => rosterOf(m)).filter(Boolean) : others.map((t) => t.rosterId);
+      pr.notes = {};
+      if (saved) for (const [m, n] of Object.entries(saved.notes || {})) { const id = rosterOf(m); if (id) pr.notes[id] = n; }
+      renderBallot(saved);
+      prStep(2);
+    } catch (e) {
+      console.error(e);
+      err.textContent = "Couldn't reach the ballot box. Check your connection and try again.";
+    } finally {
+      btn.disabled = false; btn.textContent = "Start ranking";
+    }
+  }
+
+  // ---- ballot: step 2, rank the other clubs ----
+  function renderBallot(saved) {
+    const me = teamByManager(pr.voter);
+    $("#prMe").innerHTML = `${crest(me)}<span>Voting as <b>${esc(me.name)}</b></span>`;
+    $("#prSavedNote").textContent = saved ? `You already voted this round (${new Date(saved.submitted_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}). Submitting again replaces it.` : "";
+    const med = weekMedians();
+    $("#prList").innerHTML = pr.order.map((id) => {
+      const t = state.byRoster[id], c = prContext(t, med);
+      const form = t.record.slice(-5).split("").map((r) => `<i class="${r}">${r === "T" ? "D" : r}</i>`).join("");
+      const stat = (v, l, cls = "") => `<span class="pr-stat ${cls}"><b>${v}</b><small>${l}</small></span>`;
+      return `<li class="pr-card" data-id="${id}">
+        <span class="pr-card__rank" aria-hidden="true"></span>
+        <span class="pr-card__handle" aria-hidden="true" title="Drag to reorder"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.3"/><circle cx="11" cy="4" r="1.3"/><circle cx="5" cy="8" r="1.3"/><circle cx="11" cy="8" r="1.3"/><circle cx="5" cy="12" r="1.3"/><circle cx="11" cy="12" r="1.3"/></svg></span>
+        <div class="pr-card__main">
+          <div class="pr-card__id">${crest(t)}<span><b>${esc(t.name)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)} in the table${t.streak ? ` · ${esc(t.streak)} streak` : ""}</small></span>
+            <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></div>
+          <div class="pr-card__stats">
+            ${stat(`${t.w}-${t.d}-${t.l}`, "Record")}
+            ${stat(num(t.pf), "Points for")}
+            ${stat(num(c.avg), "Avg / week")}
+            ${stat(c.best != null ? num(c.best) : "–", "Best week")}
+            ${stat(t.allPlay ? `${t.allPlay.w}-${t.allPlay.l}` : "–", "All-Play")}
+            ${stat(c.hardLuck, "Hard-luck losses", c.hardLuck ? "is-flag" : "")}
+            ${stat(num(t.pa), "Points against")}
+            ${miniSpark(t.games)}
+          </div>
+          <label class="pr-card__note"><span class="visually-hidden">Note on ${esc(t.name)} (optional)</span>
+            <textarea rows="2" maxlength="280" placeholder="Hot take on ${esc(t.name)} (optional)" data-id="${id}">${esc(pr.notes[id] || "")}</textarea></label>
+        </div>
+        <span class="pr-card__move">
+          <button type="button" class="pr-up" aria-label="Move ${esc(t.name)} up"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg></button>
+          <button type="button" class="pr-down" aria-label="Move ${esc(t.name)} down"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg></button>
+        </span>
+      </li>`;
+    }).join("");
+    numberCards();
+  }
+  function numberCards() {
+    const cards = $$("#prList .pr-card");
+    pr.order = cards.map((c) => +c.dataset.id);
+    cards.forEach((c, i) => {
+      $(".pr-card__rank", c).textContent = i + 1;
+      $(".pr-up", c).disabled = i === 0;
+      $(".pr-down", c).disabled = i === cards.length - 1;
+      c.setAttribute("aria-label", `${i + 1}. ${state.byRoster[c.dataset.id].name}`);
+    });
+  }
+  function moveCard(card, dir) {
+    const sib = dir < 0 ? card.previousElementSibling : card.nextElementSibling;
+    if (!sib) return;
+    const before = card.getBoundingClientRect().top;
+    dir < 0 ? sib.before(card) : sib.after(card);
+    // slide from the old spot to the new one
+    if (!reduceMotion()) {
+      const delta = before - card.getBoundingClientRect().top;
+      card.animate([{ transform: `translateY(${delta}px)` }, { transform: "none" }], { duration: 220, easing: "cubic-bezier(.16,1,.3,1)" });
+    }
+    numberCards();
+    $("#prStatus").textContent = `${state.byRoster[card.dataset.id].name} moved to ${pr.order.indexOf(+card.dataset.id) + 1}.`;
+  }
+  function bindBallot() {
+    const list = $("#prList");
+    list.addEventListener("click", (e) => {
+      const b = e.target.closest(".pr-up, .pr-down");
+      if (!b) return;
+      const card = b.closest(".pr-card");
+      moveCard(card, b.classList.contains("pr-up") ? -1 : 1);
+      const again = $(b.classList.contains("pr-up") ? ".pr-up" : ".pr-down", card);
+      (again.disabled ? $(b.classList.contains("pr-up") ? ".pr-down" : ".pr-up", card) : again).focus();
+    });
+    list.addEventListener("input", (e) => {
+      if (e.target.matches("textarea")) pr.notes[e.target.dataset.id] = e.target.value;
+    });
+    // drag to reorder: the card follows the pointer and swaps past a neighbour's midpoint
+    list.addEventListener("pointerdown", (e) => {
+      const handle = e.target.closest(".pr-card__handle");
+      if (!handle || e.button > 0) return;
+      e.preventDefault();
+      const card = handle.closest(".pr-card");
+      let startY = e.clientY;
+      card.classList.add("is-drag");
+      handle.setPointerCapture(e.pointerId);
+      const move = (ev) => {
+        let dy = ev.clientY - startY;
+        const prev = card.previousElementSibling, next = card.nextElementSibling;
+        if (next && dy > next.offsetHeight / 2) { next.after(card); startY += next.offsetHeight + 10; dy = ev.clientY - startY; numberCards(); }
+        else if (prev && dy < -prev.offsetHeight / 2) { prev.before(card); startY -= prev.offsetHeight + 10; dy = ev.clientY - startY; numberCards(); }
+        card.style.transform = `translateY(${dy}px)`;
+      };
+      const up = () => {
+        card.classList.remove("is-drag");
+        card.style.transform = "";
+        handle.removeEventListener("pointermove", move);
+        handle.removeEventListener("pointerup", up);
+        handle.removeEventListener("pointercancel", up);
+        numberCards();
+      };
+      handle.addEventListener("pointermove", move);
+      handle.addEventListener("pointerup", up);
+      handle.addEventListener("pointercancel", up);
+    });
+  }
+  async function submitBallot() {
+    const btn = $("#prSubmit"), err = $("#prErr2");
+    btn.disabled = true; btn.textContent = "Submitting…"; err.textContent = "";
+    const notes = {};
+    pr.order.forEach((id) => { const n = (pr.notes[id] || "").trim(); if (n) notes[state.byRoster[id].manager.toLowerCase()] = n; });
+    try {
+      const res = await rpc("submit_ballot", {
+        p_week: pr.week, p_voter: pr.voter, p_code: pr.code,
+        p_rankings: pr.order.map((id) => state.byRoster[id].manager.toLowerCase()), p_notes: notes,
+      });
+      if (!res.ok) { err.textContent = res.error; return; }
+      $("#prDoneList").innerHTML = pr.order.map((id) => `<li>${crest(state.byRoster[id])}<b>${esc(state.byRoster[id].name)}</b></li>`).join("");
+      prStep(3);
+      pr.viewing = pr.week;
+      loadPRResults();
+    } catch (e) {
+      console.error(e);
+      err.textContent = "Couldn't submit. Check your connection and try again. Your ranking is still here.";
+    } finally {
+      btn.disabled = false; btn.textContent = "Submit ballot";
+    }
+  }
+
+  function initPower() {
+    if (!$("#prResults")) return;
+    pr.week = (state.league.settings && state.league.settings.last_scored_leg) || Math.max(1, state.week - 1);
+    pr.viewing = pr.week;
+    $$(".js-pr-week").forEach((e) => (e.textContent = pr.week));
+    $$(".js-pr-next").forEach((e) => (e.textContent = pr.week + 1));
+    try {
+      const saved = JSON.parse(localStorage.getItem(PR_STORE) || "null");
+      if (saved) { pr.voter = saved.voter; $("#prCode").value = saved.code; }
+    } catch (_) {}
+    renderWho();
+    bindBallot();
+    $("#prGo").addEventListener("click", startBallot);
+    $("#prCode").addEventListener("keydown", (e) => { if (e.key === "Enter") startBallot(); });
+    $("#prBack").addEventListener("click", () => prStep(1));
+    $("#prSubmit").addEventListener("click", submitBallot);
+    $("#prEdit").addEventListener("click", () => startBallot());
+    $("#prArchive").addEventListener("change", async (e) => {
+      pr.viewing = +e.target.value;
+      if (pr.viewing !== pr.week) {
+        try { pr.archive = await rpc("get_results", { p_week: pr.viewing }); } catch (_) { pr.archive = null; }
+      }
+      renderPRResults();
+    });
+    loadPRResults();
+  }
+
   // ---------- HOME SNAPSHOT ----------
   function renderHomeSnap() {
     const table = $("#homeTable");
@@ -1619,6 +1926,7 @@
       renderVictoryRoad();
       renderLineupChart();
       renderRankChart();
+      initPower();
       observeReveals();
 
       // players, transactions and weekly stats are heavier: render the rest once they land
