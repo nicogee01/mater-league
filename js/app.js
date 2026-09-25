@@ -1,0 +1,1026 @@
+/* =========================================================
+   The Mater League — live data from the Sleeper API,
+   plus logged matchups / cup / honours from data/results.js
+   ========================================================= */
+(function () {
+  const LEAGUE_ID = "1390750210698780672";
+  const SPORT = "clubsoccer:epl";
+  const API = "https://api.sleeper.app/v1";
+  const PLAYOFF_SPOTS = 6;
+  const PLAYER_CACHE_KEY = "nym-players-v1";
+  const PLAYER_CACHE_TTL = 12 * 60 * 60 * 1000;
+  const PHOTO_CACHE = "nym-photo-";
+  const DATA = window.NYM_RESULTS || {};
+
+  // categorical order validated for dark surfaces (CVD-safe adjacent pairs); colour follows roster ID
+  const SERIES = ["#00a35a", "#9460c9", "#b8860b", "#4a78d0", "#d0601c", "#1592b0", "#d6246f", "#8c8c2a"];
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const num = (n, d = 1) => Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+  const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const state = {
+    league: null, teams: [], byRoster: {}, players: {}, txns: [], week: 0,
+    results: [], hasResults: false, projections: {}, seasonPts: {}, rankHistory: null, cupLevels: [],
+  };
+
+  // ---------- fetch helpers ----------
+  async function get(path) {
+    const r = await fetch(API + path);
+    if (!r.ok) throw new Error(`${path} → ${r.status}`);
+    return r.json();
+  }
+
+  // Players file is ~2 MB; keep a trimmed copy for 12h so repeat visits are instant.
+  async function loadPlayers() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(PLAYER_CACHE_KEY) || "null");
+      if (cached && Date.now() - cached.t < PLAYER_CACHE_TTL) return cached.p;
+    } catch (_) {}
+    const raw = await get(`/players/${SPORT}`);
+    const p = {};
+    for (const [id, x] of Object.entries(raw)) {
+      p[id] = {
+        n: x.full_name || [x.first_name, x.last_name].filter(Boolean).join(" ") || "Unknown",
+        l: x.last_name || x.full_name || "",
+        c: x.team_abbr || "",
+        p: (x.fantasy_positions && x.fantasy_positions[0]) || x.position || "",
+        i: x.injury_status || "",
+      };
+    }
+    try { localStorage.setItem(PLAYER_CACHE_KEY, JSON.stringify({ t: Date.now(), p })); } catch (_) {}
+    return p;
+  }
+
+  // Season points + per-90 projection for every player, from weekly Sleeper stats and league scoring.
+  // Per-90 needs at least 90 minutes played, otherwise a 5-minute cameo would project absurdly high.
+  function buildProjections(statsByWeek, scoring) {
+    const agg = {};
+    for (const week of statsByWeek) {
+      for (const [pid, line] of Object.entries(week || {})) {
+        let pts = 0;
+        for (const [k, v] of Object.entries(line)) if (k.startsWith("pos_") && scoring[k] !== undefined) pts += Number(v) * Number(scoring[k]);
+        const a = (agg[pid] ||= { pts: 0, min: 0, gp: 0 });
+        a.pts += pts; a.min += Number(line.min) || 0; a.gp += 1;
+      }
+    }
+    const proj = {}, season = {};
+    for (const [pid, a] of Object.entries(agg)) {
+      season[pid] = a.pts;
+      proj[pid] = a.min >= 90 ? { v: (a.pts / a.min) * 90, per90: true } : { v: a.pts / a.gp, per90: false };
+    }
+    return { proj, season };
+  }
+
+  // Wikipedia headshots, cached (hits for 30 days, misses for 3)
+  async function playerPhoto(name) {
+    const key = PHOTO_CACHE + name;
+    try {
+      const c = JSON.parse(localStorage.getItem(key) || "null");
+      if (c && Date.now() - c.t < (c.u ? 30 : 3) * 864e5) return c.u;
+    } catch (_) {}
+    let url = null;
+    try {
+      const s = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(name + " footballer")}&srlimit=1&format=json&origin=*`).then((r) => r.json());
+      const title = s.query && s.query.search && s.query.search[0] && s.query.search[0].title;
+      if (title) {
+        const sum = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`).then((r) => (r.ok ? r.json() : null));
+        url = (sum && sum.thumbnail && sum.thumbnail.source) || null;
+      }
+    } catch (_) { return null; }
+    try { localStorage.setItem(key, JSON.stringify({ u: url, t: Date.now() })); } catch (_) {}
+    return url;
+  }
+  // run photo lookups a few at a time so Wikipedia isn't hammered
+  async function loadPhotos(pids, root) {
+    const queue = [...pids];
+    const worker = async () => {
+      while (queue.length) {
+        const pid = queue.shift();
+        const p = state.players[pid];
+        if (!p) continue;
+        const url = await playerPhoto(p.n);
+        if (!url || !root.isConnected) continue;
+        const img = new Image();
+        img.onload = () => $$(`[data-photo="${pid}"]`, root).forEach((el) => { el.style.backgroundImage = `url("${url}")`; el.classList.add("has-photo"); });
+        img.src = url;
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+  }
+
+  // ---------- club identity ----------
+  const KITS = [
+    ["#6c1d78", "#ff2882"], ["#003c71", "#04f5ff"], ["#0b6b3a", "#00ff85"], ["#8a1538", "#ffd166"],
+    ["#1f2a44", "#ff5a36"], ["#4b0f5a", "#00ff85"], ["#00463a", "#ffd166"], ["#5a0f2c", "#04f5ff"],
+  ];
+  function hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
+  function initials(name) {
+    const words = String(name).replace(/[^\p{L}\p{N}\s]/gu, "").split(/\s+/).filter(Boolean);
+    return (words.length > 1 ? words[0][0] + words[1][0] : (words[0] || "?").slice(0, 2)).toUpperCase();
+  }
+  function crestSVG(t) {
+    const [a, b] = t.kit;
+    return `<svg viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" fill="${a}"/>
+      <path d="M0 64 L64 0 L64 22 L22 64 Z" fill="${b}" opacity="0.9"/>
+      <circle cx="32" cy="32" r="21" fill="rgba(14,0,19,0.78)" stroke="#fff" stroke-width="2"/>
+      <text x="32" y="39" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="20" fill="#fff">${esc(initials(t.name))}</text>
+    </svg>`;
+  }
+  function crest(t, size = "") {
+    const cls = `crest ${size ? "crest--" + size : ""}`;
+    if (!t) return `<span class="${cls}"></span>`;
+    if (t.logo) return `<span class="${cls}"><img src="${esc(t.logo)}" alt="" loading="lazy" width="96" height="96" data-fallback="${t.rosterId}"></span>`;
+    return `<span class="${cls}">${crestSVG(t)}</span>`;
+  }
+  // swap broken logo images for the generated crest
+  document.addEventListener("error", (e) => {
+    const img = e.target;
+    if (img.tagName === "IMG" && img.dataset.fallback) {
+      const t = state.byRoster[img.dataset.fallback];
+      if (t) img.parentElement.innerHTML = crestSVG(t);
+    }
+  }, true);
+  const teamName = (id) => (state.byRoster[id] ? state.byRoster[id].name : "TBD");
+
+  // ---------- build model ----------
+  function buildTeams(users, rosters) {
+    const userById = Object.fromEntries(users.map((u) => [u.user_id, u]));
+    return rosters.map((r) => {
+      const u = userById[r.owner_id] || {};
+      const md = u.metadata || {};
+      const s = r.settings || {};
+      const manager = u.display_name || "Vacant";
+      const name = md.team_name || `${manager} FC`;
+      const logo = md.avatar || (u.avatar ? `https://sleepercdn.com/avatars/thumbs/${u.avatar}` : "");
+      return {
+        rosterId: r.roster_id,
+        color: SERIES[(r.roster_id - 1) % SERIES.length],
+        name, manager, logo,
+        kit: KITS[hash(name) % KITS.length],
+        w: s.wins || 0, l: s.losses || 0, d: s.ties || 0,
+        pf: (s.fpts || 0) + (s.fpts_decimal || 0) / 100,
+        pa: (s.fpts_against || 0) + (s.fpts_against_decimal || 0) / 100,
+        pp: (s.ppts || 0) + (s.ppts_decimal || 0) / 100,
+        faabUsed: s.waiver_budget_used || 0,
+        record: (r.metadata && r.metadata.record) || "",
+        streak: (r.metadata && r.metadata.streak) || "",
+        starters: (r.starters || []).filter((id) => id && id !== "0"),
+        players: r.players || [],
+        reserve: r.reserve || [],
+      };
+    });
+  }
+
+  function rank(teams) {
+    return [...teams].sort((a, b) => b.w - a.w || b.d - a.d || b.pf - a.pf).map((t, i) => Object.assign(t, { pos: i + 1 }));
+  }
+
+  // Streak runs straight from Sleeper's per-week record string ("WWLWW"), so they're live today.
+  function streakRuns(t, startWeek) {
+    const runs = [];
+    t.record.split("").forEach((r, i) => {
+      const wk = startWeek + i, last = runs[runs.length - 1];
+      if (last && last.type === r) { last.len++; last.end = wk; } else runs.push({ type: r, len: 1, start: wk, end: wk });
+    });
+    return runs;
+  }
+
+  // Everything that needs real matchups: splits, h2h, all-play, consistency, optimal lineups.
+  function deriveFromResults() {
+    const T = state.teams;
+    T.forEach((t) => Object.assign(t, { games: [], home: { w: 0, l: 0, d: 0 }, away: { w: 0, l: 0, d: 0 }, h2h: {}, allPlay: null, stdDev: null, optimal: null, robbed: 0 }));
+    const res = (a, b) => (a > b ? "W" : a < b ? "L" : "D");
+    for (const m of [...state.results].sort((a, b) => a.week - b.week)) {
+      const H = state.byRoster[m.home], A = state.byRoster[m.away];
+      const hr = res(m.homePts, m.awayPts), ar = res(m.awayPts, m.homePts);
+      H.games.push({ week: m.week, score: m.homePts, oppScore: m.awayPts, opp: m.away, res: hr, best: m.homeBest });
+      A.games.push({ week: m.week, score: m.awayPts, oppScore: m.homePts, opp: m.home, res: ar, best: m.awayBest });
+      H.home[hr.toLowerCase()]++; A.away[ar.toLowerCase()]++;
+      const hh = (H.h2h[m.away] ||= { w: 0, l: 0, d: 0 }), ah = (A.h2h[m.home] ||= { w: 0, l: 0, d: 0 });
+      hh[hr.toLowerCase()]++; ah[ar.toLowerCase()]++;
+    }
+    if (!state.hasResults) return;
+    const byWeek = {};
+    T.forEach((t) => t.games.forEach((g) => (byWeek[g.week] ||= []).push({ id: t.rosterId, s: g.score })));
+    T.forEach((t) => {
+      const ap = { w: 0, l: 0, d: 0 };
+      t.games.forEach((g) => byWeek[g.week].forEach((o) => { if (o.id !== t.rosterId) ap[o.s < g.score ? "w" : o.s > g.score ? "l" : "d"]++; }));
+      t.allPlay = t.games.length ? ap : null;
+      if (t.games.length > 1) {
+        const mean = t.games.reduce((a, g) => a + g.score, 0) / t.games.length;
+        t.stdDev = Math.sqrt(t.games.reduce((a, g) => a + (g.score - mean) ** 2, 0) / t.games.length);
+      }
+      const lg = t.games.filter((g) => Number.isFinite(g.best));
+      if (lg.length) {
+        t.optimal = { w: 0, l: 0, d: 0 };
+        lg.forEach((g) => { const r = res(g.best, g.oppScore); t.optimal[r.toLowerCase()]++; if (g.res === "L" && r === "W") t.robbed++; });
+      }
+      const opps = Object.entries(t.h2h).map(([id, r]) => ({ id: +id, ...r, diff: r.w - r.l, n: r.w + r.l + r.d }));
+      t.nemesis = opps.length ? [...opps].sort((a, b) => a.diff - b.diff || b.n - a.n)[0] : null;
+      t.cupcake = opps.length ? [...opps].sort((a, b) => b.diff - a.diff || b.n - a.n)[0] : null;
+      if (t.nemesis && t.cupcake && t.nemesis.id === t.cupcake.id) t.cupcake = null;
+    });
+  }
+
+  // League position after each week. With logged matchups it's exact (wins, then points);
+  // until then it's wins from the record string, ties split by season points for.
+  function buildRankHistory() {
+    const start = (state.league.settings && state.league.settings.start_week) || 1;
+    const weeks = state.hasResults
+      ? [...new Set(state.results.map((m) => m.week))].sort((a, b) => a - b)
+      : Array.from({ length: Math.max(...state.teams.map((t) => t.record.length), 0) }, (_, i) => start + i);
+    const hist = Object.fromEntries(state.teams.map((t) => [t.rosterId, []]));
+    weeks.forEach((wk, i) => {
+      const snap = state.teams.map((t) => {
+        if (state.hasResults) {
+          const g = t.games.filter((x) => x.week <= wk);
+          return { id: t.rosterId, w: g.filter((x) => x.res === "W").length, pf: g.reduce((a, x) => a + x.score, 0) };
+        }
+        return { id: t.rosterId, w: (t.record.slice(0, i + 1).match(/W/g) || []).length, pf: t.pf };
+      }).sort((a, b) => b.w - a.w || b.pf - a.pf);
+      snap.forEach((s, r) => hist[s.id].push(r + 1));
+    });
+    return { weeks, hist, exact: state.hasResults };
+  }
+
+  // ---------- HERO ----------
+  function renderHero() {
+    const T = state.teams;
+    const row = (t) => `<li class="sb__row"><span class="sb__pos">${t.pos}</span><span class="sb__name">${esc(t.name)}</span><strong>${t.w}-${t.l}${t.d ? "-" + t.d : ""}</strong></li>`;
+    $("#sbTop").innerHTML = T.slice(0, 3).map(row).join("");
+    $("#sbBottom").innerHTML = T.slice(-2).map(row).join("");
+    $("#heroEyebrow").textContent = `The Mater League · Matchweek ${state.week}`;
+    $("#tableWeek").textContent = state.week;
+  }
+  function streakLeader() {
+    const val = (t) => (t.streak.endsWith("W") ? parseInt(t.streak, 10) : 0);
+    const best = [...state.teams].sort((a, b) => val(b) - val(a))[0];
+    return best && val(best) > 0 ? best : null;
+  }
+
+  // ---------- TABLE ----------
+  const winPct = (t) => { const g = t.w + t.l + t.d; return g ? (t.w + t.d / 2) / g : 0; };
+  const eff = (t) => (t.pp ? t.pf / t.pp : 0);
+  const SORTS = {
+    rank: (t) => -t.pos,
+    winpct: winPct,
+    pf: (t) => t.pf,
+    pa: (t) => t.pa,
+    diff: (t) => t.pf - t.pa,
+    allplay: (t) => (t.allPlay ? t.allPlay.w - t.allPlay.l : -Infinity),
+    eff,
+  };
+  let tableSort = { key: "rank", dir: -1 };
+  function renderTable() {
+    const n = state.teams.length;
+    const rows = [...state.teams].sort((a, b) => (SORTS[tableSort.key](b) - SORTS[tableSort.key](a)) * -tableSort.dir || a.pos - b.pos);
+    const byRank = tableSort.key === "rank" && tableSort.dir === -1;
+    $("#tableBody").innerHTML = rows.map((t) => {
+      const diff = t.pf - t.pa;
+      const form = t.record.slice(-5).split("").map((r) => `<i class="${r}" title="${r === "W" ? "Win" : r === "L" ? "Loss" : "Draw"}">${r === "T" ? "D" : r}</i>`).join("");
+      const cls = [t.pos <= PLAYOFF_SPOTS ? "is-po" : "", t.pos === n ? "is-spoon" : "", byRank && t.pos === PLAYOFF_SPOTS + 1 ? "cut" : ""].join(" ");
+      const ap = t.allPlay ? `${t.allPlay.w}-${t.allPlay.l}${t.allPlay.d ? "-" + t.allPlay.d : ""}` : `<span class="dim" title="Needs logged matchups">–</span>`;
+      return `<tr class="${cls}" data-roster="${t.rosterId}">
+        <td class="c-pos"><span class="pos">${t.pos}</span></td>
+        <td class="c-club"><div class="club-cell"><button type="button" data-open="${t.rosterId}" aria-label="Open ${esc(t.name)} club profile">${crest(t)}<span><span class="name">${esc(t.name)}</span><span class="mgr">${esc(t.manager)}</span></span></button></div></td>
+        <td class="rec">${t.w}-${t.d}-${t.l}</td>
+        <td class="hide-sm">${(winPct(t) * 100).toFixed(1)}%</td>
+        <td class="pf">${num(t.pf)}</td>
+        <td class="hide-sm">${num(t.pa)}</td>
+        <td class="hide-md">${diff > 0 ? "+" : ""}${num(diff)}</td>
+        <td class="hide-md">${ap}</td>
+        <td class="hide-md">${Math.round(eff(t) * 100)}%</td>
+        <td class="c-form hide-sm"><span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></td>
+      </tr>`;
+    }).join("");
+    $$(".league-table th").forEach((th) => {
+      const b = $(".sort", th);
+      if (!b) return;
+      const on = b.dataset.sort === tableSort.key;
+      th.setAttribute("aria-sort", on ? (tableSort.dir === -1 ? "descending" : "ascending") : "none");
+      b.classList.toggle("is-on", on);
+    });
+  }
+  $$(".league-table .sort").forEach((b) => b.addEventListener("click", () => {
+    const key = b.dataset.sort;
+    tableSort = tableSort.key === key ? { key, dir: -tableSort.dir } : { key, dir: -1 };
+    renderTable();
+  }));
+  $("#tableBody").addEventListener("click", (e) => {
+    const tr = e.target.closest("tr[data-roster]");
+    if (tr && !e.target.closest("button")) openClub(+tr.dataset.roster, true);
+  });
+
+  // ---------- HEAD-TO-HEAD ----------
+  function loadResults() {
+    return (DATA.matches || []).filter((m) => state.byRoster[m.home] && state.byRoster[m.away]);
+  }
+  function h2h(a, b) {
+    const games = state.results.filter((m) => (m.home === a && m.away === b) || (m.home === b && m.away === a));
+    let wa = 0, wb = 0, dr = 0;
+    for (const g of games) {
+      const pa = g.home === a ? g.homePts : g.awayPts;
+      const pb = g.home === a ? g.awayPts : g.homePts;
+      pa > pb ? wa++ : pb > pa ? wb++ : dr++;
+    }
+    return { games, wa, wb, dr };
+  }
+  function renderH2HPicker() {
+    const opts = state.teams.map((t) => `<option value="${t.rosterId}">${esc(t.name)}</option>`).join("");
+    const A = $("#h2hA"), B = $("#h2hB");
+    A.innerHTML = opts; B.innerHTML = opts;
+    A.value = state.teams[0].rosterId;
+    B.value = state.teams[1].rosterId;
+    const update = (changed) => {
+      if (A.value === B.value) (changed === A ? B : A).value = state.teams.find((t) => String(t.rosterId) !== changed.value).rosterId;
+      renderH2H(+A.value, +B.value, changed === A ? "#h2hCrestA" : "#h2hCrestB");
+    };
+    A.addEventListener("change", () => update(A));
+    B.addEventListener("change", () => update(B));
+    renderH2H(+A.value, +B.value);
+  }
+  function renderH2H(a, b, popSel) {
+    const r = h2h(a, b);
+    $("#h2hCrestA").innerHTML = crest(state.byRoster[a], "lg");
+    $("#h2hCrestB").innerHTML = crest(state.byRoster[b], "lg");
+    if (popSel) { const el = $(popSel); el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
+    $("#h2hWinsA").textContent = r.wa;
+    $("#h2hWinsB").textContent = r.wb;
+    $("#h2hMeta").textContent = r.games.length
+      ? `${r.games.length} meeting${r.games.length > 1 ? "s" : ""}${r.dr ? ` · ${r.dr} draw${r.dr > 1 ? "s" : ""}` : ""}`
+      : "No meetings logged yet";
+    $("#h2hMeetings").innerHTML = r.games.sort((x, y) => y.week - x.week).map((g) => `<li><span class="wk">GW ${g.week}</span>
+        <span class="a ${g.homePts > g.awayPts ? "win" : ""}">${esc(teamName(g.home))}</span>
+        <span class="sc">${num(g.homePts)} – ${num(g.awayPts)}</span>
+        <span class="${g.awayPts > g.homePts ? "win" : ""}">${esc(teamName(g.away))}</span></li>`).join("");
+  }
+  function renderMatrix() {
+    const T = state.teams;
+    const head = `<thead><tr><th scope="col"><span class="visually-hidden">Club</span></th>${T.map((t) => `<th scope="col" title="${esc(t.name)}">${crest(t)}<span class="visually-hidden">${esc(t.name)}</span></th>`).join("")}</tr></thead>`;
+    const body = T.map((row) => `<tr><th scope="row">${crest(row)}${esc(row.name)}</th>${T.map((col) => {
+      if (row === col) return `<td class="self" aria-label="Same club"></td>`;
+      const r = h2h(row.rosterId, col.rosterId);
+      if (!r.games.length) return `<td class="even">–</td>`;
+      const c = r.wa > r.wb ? "up" : r.wa < r.wb ? "down" : "even";
+      return `<td class="${c}">${r.wa}–${r.wb}${r.dr ? `–${r.dr}` : ""}</td>`;
+    }).join("")}</tr>`).join("");
+    $("#h2hMatrix").innerHTML = head + `<tbody>${body}</tbody>`;
+    if (!state.hasResults) {
+      const empty = $("#h2hEmpty");
+      empty.hidden = false;
+      empty.innerHTML = `Sleeper doesn't publish soccer matchups publicly, so head-to-heads fill in as results are logged in <code>data/results.js</code>.`;
+    }
+  }
+
+  // ---------- CLUBS ----------
+  const POS_ORDER = { GK: 0, D: 1, M: 2, F: 3 };
+  function renderClubs() {
+    $("#clubGrid").innerHTML = state.teams.map((t) => `
+      <button type="button" class="club-card" data-open="${t.rosterId}" aria-pressed="false" aria-controls="clubProfile" style="--c1:${t.kit[0]};--c2:${t.kit[1]}">
+        <span class="top">${crest(t, "lg")}<span class="rank" aria-label="Position ${t.pos}">${String(t.pos).padStart(2, "0")}</span></span>
+        <span><span class="cc-name">${esc(t.name)}</span><span class="mgr">${esc(t.manager)}</span></span>
+        <span class="stats">
+          <span><b>${t.w}-${t.l}${t.d ? "-" + t.d : ""}</b><small>Record</small></span>
+          <span><b>${num(t.pf, 0)}</b><small>Points</small></span>
+          <span><b>${t.streak || "–"}</b><small>Streak</small></span>
+        </span>
+      </button>`).join("");
+  }
+
+  const rec = (r) => (r ? `${r.w}-${r.l}${r.d ? "-" + r.d : ""}` : "–");
+  function recordTransfer(id) {
+    const bids = state.txns.filter((t) => t.type === "waiver" && t.roster_ids[0] === id && t.settings && t.settings.waiver_bid);
+    const top = bids.sort((a, b) => b.settings.waiver_bid - a.settings.waiver_bid)[0];
+    if (!top) return null;
+    const pid = Object.keys(top.adds || {})[0];
+    return { name: state.players[pid] ? state.players[pid].n : "Unknown", bid: top.settings.waiver_bid, when: top.status_updated || top.created };
+  }
+  function sparklineSVG(games) {
+    const W = 520, H = 140, P = 22;
+    const vals = games.flatMap((g) => [g.score, Number.isFinite(g.best) ? g.best : g.score]);
+    const lo = Math.min(...vals) * 0.95, hi = Math.max(...vals) * 1.02;
+    const x = (i) => P + (games.length === 1 ? (W - 2 * P) / 2 : (i * (W - 2 * P)) / (games.length - 1));
+    const y = (v) => H - P - ((v - lo) / (hi - lo || 1)) * (H - 2 * P);
+    const line = (key) => games.map((g, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(g[key]).toFixed(1)}`).join("");
+    const hasBest = games.every((g) => Number.isFinite(g.best));
+    return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="Points by week: ${games.map((g) => `GW${g.week} ${num(g.score)}`).join(", ")}">
+      <line x1="${P}" x2="${W - P}" y1="${H - P}" y2="${H - P}" class="spark__axis"/>
+      ${hasBest ? `<path d="${line("best")}" class="spark__best"/>` : ""}
+      <path d="${line("score")}" class="spark__line"/>
+      ${games.map((g, i) => `<circle cx="${x(i)}" cy="${y(g.score)}" r="4" class="spark__dot"><title>GW ${g.week}: ${num(g.score)}${hasBest ? ` (best ${num(g.best)})` : ""}</title></circle>
+        <text x="${x(i)}" y="${H - 4}" class="spark__lbl">GW${g.week}</text>`).join("")}
+    </svg>
+    <p class="spark__key"><span class="k k--act"></span> Actual${hasBest ? ` <span class="k k--best"></span> Best possible` : ""}</p>`;
+  }
+
+  function openClub(id, scroll) {
+    const t = state.byRoster[id];
+    if (!t) return;
+    const P = state.players;
+    const pl = (pid) => P[pid] || { n: `Player ${pid}`, l: pid, c: "", p: "", i: "" };
+    const pj = (pid) => { const x = state.projections[pid]; return x ? `${num(x.v)}${x.per90 ? "/90" : "/gm"}` : ""; };
+    const starters = new Set(t.starters), reserve = new Set(t.reserve);
+
+    // group the XI by line, GK at the bottom of the pitch
+    const lines = { GK: [], D: [], M: [], F: [] };
+    t.starters.forEach((pid) => { const p = pl(pid); (lines[p.p] || lines.M).push({ ...p, id: pid }); });
+    const shape = [lines.D.length, lines.M.length, lines.F.length].filter(Boolean).join("-");
+    let delay = 0;
+    const row = (arr) => `<div class="pitch__row">${arr.map((p) => `
+      <div class="pl" style="animation-delay:${(delay++) * 45}ms">
+        <span class="pl__photo" data-photo="${p.id}"><span>${esc(initials(p.n))}</span></span>
+        ${pj(p.id) ? `<span class="pl__proj">${pj(p.id)}</span>` : ""}
+        <span class="pl__name">${esc(p.l)}</span><span class="pl__club">${esc(p.c)}</span>
+      </div>`).join("")}</div>`;
+
+    const squad = [...t.players].sort((a, b) => {
+      const pa = pl(a), pb = pl(b);
+      return (starters.has(b) - starters.has(a)) || ((POS_ORDER[pa.p] ?? 9) - (POS_ORDER[pb.p] ?? 9)) || pa.l.localeCompare(pb.l);
+    });
+    const budget = (state.league.settings && state.league.settings.waiver_budget) || 0;
+    const rt = recordTransfer(id);
+    const cs = t.cupStatus;
+    const cupBadge = !cs ? `<span class="badge badge--tbd">McQueen Cup · not yet drawn</span>`
+      : cs.result === "won" ? `<span class="badge badge--won">McQueen Cup · won ${esc(cs.round)} vs ${esc(teamName(cs.opp))}</span>`
+      : cs.result === "lost" ? `<span class="badge badge--lost">McQueen Cup · out in ${esc(cs.round)} to ${esc(teamName(cs.opp))}</span>`
+      : `<span class="badge badge--live">McQueen Cup · ${esc(cs.round)} vs ${esc(teamName(cs.opp))}</span>`;
+    const form = t.record.slice(-5).split("").map((r) => `<i class="${r}" title="${r === "W" ? "Win" : r === "L" ? "Loss" : "Draw"}">${r === "T" ? "D" : r}</i>`).join("");
+    const kpi = (v, l, note) => `<div class="kpi"><b>${v}</b><small>${l}</small>${note ? `<span class="kpi__note">${note}</span>` : ""}</div>`;
+    const needs = state.hasResults ? "" : "Needs matchups";
+    const h2hRows = state.teams.filter((o) => o !== t).map((o) => {
+      const r = t.h2h[o.rosterId];
+      return `<tr><td>${crest(o)}<span>${esc(o.name)}</span></td><td class="r">${r ? rec(r) : "–"}</td></tr>`;
+    }).join("");
+
+    const el = $("#clubProfile");
+    el.style.setProperty("--c1", t.kit[0]);
+    el.style.setProperty("--c2", t.kit[1]);
+    el.innerHTML = `
+      <div class="cp__banner">
+        ${crest(t, "xl")}
+        <div class="cp__id">
+          <h3>${esc(t.name)}</h3>
+          <p>Managed by ${esc(t.manager)} · ${ordinal(t.pos)} place <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></p>
+          <p class="cp__badges">${cupBadge}</p>
+        </div>
+        <button class="cp__close" type="button" aria-label="Close club profile"><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+      </div>
+      <div class="cp__body">
+        <div class="cp__groups">
+          <p class="cp__glabel">Record</p>
+          <div class="cp__kpis">
+            ${kpi(rec({ w: t.w, l: t.l, d: t.d }), "Overall")}
+            ${kpi(state.hasResults ? rec(t.home) : "–", "Home", needs)}
+            ${kpi(state.hasResults ? rec(t.away) : "–", "Away", needs)}
+            ${kpi(rec(t.allPlay), "All-Play", needs)}
+          </div>
+          <p class="cp__glabel">Scoring</p>
+          <div class="cp__kpis">
+            ${kpi(num(t.pf), "Points for")}
+            ${kpi(num(t.pa), "Points against")}
+            ${kpi(t.stdDev != null ? num(t.stdDev) : "–", "Std dev", needs)}
+            ${kpi("$" + (budget - t.faabUsed), "FAAB left")}
+          </div>
+          <p class="cp__glabel">Lineup management</p>
+          <div class="cp__kpis">
+            ${kpi(Math.round(eff(t) * 100) + "%", "Efficiency")}
+            ${kpi(num(t.pp - t.pf), "Bench points left")}
+            ${kpi(rec(t.optimal), "Optimal record", state.hasResults ? "" : needs)}
+            ${kpi(state.hasResults ? t.robbed : "–", "Robbed by bench", needs)}
+          </div>
+        </div>
+
+        ${t.games.length ? `<div class="cp__block cp__wide"><h4 class="subhead">Season sparkline</h4>${sparklineSVG(t.games)}</div>` : ""}
+
+        ${t.nemesis || t.cupcake ? `<div class="nc cp__wide">
+          ${t.nemesis ? `<div class="nc__item nc__item--nem"><small>Nemesis</small>${crest(state.byRoster[t.nemesis.id])}<b>${esc(teamName(t.nemesis.id))}</b><span>${rec(t.nemesis)}</span></div>` : ""}
+          ${t.cupcake ? `<div class="nc__item nc__item--cup"><small>Cupcake</small>${crest(state.byRoster[t.cupcake.id])}<b>${esc(teamName(t.cupcake.id))}</b><span>${rec(t.cupcake)}</span></div>` : ""}
+        </div>` : ""}
+
+        <div class="formation">
+          <div class="formation__label"><h4 class="subhead" style="margin:0">Starting XI</h4><b>${shape || "–"}</b></div>
+          <div class="pitch" role="img" aria-label="${esc(t.name)} starting eleven in a ${shape} formation: ${esc(t.starters.map((pid) => pl(pid).n).join(", "))}">
+            <span class="box"></span><span class="box box--six"></span>
+            ${row(lines.GK)}${row(lines.D)}${row(lines.M)}${row(lines.F)}
+          </div>
+          <p class="formation__note">Green tag = projected points per 90 minutes (per game for players under 90 minutes this season).</p>
+        </div>
+        <div class="squad">
+          <h4>Squad (${t.players.length})</h4>
+          <ul>${squad.map((pid) => {
+            const p = pl(pid);
+            const tag = reserve.has(pid) ? `<span class="tag inj">IR</span>`
+              : p.i ? `<span class="tag inj">${esc(p.i)}</span>`
+              : starters.has(pid) ? `<span class="tag xi">XI</span>` : `<span class="tag">Bench</span>`;
+            const sp = state.seasonPts[pid];
+            return `<li><span class="posb ${esc(p.p)}">${esc(p.p || "–")}</span>
+              <span class="sq__photo" data-photo="${pid}" aria-hidden="true"></span>
+              <span class="nm">${esc(p.n)}<small>${esc(p.c)}${sp != null ? ` · ${num(sp)} pts` : ""}${pj(pid) ? ` · ${pj(pid)}` : ""}</small></span>${tag}</li>`;
+          }).join("")}</ul>
+        </div>
+
+        <div class="cp__block">
+          <h4 class="subhead">Head-to-head</h4>
+          <table class="h2h-mini"><tbody>${h2hRows}</tbody></table>
+        </div>
+        <div class="cp__block">
+          <h4 class="subhead">Club record transfer</h4>
+          ${rt ? `<div class="rt"><span class="rt__fee">$${rt.bid}</span><b>${esc(rt.name)}</b><small>${new Date(rt.when).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</small></div>`
+               : `<p class="dim">No waiver fees paid yet.</p>`}
+        </div>
+      </div>`;
+    el.hidden = false;
+    $(".cp__close", el).addEventListener("click", closeClub);
+    $$(".club-card").forEach((c) => c.setAttribute("aria-pressed", String(+c.dataset.open === id)));
+    history.replaceState(null, "", `#club-${id}`);
+    if (scroll) el.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
+    loadPhotos([...t.starters, ...squad.filter((p) => !starters.has(p))], el);
+  }
+  function closeClub() {
+    const el = $("#clubProfile");
+    const open = $('.club-card[aria-pressed="true"]');
+    el.hidden = true;
+    $$(".club-card").forEach((c) => c.setAttribute("aria-pressed", "false"));
+    history.replaceState(null, "", "#clubs");
+    open && open.focus();
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-open]");
+    if (!b) return;
+    if (b.classList.contains("club-card") && b.getAttribute("aria-pressed") === "true") return closeClub();
+    openClub(+b.dataset.open, true);
+  });
+  const ordinal = (n) => n + (["th", "st", "nd", "rd"][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] || "th");
+
+  // ---------- TRANSFERS ----------
+  let feedFilter = "all", feedShown = 12;
+  const IN = `<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1l5 6H8v4H4V7H1z"/></svg>`;
+  const OUT = `<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 11L1 5h3V1h4v4h3z"/></svg>`;
+  function txnSummary(tx) {
+    const nm = (pid) => (state.players[pid] ? state.players[pid].n : `Player ${pid}`);
+    const adds = tx.adds || {}, drops = tx.drops || {};
+    const teams = tx.roster_ids.map((id) => state.byRoster[id]).filter(Boolean);
+    const main = teams[0];
+    const perTeam = teams.map((t) => ({
+      t,
+      ins: Object.keys(adds).filter((p) => adds[p] === t.rosterId).map(nm),
+      outs: Object.keys(drops).filter((p) => drops[p] === t.rosterId).map(nm),
+    }));
+    let head;
+    if (tx.type === "trade") head = `${teams.map((t) => esc(t.name)).join(" and ")} agree a deal`;
+    else {
+      const ins = perTeam[0] ? perTeam[0].ins : [];
+      head = ins.length
+        ? `${esc(main.name)} ${tx.type === "waiver" ? "win the race for" : "snap up"} ${esc(ins.join(", "))}`
+        : `${esc(main.name)} release ${esc((perTeam[0] ? perTeam[0].outs : []).join(", "))}`;
+    }
+    const moves = perTeam.map(({ t, ins, outs }) => [
+      ...ins.map((n) => `<span class="in">${IN}<b>${esc(n)}</b>${tx.type === "trade" ? ` → ${esc(t.name)}` : " in"}</span>`),
+      ...(tx.type === "trade" ? [] : outs.map((n) => `<span class="out">${OUT}<b>${esc(n)}</b> out</span>`)),
+    ].join("")).join("");
+    return { head, moves, main };
+  }
+  function when(ms) {
+    const s = (Date.now() - ms) / 1000;
+    if (s < 3600) return `${Math.max(1, Math.round(s / 60))}m ago`;
+    if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+    if (s < 86400 * 7) return `${Math.round(s / 86400)}d ago`;
+    return new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+  function renderFeed() {
+    const list = state.txns.filter((t) => feedFilter === "all" || t.type === feedFilter);
+    const shown = list.slice(0, feedShown);
+    $("#feed").innerHTML = shown.length ? shown.map((tx, i) => {
+      const { head, moves, main } = txnSummary(tx);
+      const bid = tx.settings && tx.settings.waiver_bid;
+      const label = { waiver: "Waiver", free_agent: "Free agent", trade: "Trade" }[tx.type] || tx.type;
+      return `<li class="feed__item" style="animation-delay:${Math.min(i, 8) * 40}ms">
+        ${main ? crest(main) : ""}
+        <div class="body"><span class="feed__type ${tx.type}">${label}</span><div class="feed__head">${head}</div><div class="moves">${moves}</div></div>
+        <div class="feed__side">${bid != null && tx.type === "waiver" ? `<div class="feed__fee">$${bid}<small>FAAB fee</small></div>` : ""}<div class="feed__when">GW ${tx.leg} · ${when(tx.status_updated || tx.created)}</div></div>
+      </li>`;
+    }).join("") : `<li class="empty">Quiet window. No ${feedFilter === "all" ? "" : feedFilter.replace("_", " ") + " "}moves yet.</li>`;
+    $("#feedMore").hidden = list.length <= feedShown;
+  }
+  $$(".filters .chip").forEach((c) => c.addEventListener("click", () => {
+    feedFilter = c.dataset.filter; feedShown = 12;
+    $$(".filters .chip").forEach((x) => { x.classList.toggle("is-active", x === c); x.setAttribute("aria-pressed", String(x === c)); });
+    renderFeed();
+  }));
+  $("#feedMore").addEventListener("click", () => { feedShown += 12; renderFeed(); });
+
+  function renderTicker() {
+    const items = state.txns.slice(0, 10).map((tx) => {
+      const bid = tx.type === "waiver" && tx.settings && tx.settings.waiver_bid ? ` for $${tx.settings.waiver_bid}` : "";
+      return txnSummary(tx).head + bid;
+    });
+    const leader = state.teams[0];
+    if (leader) items.unshift(`${esc(leader.name)} top the table on ${leader.w} wins`);
+    const hot = streakLeader();
+    if (hot) items.push(`${esc(hot.name)} on a ${esc(hot.streak)} streak`);
+    items.push("Site in development: matchups &amp; the McQueen Cup coming soon");
+    // two identical copies so the -50% marquee loop is seamless; the copy is hidden from screen readers
+    $("#ticker").innerHTML = items.map((s) => `<span>${s}</span>`).join("") + items.map((s) => `<span aria-hidden="true">${s}</span>`).join("");
+    $("#ticker").style.setProperty("--marquee", Math.max(30, items.length * 7) + "s");
+  }
+
+  // ---------- HALL OF RECORDS ----------
+  const ICONS = {
+    trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+    target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    bench: '<path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z"/><path d="M5 18v2"/><path d="M19 18v2"/>',
+    rain: '<path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.24"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/>',
+    spoon: '<ellipse cx="12" cy="6.5" rx="4" ry="4.5"/><path d="M12 11v11"/>',
+    cash: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+    pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+    swap: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+    zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+    swords: '<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/>',
+    trend: '<path d="M22 7 13.5 15.5 8.5 10.5 2 17"/><path d="M16 7h6v6"/>',
+    down: '<path d="M22 17 13.5 8.5 8.5 13.5 2 7"/><path d="M16 17h6v-6"/>',
+    scale: '<path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7 2 14a3 3 0 0 0 6 0Z"/><path d="M19 7l-3 7a3 3 0 0 0 6 0Z"/>',
+    wave: '<path d="M2 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0"/>',
+    ruler: '<path d="M3 12h18"/><path d="M7 8v8M12 6v12M17 8v8"/>',
+  };
+  function renderRecords() {
+    const T = state.teams;
+    const top = (f) => [...T].sort((a, b) => f(b) - f(a))[0];
+    const cards = [];
+    // who: a team object, or a list of team objects for ties
+    const add = (tone, icon, title, who, val, blurb) => who && cards.push({ tone, icon, title, who: [].concat(who), val, blurb });
+
+    // --- live from Sleeper ---
+    const boot = top((t) => t.pf);
+    add("gold", "trophy", "Golden Boot", boot, num(boot.pf), "Most points scored this season.");
+    const genius = top(eff);
+    add("cyan", "target", "Tactical Genius", genius, Math.round(eff(genius) * 100) + "%", "Best lineup efficiency: points scored vs the best possible XI.");
+    const bench = top((t) => t.pp - t.pf);
+    add("pink", "bench", "Tinkerman Award", bench, num(bench.pp - bench.pf), "Most points left on the bench. Rotate less.");
+    const unlucky = top((t) => t.pa);
+    add("pink", "rain", "Hard Luck FC", unlucky, num(unlucky.pa), "Most points conceded. Opponents always turn up against them.");
+
+    const start = (state.league.settings && state.league.settings.start_week) || 1;
+    const runs = T.flatMap((t) => streakRuns(t, start).map((r) => ({ t, ...r })));
+    const wk = (r) => (r.start === r.end ? `Week ${r.start}` : `Weeks ${r.start}–${r.end}`);
+    const longest = (type) => {
+      const list = runs.filter((r) => r.type === type);
+      const max = Math.max(0, ...list.map((r) => r.len));
+      return { max, ties: list.filter((r) => r.len === max) };
+    };
+    const ws = longest("W"), ls = longest("L");
+    if (ws.max) add("green", "trend", "Longest Winning Streak", ws.ties.map((r) => r.t), `${ws.max} games`, ws.ties.map((r) => `${r.t.name}, ${wk(r)}`).join(" · "));
+    if (ls.max) add("pink", "down", "Longest Losing Streak", ls.ties.map((r) => r.t), `${ls.max} games`, ls.ties.map((r) => `${r.t.name}, ${wk(r)}`).join(" · "));
+    const hot = streakLeader();
+    if (hot) add("green", "flame", "In Form", hot, hot.streak, "Longest current winning run.");
+    const spoon = T[T.length - 1];
+    add("pink", "spoon", "Wooden Spoon", spoon, `${spoon.w}-${spoon.l}`, "Bottom of the table. Plenty of season left, maybe.");
+    const spender = top((t) => t.faabUsed);
+    add("gold", "cash", "Chequebook Manager", spender, "$" + spender.faabUsed, "Most FAAB spent in the transfer window.");
+    const bids = state.txns.filter((t) => t.type === "waiver" && t.settings && t.settings.waiver_bid);
+    const recordBid = [...bids].sort((a, b) => b.settings.waiver_bid - a.settings.waiver_bid)[0];
+    if (recordBid) {
+      const p = state.players[Object.keys(recordBid.adds || {})[0]];
+      add("gold", "pen", "Record Signing", state.byRoster[recordBid.roster_ids[0]], "$" + recordBid.settings.waiver_bid, `${p ? p.n : "A mystery man"}, the league's most expensive signing.`);
+    }
+    const counts = {};
+    state.txns.forEach((t) => t.roster_ids.forEach((id) => (counts[id] = (counts[id] || 0) + 1)));
+    const busy = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    if (busy) add("cyan", "swap", "Super Agent", state.byRoster[busy[0]], busy[1] + " moves", "Most active in the window. Never met a free agent they didn't like.");
+
+    // --- from logged matchups ---
+    const LOCKED = ["Biggest Blowout", "Closest Game", "Highest Score of the Season", "Lowest Winning Score", "Highest Scoring Matchup",
+      "Lowest Scoring Matchup", "Most Inconsistent Scorer", "Most Consistent Scorer", "Costliest Bench Blunder", "Robbed by the Bench"];
+    if (state.hasResults) {
+      const M = state.results.map((m) => {
+        const homeWon = m.homePts >= m.awayPts;
+        return { ...m, win: homeWon ? m.home : m.away, loss: homeWon ? m.away : m.home, wp: Math.max(m.homePts, m.awayPts), lp: Math.min(m.homePts, m.awayPts) };
+      });
+      const extreme = (list, f, dir) => { const v = dir * Math.max(...list.map((x) => dir * f(x))); return { v, ties: list.filter((x) => Math.abs(f(x) - v) < 0.005) }; };
+      const game = (m) => `${teamName(m.win)} ${num(m.wp)}–${num(m.lp)} ${teamName(m.loss)}, GW ${m.week}`;
+      const winners = (ties) => ties.map((m) => state.byRoster[m.win]);
+
+      const blow = extreme(M, (m) => m.wp - m.lp, 1);
+      add("pink", "swords", "Biggest Blowout", winners(blow.ties), "+" + num(blow.v), blow.ties.map(game).join(" · "));
+      const close = extreme(M, (m) => m.wp - m.lp, -1);
+      add("cyan", "ruler", "Closest Game", winners(close.ties), num(close.v), close.ties.map(game).join(" · "));
+      const scores = M.flatMap((m) => [{ id: m.home, s: m.homePts, week: m.week }, { id: m.away, s: m.awayPts, week: m.week }]);
+      const hi = extreme(scores, (s) => s.s, 1);
+      add("green", "zap", "Highest Score of the Season", hi.ties.map((s) => state.byRoster[s.id]), num(hi.v), hi.ties.map((s) => `GW ${s.week}`).join(" · "));
+      const lowWin = extreme(M, (m) => m.wp, -1);
+      add("gold", "pen", "Lowest Winning Score", winners(lowWin.ties), num(lowWin.v), lowWin.ties.map(game).join(" · "));
+      const hiT = extreme(M, (m) => m.wp + m.lp, 1);
+      add("green", "flame", "Highest Scoring Matchup", winners(hiT.ties), num(hiT.v), hiT.ties.map(game).join(" · "));
+      const loT = extreme(M, (m) => m.wp + m.lp, -1);
+      add("pink", "rain", "Lowest Scoring Matchup", winners(loT.ties), num(loT.v), loT.ties.map(game).join(" · "));
+      const sd = T.filter((t) => t.stdDev != null);
+      if (sd.length) {
+        const inc = extreme(sd, (t) => t.stdDev, 1), con = extreme(sd, (t) => t.stdDev, -1);
+        add("pink", "wave", "Most Inconsistent Scorer", inc.ties, num(inc.v) + " sd", "Biggest week-to-week swings.");
+        add("cyan", "scale", "Most Consistent Scorer", con.ties, num(con.v) + " sd", "Metronomic. You know what you're getting.");
+      }
+      const lg = T.flatMap((t) => t.games.filter((g) => Number.isFinite(g.best)).map((g) => ({ t, ...g })));
+      if (lg.length) {
+        const blunder = extreme(lg, (g) => g.best - g.score, 1);
+        add("pink", "bench", "Costliest Bench Blunder", blunder.ties.map((g) => g.t), num(blunder.v), blunder.ties.map((g) => `Scored ${num(g.score)} with ${num(g.best)} available, GW ${g.week}`).join(" · "));
+        const maxR = Math.max(...T.map((t) => t.robbed));
+        if (maxR > 0) add("pink", "down", "Robbed by the Bench", T.filter((t) => t.robbed === maxR), `${maxR} loss${maxR > 1 ? "es" : ""}`, "Defeats that the best lineup would have won.");
+      }
+    }
+    const unlocked = new Set(cards.map((c) => c.title));
+    const locked = LOCKED.filter((l) => !unlocked.has(l));
+
+    $("#awardsGrid").innerHTML = cards.map((c) => `
+      <article class="award award--${c.tone}">
+        <div class="award__icon"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[c.icon]}</svg></div>
+        <h3>${c.title}</h3>
+        <div class="award__who">${[...new Set(c.who)].slice(0, 3).map((t) => crest(t)).join("")}<strong>${[...new Set(c.who)].map((t) => esc(t.name)).join(" & ")}</strong></div>
+        <div class="award__val">${esc(c.val)}</div>
+        <p>${esc(c.blurb)}</p>
+      </article>`).join("");
+    $("#lockedRecords").hidden = !locked.length;
+    $("#lockedList").innerHTML = locked.map((l) => `<li>${l}</li>`).join("");
+  }
+
+  // ---------- McQUEEN CUP ----------
+  const ROUND_BY_TIES = { 8: "Round of 16", 4: "Quarterfinals", 2: "Semifinals", 1: "Final" };
+  function buildCup() {
+    const rows = DATA.cup || [];
+    const levels = [];
+    for (let ties = state.teams.length / 2; ties >= 1; ties /= 2) {
+      const name = ROUND_BY_TIES[ties] || `Round of ${ties * 2}`;
+      const mine = rows.filter((r) => r.round === name);
+      const drawn = mine.filter((r) => state.byRoster[r.a] && state.byRoster[r.b]);
+      const sched = mine.filter((r) => !(state.byRoster[r.a] && state.byRoster[r.b]));
+      const map = new Map();
+      drawn.forEach((r) => {
+        const key = [r.a, r.b].sort((x, y) => x - y).join("-");
+        if (!map.has(key)) map.set(key, { ids: [r.a, r.b], legs: [] });
+        map.get(key).legs.push(r);
+      });
+      const real = [...map.values()].map((t) => {
+        t.legs.sort((x, y) => x.leg - y.leg);
+        const agg = { [t.ids[0]]: 0, [t.ids[1]]: 0 };
+        t.legs.forEach((l) => { agg[l.a] += Number(l.aPts) || 0; agg[l.b] += Number(l.bPts) || 0; });
+        const complete = t.legs.length >= 2;
+        const [a, b] = t.ids;
+        const winner = complete && agg[a] !== agg[b] ? (agg[a] > agg[b] ? a : b) : null;
+        return { real: true, ids: t.ids, legs: t.legs, agg, complete, winner };
+      });
+      const tbd = Array.from({ length: Math.max(0, ties - real.length) }, (_, i) => {
+        const weeks = {};
+        sched.forEach((r) => { const byLeg = sched.filter((x) => x.leg === r.leg); if (byLeg[i] && byLeg[i].week) weeks[r.leg] = byLeg[i].week; });
+        return { real: false, weeks };
+      });
+      levels.push({ name, ties: [...real, ...tbd] });
+    }
+    levels.forEach((lv) => lv.ties.forEach((t) => {
+      if (!t.real) return;
+      t.ids.forEach((id) => {
+        const opp = t.ids.find((x) => x !== id);
+        const team = state.byRoster[id];
+        if (team) team.cupStatus = { round: lv.name, opp, result: !t.complete ? "pending" : t.winner === id ? "won" : "lost" };
+      });
+    }));
+    return levels;
+  }
+  function renderCup() {
+    const CHECK = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>`;
+    $("#bracket").innerHTML = state.cupLevels.map((lv, li) => `
+      <div class="bracket__round">
+        <p class="bracket__name">${lv.name}</p>
+        <div class="bracket__ties">${lv.ties.map((t) => {
+          if (!t.real) {
+            const wk = Object.keys(t.weeks).sort().map((l) => `Leg ${l} · GW ${t.weeks[l]}`).join(" · ");
+            return `<div class="tie tie--tbd"><div class="tie__row"><span class="tie__crest"></span><span class="tie__name">TBD</span><span class="tie__agg">–</span></div>
+              <div class="tie__row"><span class="tie__crest"></span><span class="tie__name">TBD</span><span class="tie__agg">–</span></div>
+              <p class="tie__meta">${wk || "Awaiting random draw"}</p></div>`;
+          }
+          const legs = t.legs.map((l) => `Leg ${l.leg}: ${num(l.aPts)}–${num(l.bPts)}`).join(" · ");
+          const meta = t.complete ? (t.winner ? `Won on aggregate · ${legs}` : `Level on aggregate · ${legs}`) : `${legs} · Leg ${t.legs.length + 1} pending`;
+          return `<div class="tie">${t.ids.map((id) => `<div class="tie__row ${t.winner === id ? "is-win" : t.winner ? "is-out" : ""}">
+              ${crest(state.byRoster[id])}<span class="tie__name">${esc(teamName(id))}${t.winner === id ? `<span class="visually-hidden"> (through)</span>` : ""}</span>
+              <span class="tie__agg">${num(t.agg[id])}</span>${t.winner === id ? CHECK : ""}</div>`).join("")}
+            <p class="tie__meta">${meta}</p></div>`;
+        }).join("")}</div>
+      </div>${li < state.cupLevels.length - 1 ? `<div class="bracket__link" aria-hidden="true"></div>` : ""}`).join("");
+  }
+
+  // ---------- VICTORY ROAD ----------
+  function renderVictoryRoad() {
+    const H = DATA.honours || {};
+    const col = (label, list, pending) => `
+      <div class="vr__col reveal">
+        <p class="vr__label">${label}</p>
+        ${(list && list.length ? [...list].sort((a, b) => b.year - a.year) : [{ year: new Date().getFullYear(), champion: null }]).map((s) => {
+          const champ = state.byRoster[s.champion], ru = state.byRoster[s.runnerUp];
+          return `<div class="vr__season ${champ ? "is-won" : ""}">
+            <span class="vr__year">${s.year}</span>
+            <svg class="vr__trophy" viewBox="0 0 60 70" aria-hidden="true"><use href="#trophy"/></svg>
+            <div class="vr__champ">${champ ? crest(champ) : ""}<b>${champ ? esc(champ.name) : "TBD"}</b></div>
+            <p class="vr__ru">Runner-up · ${ru ? esc(ru.name) : "TBD"}</p>
+            ${champ ? "" : `<span class="vr__status">${pending}</span>`}
+          </div>`;
+        }).join("")}
+      </div>`;
+    $("#victoryRoad").innerHTML = col("Mater League Champions", H.league, "Season in progress") + col("McQueen Cup Champions", H.cup, "Bracket in progress");
+  }
+
+  // ---------- ANALYTICS ----------
+  const tip = $("#tooltip");
+  function showTip(html, x, y) {
+    tip.innerHTML = html; tip.hidden = false;
+    const r = tip.getBoundingClientRect();
+    tip.style.left = Math.min(window.innerWidth - r.width - 8, Math.max(8, x + 14)) + "px";
+    tip.style.top = Math.max(8, y - r.height - 12) + "px";
+  }
+  const hideTip = () => { tip.hidden = true; };
+  // hover and keyboard focus both show the same tooltip
+  function bindTip(root, sel, htmlFor) {
+    root.addEventListener("pointermove", (e) => { const t = e.target.closest(sel); t ? showTip(htmlFor(t), e.clientX, e.clientY) : hideTip(); });
+    root.addEventListener("pointerleave", hideTip);
+    root.addEventListener("focusin", (e) => { const t = e.target.closest(sel); if (!t) return; const r = t.getBoundingClientRect(); showTip(htmlFor(t), r.left + r.width / 2, r.top); });
+    root.addEventListener("focusout", hideTip);
+  }
+
+  function renderLineupChart() {
+    const T = [...state.teams].sort((a, b) => b.pf - a.pf);
+    const max = Math.max(...T.map((t) => t.pp || t.pf));
+    const el = $("#lineupChart");
+    el.innerHTML = `<ul class="lc" role="list">${T.map((t) => `
+      <li class="lc__row" tabindex="0" data-id="${t.rosterId}" aria-label="${esc(t.name)}: ${num(t.pf)} of ${num(t.pp)} possible, ${Math.round(eff(t) * 100)}%">
+        <span class="lc__name">${esc(t.name)}</span>
+        <span class="lc__track">
+          <span class="lc__pot" style="width:${(t.pp / max) * 100}%"></span>
+          <span class="lc__act" style="width:${(t.pf / max) * 100}%"></span>
+        </span>
+        <span class="lc__val">${num(t.pf, 0)}<small> / ${num(t.pp, 0)}</small></span>
+      </li>`).join("")}</ul>
+      <p class="lc__key"><span class="k k--act"></span> Points scored <span class="k k--pot"></span> Best possible</p>`;
+    bindTip(el, ".lc__row", (row) => {
+      const t = state.byRoster[row.dataset.id];
+      return `<b>${esc(t.name)}</b><span>Scored <strong>${num(t.pf)}</strong></span><span>Best possible <strong>${num(t.pp)}</strong></span><span>Left on bench <strong>${num(t.pp - t.pf)}</strong> (${Math.round(eff(t) * 100)}% efficient)</span>`;
+    });
+  }
+
+  function renderRankChart() {
+    const { weeks, hist, exact } = state.rankHistory;
+    const el = $("#rankChart");
+    const n = state.teams.length;
+    if (!weeks.length) { el.innerHTML = `<p class="pending-note">No matchweeks played yet.</p>`; return; }
+    const W = 720, H = 340, L = 34, R = 20, Tp = 16, B = 32;
+    const x = (i) => L + (weeks.length === 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (weeks.length - 1));
+    const y = (r) => Tp + ((r - 1) * (H - Tp - B)) / (n - 1);
+    const lines = state.teams.map((t) => {
+      const pts = hist[t.rosterId];
+      return `<g class="rk__series" data-id="${t.rosterId}" style="--c:${t.color}">
+        <path class="rk__line" d="${pts.map((r, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(r).toFixed(1)}`).join("")}"/>
+        ${pts.map((r, i) => `<circle class="rk__dot" cx="${x(i)}" cy="${y(r)}" r="4.5"/>`).join("")}
+      </g>`;
+    }).join("");
+    el.innerHTML = `
+      <div class="rk__legend" role="group" aria-label="Highlight a club">${state.teams.map((t) => `<button type="button" class="rk__chip" data-id="${t.rosterId}" aria-pressed="false" style="--c:${t.color}"><span class="sw"></span>${esc(t.name)}</button>`).join("")}</div>
+      <svg class="rk" viewBox="0 0 ${W} ${H}" role="img" aria-label="League position by week for each club">
+        ${Array.from({ length: n }, (_, i) => `<line class="rk__grid" x1="${L}" x2="${W - R}" y1="${y(i + 1)}" y2="${y(i + 1)}"/><text class="rk__axis" x="${L - 10}" y="${y(i + 1) + 4}" text-anchor="end">${i + 1}</text>`).join("")}
+        ${weeks.map((w, i) => `<text class="rk__axis" x="${x(i)}" y="${H - 8}" text-anchor="middle">GW${w}</text>`).join("")}
+        <line class="rk__cross" id="rkCross" x1="0" x2="0" y1="${Tp - 6}" y2="${H - B + 6}" visibility="hidden"/>
+        ${lines}
+        ${weeks.map((w, i) => `<rect class="rk__hit" data-i="${i}" x="${x(i) - (W - L - R) / Math.max(1, weeks.length - 1) / 2}" y="0" width="${(W - L - R) / Math.max(1, weeks.length - 1)}" height="${H}"/>`).join("")}
+      </svg>
+      ${exact ? "" : `<p class="chart-note">Until matchups are logged, positions use each week's wins with ties split by season points for.</p>`}
+      <table class="visually-hidden"><caption>League position by week</caption><thead><tr><th>Club</th>${weeks.map((w) => `<th>GW${w}</th>`).join("")}</tr></thead>
+        <tbody>${state.teams.map((t) => `<tr><th>${esc(t.name)}</th>${hist[t.rosterId].map((r) => `<td>${r}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+
+    const svg = $(".rk", el), cross = $("#rkCross", el);
+    const highlight = (id) => {
+      el.classList.toggle("is-focus", id != null);
+      $$(".rk__series", el).forEach((g) => g.classList.toggle("is-on", g.dataset.id === String(id)));
+      $$(".rk__chip", el).forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.id === String(id))));
+    };
+    let pinned = null;
+    $$(".rk__chip", el).forEach((c) => {
+      c.addEventListener("click", () => { pinned = pinned === c.dataset.id ? null : c.dataset.id; highlight(pinned); });
+      c.addEventListener("pointerenter", () => highlight(c.dataset.id));
+      c.addEventListener("pointerleave", () => highlight(pinned));
+    });
+    svg.addEventListener("pointermove", (e) => {
+      const hit = e.target.closest(".rk__hit");
+      if (!hit) return;
+      const i = +hit.dataset.i;
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+      const order = [...state.teams].sort((a, b) => hist[a.rosterId][i] - hist[b.rosterId][i]);
+      showTip(`<b>Matchweek ${weeks[i]}</b>${order.map((t) => `<span class="tt-row"><i style="background:${t.color}"></i>${hist[t.rosterId][i]}. ${esc(t.name)}</span>`).join("")}`, e.clientX, e.clientY);
+    });
+    svg.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
+  }
+
+  // ---------- reveal + nav state ----------
+  function observeReveals() {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        const siblings = [...e.target.parentElement.children];
+        e.target.style.transitionDelay = e.target.matches(".club-card, .award") ? `${Math.min(siblings.indexOf(e.target), 10) * 50}ms` : "";
+        e.target.classList.add("is-in");
+        io.unobserve(e.target);
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    $$(".reveal:not(.is-in), .club-card:not(.is-in), .award:not(.is-in)").forEach((el) => io.observe(el));
+  }
+  const navLinks = $$(".nav__links a");
+  const sectionSpy = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      navLinks.forEach((a) => {
+        const on = a.getAttribute("href") === "#" + e.target.id;
+        a.classList.toggle("is-active", on);
+        on ? a.setAttribute("aria-current", "true") : a.removeAttribute("aria-current");
+      });
+    });
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  $$("main > section").forEach((s) => sectionSpy.observe(s));
+
+  // mobile menu
+  const toggle = $("#navToggle"), menu = $("#mobileMenu");
+  toggle.addEventListener("click", () => {
+    const open = toggle.getAttribute("aria-expanded") !== "true";
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+    menu.hidden = !open;
+  });
+  menu.addEventListener("click", (e) => { if (e.target.tagName === "A") toggle.click(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    hideTip();
+    if (!menu.hidden) { toggle.click(); toggle.focus(); }
+    else if (!$("#clubProfile").hidden) closeClub();
+  });
+
+  // ---------- boot ----------
+  function showError(err) {
+    console.error(err);
+    const box = `<div class="error-box" role="alert"><strong>Couldn't reach Sleeper.</strong> Check your connection and try again.<br><button type="button" onclick="location.reload()">Retry</button></div>`;
+    $("#tableBody").innerHTML = `<tr><td colspan="10">${box}</td></tr>`;
+    $("#feed").innerHTML = `<li>${box}</li>`;
+  }
+
+  async function boot() {
+    try {
+      const [league, users, rosters, sportState] = await Promise.all([
+        get(`/league/${LEAGUE_ID}`), get(`/league/${LEAGUE_ID}/users`), get(`/league/${LEAGUE_ID}/rosters`), get(`/state/${SPORT}`).catch(() => ({})),
+      ]);
+      state.league = league;
+      state.week = sportState.display_week || sportState.week || (league.settings && league.settings.leg) || 1;
+      state.teams = rank(buildTeams(users, rosters));
+      state.byRoster = Object.fromEntries(state.teams.map((t) => [t.rosterId, t]));
+      state.results = loadResults();
+      state.hasResults = state.results.length > 0;
+      deriveFromResults();
+      state.rankHistory = buildRankHistory();
+      state.cupLevels = buildCup();
+
+      renderHero();
+      renderTable();
+      renderClubs();
+      renderH2HPicker();
+      renderMatrix();
+      renderCup();
+      renderVictoryRoad();
+      renderLineupChart();
+      renderRankChart();
+      observeReveals();
+
+      // players, transactions and weekly stats are heavier: render the rest once they land
+      const legs = Math.max(state.week, (league.settings && league.settings.leg) || 1);
+      const scored = (league.settings && league.settings.last_scored_leg) || Math.max(0, state.week - 1);
+      const season = league.season || sportState.season;
+      const [players, statsWeeks, ...txnLegs] = await Promise.all([
+        loadPlayers().catch(() => ({})),
+        Promise.all(Array.from({ length: scored }, (_, i) => get(`/stats/${SPORT}/regular/${season}/${i + 1}`).catch(() => ({})))),
+        ...Array.from({ length: legs }, (_, i) => get(`/league/${LEAGUE_ID}/transactions/${i + 1}`).catch(() => [])),
+      ]);
+      state.players = players;
+      const { proj, season: seasonPts } = buildProjections(statsWeeks, league.scoring_settings || {});
+      state.projections = proj;
+      state.seasonPts = seasonPts;
+      state.txns = txnLegs.flat().filter((t) => t && t.status === "complete").sort((a, b) => (b.status_updated || b.created) - (a.status_updated || a.created));
+
+      renderFeed();
+      renderTicker();
+      renderRecords();
+      observeReveals();
+
+      const m = location.hash.match(/^#club-(\d+)$/);
+      if (m) openClub(+m[1], true);
+
+      $("#updated").textContent = `Last updated ${new Date().toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
+    } catch (err) {
+      showError(err);
+    }
+  }
+  boot();
+})();
