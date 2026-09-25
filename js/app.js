@@ -618,7 +618,6 @@
       const pa = pl(a), pb = pl(b);
       return (starters.has(b) - starters.has(a)) || ((POS_ORDER[pa.p] ?? 9) - (POS_ORDER[pb.p] ?? 9)) || pa.l.localeCompare(pb.l);
     });
-    const budget = (state.league.settings && state.league.settings.waiver_budget) || 0;
     const rt = recordTransfer(id);
     const cs = t.cupStatus;
     const cupBadge = !cs ? `<span class="badge badge--tbd">McQueen Cup · not yet drawn</span>`
@@ -660,7 +659,7 @@
             ${kpi(num(t.pf), "Points for")}
             ${kpi(num(t.pa), "Points against")}
             ${kpi(t.stdDev != null ? num(t.stdDev) : "–", "Std dev", needs)}
-            ${kpi("$" + (budget - t.faabUsed), "FAAB left")}
+            ${kpi("$" + faabLeft(t), "FAAB left", (() => { const x = faabLedger()[t.rosterId]; return `$${x.paid} spent${x.traded ? ` · ${x.traded > 0 ? "+" : "−"}$${Math.abs(x.traded)} traded` : ""}`; })())}
           </div>
           <p class="cp__glabel">Lineup management</p>
           <div class="cp__kpis">
@@ -821,17 +820,33 @@
     renderFeed();
   }));
 
+  // FAAB can be traded in this league, so a club can bid past the starting budget.
+  // Sleeper's waiver_budget_used is net (bids + FAAB sent - FAAB received): right for the
+  // balance, wrong for "spent". Winning bids and traded FAAB come from the transactions.
+  function faabLedger() {
+    const L = Object.fromEntries(state.teams.map((t) => [t.rosterId, { paid: 0, signings: 0, traded: 0 }]));
+    for (const tx of state.txns) {
+      const bid = tx.type === "waiver" && tx.settings && tx.settings.waiver_bid;
+      if (bid && L[tx.roster_ids[0]]) { L[tx.roster_ids[0]].paid += bid; L[tx.roster_ids[0]].signings++; }
+      for (const m of tx.waiver_budget || []) {
+        if (L[m.sender]) L[m.sender].traded -= m.amount;
+        if (L[m.receiver]) L[m.receiver].traded += m.amount;
+      }
+    }
+    return L;
+  }
+  const faabBudget = () => (state.league.settings && state.league.settings.waiver_budget) || 0;
+  const faabLeft = (t) => faabBudget() - t.faabUsed;
+
   // sidebar: FAAB left, biggest spenders, busiest clubs, window totals
   function renderMarket() {
     if (!$("#mkFaab")) return;
     const budget = (state.league.settings && state.league.settings.waiver_budget) || 0;
     const T = state.teams;
-    const paid = {}, moves = {};
-    state.txns.forEach((t) => {
-      t.roster_ids.forEach((id) => (moves[id] = (moves[id] || 0) + 1));
-      if (t.type === "waiver" && t.settings && t.settings.waiver_bid) paid[t.roster_ids[0]] = (paid[t.roster_ids[0]] || 0) + 1;
-    });
-    const spent = T.reduce((s, t) => s + t.faabUsed, 0);
+    const moves = {};
+    state.txns.forEach((t) => t.roster_ids.forEach((id) => (moves[id] = (moves[id] || 0) + 1)));
+    const ledger = faabLedger();
+    const spent = T.reduce((s, t) => s + ledger[t.rosterId].paid, 0);
     const topBid = Math.max(0, ...state.txns.map((t) => (t.type === "waiver" && t.settings && t.settings.waiver_bid) || 0));
     const stat = (v, l) => `<div class="mk-stat"><b>${v}</b><small>${l}</small></div>`;
     $("#mkTotals").innerHTML = stat("$" + spent.toLocaleString(), "FAAB spent") + stat(state.txns.length, "Moves") +
@@ -841,11 +856,14 @@
         ${crest(t)}<span class="mk-row__name">${esc(t.name)}</span><span class="mk-row__val">${label}</span>
         <span class="mk-bar" aria-hidden="true"><span style="--w:${max ? Math.max(0, Math.min(1, value / max)) : 0}"></span></span>${extra}
       </li>`;
-    $("#mkFaab").innerHTML = [...T].sort((a, b) => (budget - b.faabUsed) - (budget - a.faabUsed))
-      .map((t) => bar(t, Math.max(0, budget - t.faabUsed), budget, `$${Math.max(0, budget - t.faabUsed)} left`)).join("");
-    const maxSpend = Math.max(1, ...T.map((t) => t.faabUsed));
-    $("#mkSpend").innerHTML = [...T].sort((a, b) => b.faabUsed - a.faabUsed).slice(0, 5)
-      .map((t) => bar(t, t.faabUsed, maxSpend, `$${t.faabUsed}`, `<small class="mk-row__sub">${paid[t.rosterId] || 0} paid signing${(paid[t.rosterId] || 0) === 1 ? "" : "s"}</small>`)).join("");
+    const signed = (t) => `${ledger[t.rosterId].signings} paid signing${ledger[t.rosterId].signings === 1 ? "" : "s"}`;
+    const traded = (t) => { const x = ledger[t.rosterId].traded; return x ? ` · ${x > 0 ? "+" : "−"}$${Math.abs(x)} via trades` : ""; };
+    const maxLeft = Math.max(budget, ...T.map(faabLeft));
+    $("#mkFaab").innerHTML = [...T].sort((a, b) => faabLeft(b) - faabLeft(a))
+      .map((t) => bar(t, faabLeft(t), maxLeft, `$${faabLeft(t)} left`, traded(t) ? `<small class="mk-row__sub">${traded(t).slice(3)}</small>` : "")).join("");
+    const maxSpend = Math.max(1, ...T.map((t) => ledger[t.rosterId].paid));
+    $("#mkSpend").innerHTML = [...T].sort((a, b) => ledger[b.rosterId].paid - ledger[a.rosterId].paid).slice(0, 5)
+      .map((t) => bar(t, ledger[t.rosterId].paid, maxSpend, `$${ledger[t.rosterId].paid}`, `<small class="mk-row__sub">${signed(t)}${traded(t)}</small>`)).join("");
     const maxMoves = Math.max(1, ...Object.values(moves));
     $("#mkBusy").innerHTML = [...T].sort((a, b) => (moves[b.rosterId] || 0) - (moves[a.rosterId] || 0)).slice(0, 5)
       .map((t) => bar(t, moves[t.rosterId] || 0, maxMoves, `${moves[t.rosterId] || 0} moves`)).join("");
@@ -932,8 +950,9 @@
     if (hot) add("green", "flame", "In Form", hot, hot.streak, "Longest current winning run.");
     const spoon = T[T.length - 1];
     add("pink", "spoon", "Wooden Spoon", spoon, `${spoon.w}-${spoon.l}`, "Bottom of the table. Plenty of season left, maybe.");
-    const spender = top((t) => t.faabUsed);
-    add("gold", "cash", "Chequebook Manager", spender, "$" + spender.faabUsed, "Most FAAB spent in the transfer window.");
+    const ledger = faabLedger();
+    const spender = top((t) => ledger[t.rosterId].paid);
+    add("gold", "cash", "Chequebook Manager", spender, "$" + ledger[spender.rosterId].paid, `Most FAAB paid in winning bids, across ${ledger[spender.rosterId].signings} signings.`);
     const bids = state.txns.filter((t) => t.type === "waiver" && t.settings && t.settings.waiver_bid);
     const recordBid = [...bids].sort((a, b) => b.settings.waiver_bid - a.settings.waiver_bid)[0];
     if (recordBid) {
@@ -1342,6 +1361,172 @@
     svg.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
   }
 
+  // ---------- DATA HUB ----------
+  // Sleeper gives per-player, per-gameweek match stats. It doesn't expose past lineups, so a
+  // club's numbers are what its CURRENT players have produced this season: either the current
+  // XI or the whole squad. "good: -1" means lower is better (conceded, cards, dispossessed).
+  const HUB_METRICS = [
+    { group: "Overall", key: "fpts", label: "Fantasy points", dp: 1 },
+    { group: "Overall", key: "min", label: "Minutes played", dp: 0 },
+    { group: "Attack", key: "g", label: "Goals", dp: 0 },
+    { group: "Attack", key: "xg", label: "Expected goals (xG)", dp: 2 },
+    { group: "Attack", key: "sat", label: "Shots", dp: 0 },
+    { group: "Attack", key: "sot", label: "Shots on target", dp: 0 },
+    { group: "Creativity", key: "at", label: "Assists", dp: 0 },
+    { group: "Creativity", key: "xa", label: "Expected assists (xA)", dp: 2 },
+    { group: "Creativity", key: "kp", label: "Key passes", dp: 0 },
+    { group: "Defence", key: "tkw", label: "Tackles won", dp: 0 },
+    { group: "Defence", key: "int", label: "Interceptions", dp: 0 },
+    { group: "Defence", key: "clr", label: "Clearances", dp: 0 },
+    { group: "Defence", key: "aer", label: "Aerial duels won", dp: 0 },
+    { group: "Defence", key: "bs", label: "Blocked shots", dp: 0 },
+    { group: "Goalkeeping", key: "cs", label: "Clean sheets (GK)", dp: 0, pos: "GK" },
+    { group: "Goalkeeping", key: "sv", label: "Saves (GK)", dp: 0, pos: "GK" },
+    { group: "Goalkeeping", key: "ga", label: "Goals conceded (GK)", dp: 0, pos: "GK", good: -1 },
+    { group: "Discipline", key: "yc", label: "Yellow cards", dp: 0, good: -1 },
+    { group: "Discipline", key: "rc", label: "Red cards", dp: 0, good: -1 },
+    { group: "Discipline", key: "dis", label: "Times dispossessed", dp: 0, good: -1 },
+  ];
+  const hub = { team: null, compare: "avg", scope: "xi", lead: "g" };
+
+  // season totals per player (raw stats + fantasy points under this league's scoring)
+  function buildPlayerTotals(statsByWeek, scoring) {
+    const out = {};
+    for (const week of statsByWeek) {
+      for (const [pid, line] of Object.entries(week || {})) {
+        const t = (out[pid] ||= { fpts: 0 });
+        for (const [k, v] of Object.entries(line)) {
+          if (k.startsWith("pos_")) { if (scoring[k] !== undefined) t.fpts += Number(v) * Number(scoring[k]); continue; }
+          if (typeof v === "number") t[k] = (t[k] || 0) + v;
+        }
+      }
+    }
+    return out;
+  }
+  function clubValue(t, m, scope) {
+    const ids = scope === "xi" ? t.starters : t.players;
+    return ids.reduce((sum, pid) => {
+      const p = state.players[pid];
+      if (m.pos && (!p || p.p !== m.pos)) return sum;
+      return sum + ((state.playerTotals[pid] || {})[m.key] || 0);
+    }, 0);
+  }
+  const ordinalRank = (vals, v, good) => 1 + vals.filter((x) => (good === -1 ? x < v : x > v)).length;
+
+  function renderHub() {
+    const el = $("#hubGroups");
+    if (!el || !state.playerTotals) return;
+    const T = state.teams;
+    const team = state.byRoster[hub.team] || T[0];
+    const cmp = hub.compare === "avg" ? null : state.byRoster[hub.compare];
+    const rows = HUB_METRICS.map((m) => {
+      const vals = T.map((t) => ({ t, v: clubValue(t, m, hub.scope) }));
+      const nums = vals.map((x) => x.v);
+      const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+      const mine = vals.find((x) => x.t === team).v;
+      const rk = ordinalRank(nums, mine, m.good);
+      return { m, vals, avg, mine, rk, lo: Math.min(...nums), hi: Math.max(...nums) };
+    });
+
+    // strengths / weaknesses: where this club ranks best and worst
+    // skip stats where the club shares its value with 2+ others (e.g. "0 red cards"): not a real edge
+    const ranked = rows.filter((r) => r.hi > r.lo && r.vals.filter((x) => x.v === r.mine).length < 3);
+    const best = ranked.filter((r) => r.rk <= 2).sort((a, b) => a.rk - b.rk).slice(0, 3);
+    const worst = ranked.filter((r) => r.rk >= T.length - 1).sort((a, b) => b.rk - a.rk).slice(0, 3);
+    const fmtV = (r, v) => num(v, r.m.dp);
+    const chip = (r, cls) => `<li class="hub-chip hub-chip--${cls}"><b>${ordinal(r.rk)}</b> ${esc(r.m.label)} <span>${fmtV(r, r.mine)}</span></li>`;
+    $("#hubSummary").innerHTML = `
+      <div class="hub-sum">
+        ${crest(team, "lg")}
+        <div><p class="hub-sum__name">${esc(team.name)}</p>
+        <p class="hub-sum__sub">${hub.scope === "xi" ? "Current starting XI" : `Full squad (${team.players.length} players)`}, season to date${cmp ? ` · vs ${esc(cmp.name)}` : " · vs league average"}</p></div>
+      </div>
+      <div class="hub-sum__lists">
+        <div><p class="hub-sum__label hub-sum__label--up">Strengths</p><ul>${best.map((r) => chip(r, "up")).join("") || "<li class=\"hub-chip\">Nothing top-two yet</li>"}</ul></div>
+        <div><p class="hub-sum__label hub-sum__label--down">Weaknesses</p><ul>${worst.map((r) => chip(r, "down")).join("") || "<li class=\"hub-chip\">Nothing bottom-two</li>"}</ul></div>
+      </div>`;
+
+    const groups = [...new Set(HUB_METRICS.map((m) => m.group))];
+    el.innerHTML = groups.map((g) => `
+      <section class="hub-group reveal is-in">
+        <h3 class="hub-group__title">${g}</h3>
+        ${rows.filter((r) => r.m.group === g).map((r) => {
+          const span = r.hi - r.lo || 1;
+          const pos = (v) => (r.hi === r.lo ? 50 : ((v - r.lo) / span) * 100);
+          const other = cmp ? r.vals.find((x) => x.t === cmp).v : r.avg;
+          const diff = r.avg ? ((r.mine - r.avg) / r.avg) * 100 : 0;
+          const better = r.m.good === -1 ? diff < 0 : diff > 0;
+          const diffTxt = Math.abs(diff) < 0.5 ? "on the average" : `${Math.abs(diff).toFixed(0)}% ${diff > 0 ? "above" : "below"} avg`;
+          return `<div class="hub-row" tabindex="0" aria-label="${esc(r.m.label)}: ${esc(team.name)} ${fmtV(r, r.mine)}, ${r.hi === r.lo ? "level with every club" : `ranked ${ordinal(r.rk)} of ${T.length}`}. ${cmp ? `${esc(cmp.name)} ${fmtV(r, other)}.` : ""} League average ${fmtV(r, r.avg)}.">
+            <span class="hub-row__label">${esc(r.m.label)}${r.m.good === -1 ? ` <small>lower is better</small>` : ""}</span>
+            <span class="hub-strip" aria-hidden="true">
+              <span class="hub-strip__avg" style="left:${pos(r.avg)}%"></span>
+              ${r.vals.filter((x) => x.t !== team && x.t !== cmp).map((x) => `<span class="hub-dot" data-id="${x.t.rosterId}" data-m="${r.m.key}" style="left:${pos(x.v)}%"></span>`).join("")}
+              ${cmp ? `<span class="hub-dot hub-dot--cmp" data-id="${cmp.rosterId}" data-m="${r.m.key}" style="left:${pos(other)}%"></span>` : ""}
+              <span class="hub-dot hub-dot--me" data-id="${team.rosterId}" data-m="${r.m.key}" style="left:${pos(r.mine)}%"></span>
+            </span>
+            <span class="hub-row__val"><b>${fmtV(r, r.mine)}</b><small>${cmp ? `vs ${fmtV(r, other)}` : `avg ${fmtV(r, r.avg)}`}</small></span>
+            ${r.hi === r.lo
+              ? `<span class="hub-row__rank"><b>Level</b><small>all clubs equal</small></span>`
+              : `<span class="hub-row__rank ${better ? "is-up" : Math.abs(diff) < 0.5 ? "" : "is-down"}"><b>${ordinal(r.rk)}</b><small>${diffTxt}</small></span>`}
+          </div>`;
+        }).join("")}
+      </section>`).join("");
+    $("#hubLegend").innerHTML = `<span class="hub-key hub-key--me"></span>${esc(team.name)}
+      ${cmp ? `<span class="hub-key hub-key--cmp"></span>${esc(cmp.name)}` : ""}
+      <span class="hub-key hub-key--avg"></span>League average <span class="hub-key hub-key--other"></span>Other clubs`;
+    hubRowsCache = rows;
+    renderLeaders();
+  }
+  let hubRowsCache = [];
+
+  function renderLeaders() {
+    const el = $("#leaders");
+    if (!el) return;
+    const m = HUB_METRICS.find((x) => x.key === hub.lead) || HUB_METRICS[2];
+    const owner = {};
+    state.teams.forEach((t) => t.players.forEach((pid) => (owner[pid] = t)));
+    const list = Object.keys(owner)
+      .map((pid) => ({ pid, p: state.players[pid], v: (state.playerTotals[pid] || {})[m.key] || 0 }))
+      .filter((x) => x.p && (!m.pos || x.p.p === m.pos))
+      .sort((a, b) => (m.good === -1 ? a.v - b.v : b.v - a.v))
+      .slice(0, 10);
+    el.innerHTML = list.map((x, i) => `
+      <li class="lead-row${owner[x.pid] === (state.byRoster[hub.team] || state.teams[0]) ? " is-mine" : ""}">
+        <span class="lead-row__rank">${i + 1}</span>
+        <span class="lead-row__photo" data-photo="${x.pid}" aria-hidden="true"><span>${esc(initials(x.p.n))}</span></span>
+        <span class="lead-row__name">${esc(x.p.n)}<small>${clubLogo(x.p.t)}${esc(x.p.c)} · ${esc(x.p.p)} · ${crest(owner[x.pid])}${esc(owner[x.pid].name)}</small></span>
+        <span class="lead-row__val">${num(x.v, m.dp)}</span>
+      </li>`).join("");
+    loadPhotos(list.map((x) => x.pid), el);
+  }
+
+  function initHub() {
+    const sel = $("#hubTeam");
+    if (!sel) return;
+    const opts = state.teams.map((t) => `<option value="${t.rosterId}">${esc(t.name)}</option>`).join("");
+    sel.innerHTML = opts;
+    $("#hubCompare").innerHTML = `<option value="avg">League average</option>` + opts;
+    // default to the site owner's club when present
+    const me = state.teams.find((t) => t.manager.toLowerCase() === "nicog01") || state.teams[0];
+    hub.team = me.rosterId; sel.value = me.rosterId;
+    sel.addEventListener("change", () => { hub.team = +sel.value; if (String(hub.compare) === sel.value) { hub.compare = "avg"; $("#hubCompare").value = "avg"; } renderHub(); });
+    $("#hubCompare").addEventListener("change", (e) => { hub.compare = e.target.value === "avg" ? "avg" : +e.target.value; renderHub(); });
+    $$("#hubScope .chip").forEach((c) => c.addEventListener("click", () => {
+      hub.scope = c.dataset.scope;
+      $$("#hubScope .chip").forEach((x) => { x.classList.toggle("is-active", x === c); x.setAttribute("aria-pressed", String(x === c)); });
+      renderHub();
+    }));
+    $("#leadMetric").innerHTML = HUB_METRICS.filter((m) => m.key !== "min").map((m) => `<option value="${m.key}"${m.key === hub.lead ? " selected" : ""}>${esc(m.label)}</option>`).join("");
+    $("#leadMetric").addEventListener("change", (e) => { hub.lead = e.target.value; renderLeaders(); });
+    bindTip($("#hubGroups"), ".hub-dot", (d) => {
+      const t = state.byRoster[d.dataset.id];
+      const r = hubRowsCache.find((x) => x.m.key === d.dataset.m);
+      const v = r.vals.find((x) => x.t === t).v;
+      return `<b>${esc(t.name)}</b><span>${esc(r.m.label)}: <strong>${num(v, r.m.dp)}</strong></span><span>${ordinal(ordinalRank(r.vals.map((x) => x.v), v, r.m.good))} of ${state.teams.length}</span>`;
+    });
+  }
+
   // ---------- HOME SNAPSHOT ----------
   function renderHomeSnap() {
     const table = $("#homeTable");
@@ -1442,13 +1627,18 @@
       const season = league.season || sportState.season;
       const [players, statsWeeks, ...txnLegs] = await Promise.all([
         loadPlayers().catch(() => ({})),
-        Promise.all(Array.from({ length: $("#clubGrid") ? scored : 0 }, (_, i) => get(`/stats/${SPORT}/regular/${season}/${i + 1}`).catch(() => ({})))),
+        Promise.all(Array.from({ length: $("#clubGrid") || $("#hubGroups") ? scored : 0 }, (_, i) => get(`/stats/${SPORT}/regular/${season}/${i + 1}`).catch(() => ({})))),
         ...Array.from({ length: legs }, (_, i) => get(`/league/${LEAGUE_ID}/transactions/${i + 1}`).catch(() => [])),
       ]);
       state.players = players;
       const { proj, season: seasonPts } = buildProjections(statsWeeks, league.scoring_settings || {});
       state.projections = proj;
       state.seasonPts = seasonPts;
+      if ($("#hubGroups")) {
+        state.playerTotals = buildPlayerTotals(statsWeeks, league.scoring_settings || {});
+        initHub();
+        renderHub();
+      }
       state.txns = txnLegs.flat().filter((t) => t && t.status === "complete").sort((a, b) => (b.status_updated || b.created) - (a.status_updated || a.created));
 
       renderFeed();

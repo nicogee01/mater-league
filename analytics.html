@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=24" />
+  <link rel="stylesheet" href="css/styles.css?v=27" />
 </head>
 <body data-page="analytics">
   <main id="main">
@@ -18,11 +18,41 @@
       <div class="page-hero__inner">
         <p class="eyebrow">Under the hood</p>
         <h1>Analytics</h1>
-        <p class="page-hero__lede">How each club got here.</p>
+        <p class="page-hero__lede">The data hub, plus the charts behind the table.</p>
       </div>
     </header>
 
     <section class="section section--page" aria-label="Analytics">
+      <section class="hub" aria-labelledby="hubTitle">
+        <div class="hub__head reveal">
+          <p class="eyebrow">Match stats from Sleeper</p>
+          <h2 class="subhead" id="hubTitle">Data hub</h2>
+          <p class="section__lede">Pick a club and see how its players stack up against the league average or any rival: goals, shots, key passes, defending, goalkeeping and discipline. Every dot is a club.</p>
+        </div>
+        <div class="hub__controls reveal">
+          <label class="hub-field"><span>Club</span><select id="hubTeam"></select></label>
+          <label class="hub-field"><span>Compare with</span><select id="hubCompare"></select></label>
+          <div class="hub-field"><span id="hubScopeLabel">Players counted</span>
+            <div class="filters" id="hubScope" role="group" aria-labelledby="hubScopeLabel">
+              <button class="chip is-active" data-scope="xi" aria-pressed="true">Current XI</button>
+              <button class="chip" data-scope="squad" aria-pressed="false">Full squad</button>
+            </div>
+          </div>
+        </div>
+        <div class="hub__summary" id="hubSummary"><div class="skeleton" style="height:120px"></div></div>
+        <p class="hub__legend" id="hubLegend"></p>
+        <div class="hub__groups" id="hubGroups"></div>
+        <p class="chart-note">Season totals for the players on each roster right now, whichever club they played for at the time. Sleeper doesn't publish past lineups, so these aren't the points each manager actually started.</p>
+
+        <div class="leaders reveal">
+          <div class="leaders__head">
+            <h3 class="subhead">League leaders</h3>
+            <label class="hub-field hub-field--inline"><span>Stat</span><select id="leadMetric"></select></label>
+          </div>
+          <ol class="leaders__list" id="leaders"></ol>
+        </div>
+      </section>
+
       <div class="charts">
         <figure class="chart-card reveal">
           <figcaption>
@@ -42,9 +72,9 @@
     </section>
   </main>
 
-  <script src="js/layout.js?v=24"></script>
-  <script src="data/league.js?v=24"></script>
-  <script src="js/motion.js?v=24"></script>
-  <script src="js/app.js?v=24"></script>
+  <script src="js/layout.js?v=27"></script>
+  <script src="data/league.js?v=27"></script>
+  <script src="js/motion.js?v=27"></script>
+  <script src="js/app.js?v=27"></script>
 </body>
 </html>

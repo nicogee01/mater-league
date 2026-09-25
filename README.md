@@ -26,12 +26,13 @@ Then open http://localhost:5173.
 |--------------------|--------|
 | Hero contenders / relegation, League table, Win%, Eff. | Live (Sleeper rosters) |
 | Clubs: XI, squad, photos, per-90 projections, record transfer | Live (rosters, weekly stats, Wikipedia) |
-| Transfer window, ticker | Live (Sleeper transactions) |
+| Transfer window, ticker | Live (Sleeper transactions). FAAB spent = winning bids; FAAB left = balance after trades |
 | Hall of Records: Golden Boot, streaks, spending, … | Live |
 | Hall of Records: blowouts, closest game, consistency, bench blunders | `data/matchups.csv` |
 | All-Play, Home/Away, Std dev, Optimal record, Nemesis/Cupcake, H2H | `data/matchups.csv` |
 | The McQueen Cup | `data/cup.csv` |
 | Victory Road | `data/league.js` → `honours` |
+| Analytics: data hub (goals, xG, key passes, tackles, saves… vs league average) | Live (Sleeper weekly player stats) |
 | Analytics: points vs best lineup | Live |
 | Analytics: standings by week | Exact with `matches`; wins-only estimate before then |
 
