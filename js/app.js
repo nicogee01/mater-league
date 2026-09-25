@@ -151,6 +151,15 @@
     }
   }, true);
   const teamName = (id) => (state.byRoster[id] ? state.byRoster[id].name : "TBD");
+  // power-rankings emblem: crown for No. 1, poo for last, from the latest public round
+  const EMBLEM = { top: ["\u{1F451}", "No. 1 in the power rankings"], bottom: ["\u{1F4A9}", "Last in the power rankings"] };
+  const emblem = (t) => {
+    const e = t && t.prTag && EMBLEM[t.prTag];
+    return e ? `<span class="pr-emblem pr-emblem--${t.prTag}" role="img" aria-label="${e[1]}" title="${e[1]} (Gameweek ${state.prEmblemWeek})">${e[0]}</span>` : "";
+  };
+  const club = (t) => (t ? esc(t.name) + emblem(t) : "TBD");           // club name as HTML, with emblem
+  const clubById = (id) => club(state.byRoster[id]);
+  const clubText = (t) => t.name + (t.prTag ? " " + EMBLEM[t.prTag][0] : ""); // plain text (dropdowns)
 
   // ---------- build model ----------
   function buildTeams(users, rosters) {
@@ -300,7 +309,7 @@
     $$(".js-week").forEach((el) => (el.textContent = state.week));
     if (!$("#sbTop")) return;
     const T = state.teams;
-    const row = (t) => `<li class="sb__row"><span class="sb__pos">${t.pos}</span><span class="sb__name">${esc(t.name)}</span><strong>${t.w}-${t.l}${t.d ? "-" + t.d : ""}</strong></li>`;
+    const row = (t) => `<li class="sb__row"><span class="sb__pos">${t.pos}</span><span class="sb__name">${club(t)}</span><strong>${t.w}-${t.l}${t.d ? "-" + t.d : ""}</strong></li>`;
     $("#sbTop").innerHTML = T.slice(0, 3).map(row).join("");
     $("#sbBottom").innerHTML = T.slice(-2).map(row).join("");
     $("#heroEyebrow").textContent = `The Mater League · Matchweek ${state.week}`;
@@ -336,7 +345,7 @@
       const ap = t.allPlay ? `${t.allPlay.w}-${t.allPlay.l}${t.allPlay.d ? "-" + t.allPlay.d : ""}` : `<span class="dim" title="Needs logged matchups">–</span>`;
       return `<tr class="${cls}" data-roster="${t.rosterId}">
         <td class="c-pos"><span class="pos">${t.pos}</span></td>
-        <td class="c-club"><div class="club-cell"><button type="button" data-open="${t.rosterId}" aria-label="Open ${esc(t.name)} club profile">${crest(t)}<span><span class="name">${esc(t.name)}</span><span class="mgr">${esc(t.manager)}</span></span></button></div></td>
+        <td class="c-club"><div class="club-cell"><button type="button" data-open="${t.rosterId}" aria-label="Open ${esc(t.name)} club profile">${crest(t)}<span><span class="name">${club(t)}</span><span class="mgr">${esc(t.manager)}</span></span></button></div></td>
         <td class="rec">${t.w}-${t.d}-${t.l}</td>
         <td class="hide-sm">${(winPct(t) * 100).toFixed(1)}%</td>
         <td class="pf">${num(t.pf)}</td>
@@ -433,7 +442,7 @@
   }
   function renderH2HPicker() {
     if (!$("#h2hA")) return;
-    const opts = state.teams.map((t) => `<option value="${t.rosterId}">${esc(t.name)}</option>`).join("");
+    const opts = state.teams.map((t) => `<option value="${t.rosterId}">${esc(clubText(t))}</option>`).join("");
     const A = $("#h2hA"), B = $("#h2hB");
     A.innerHTML = opts; B.innerHTML = opts;
     A.value = state.teams[0].rosterId;
@@ -457,15 +466,15 @@
       ? `${r.games.length} meeting${r.games.length > 1 ? "s" : ""}${r.dr ? ` · ${r.dr} draw${r.dr > 1 ? "s" : ""}` : ""}`
       : "No meetings logged yet";
     $("#h2hMeetings").innerHTML = r.games.sort((x, y) => y.week - x.week).map((g) => `<li><span class="wk">GW ${g.week}</span>
-        <span class="a ${g.homePts > g.awayPts ? "win" : ""}">${esc(teamName(g.home))}</span>
+        <span class="a ${g.homePts > g.awayPts ? "win" : ""}">${clubById(g.home)}</span>
         <span class="sc">${num(g.homePts)} – ${num(g.awayPts)}</span>
-        <span class="${g.awayPts > g.homePts ? "win" : ""}">${esc(teamName(g.away))}</span></li>`).join("");
+        <span class="${g.awayPts > g.homePts ? "win" : ""}">${clubById(g.away)}</span></li>`).join("");
   }
   function renderMatrix() {
     if (!$("#h2hMatrix")) return;
     const T = state.teams;
     const head = `<thead><tr><th scope="col"><span class="visually-hidden">Club</span></th>${T.map((t) => `<th scope="col" title="${esc(t.name)}">${crest(t)}<span class="visually-hidden">${esc(t.name)}</span></th>`).join("")}</tr></thead>`;
-    const body = T.map((row) => `<tr><th scope="row">${crest(row)}${esc(row.name)}</th>${T.map((col) => {
+    const body = T.map((row) => `<tr><th scope="row">${crest(row)}${club(row)}</th>${T.map((col) => {
       if (row === col) return `<td class="self" aria-label="Same club"></td>`;
       const r = h2h(row.rosterId, col.rosterId);
       const derby = row.derby && row.derby === col.derby;
@@ -515,7 +524,7 @@
       const { lead, r, text } = derbyVerdict(d);
       const share = d.a.pf + d.b.pf ? d.a.pf / (d.a.pf + d.b.pf) : 0.5;
       const side = (t, cls) => `<div class="derby__side derby__side--${cls}${lead === t ? " is-lead" : ""}">
-          ${crest(t, "lg")}<b>${esc(t.name)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)}</small></div>`;
+          ${crest(t, "lg")}<b>${club(t)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)}</small></div>`;
       const row = (a, label, b) => `<div class="derby__row"><span>${a}</span><small>${label}</small><span>${b}</span></div>`;
       return `<article class="derby reveal" id="derby-${esc(d.slug)}">
         <header class="derby__head"><span class="derby__tag">${esc(d.tag)}</span><h3>${esc(d.name)}</h3></header>
@@ -547,7 +556,7 @@
     $("#clubGrid").innerHTML = state.teams.map((t) => `
       <button type="button" class="club-card" data-open="${t.rosterId}" aria-pressed="false" aria-controls="clubProfile" style="--c1:${t.kit[0]};--c2:${t.kit[1]}">
         <span class="top">${crest(t, "lg")}<span class="rank" aria-label="Position ${t.pos}">${String(t.pos).padStart(2, "0")}</span></span>
-        <span><span class="cc-name">${esc(t.name)}</span><span class="mgr">${esc(t.manager)}</span></span>
+        <span><span class="cc-name">${club(t)}</span><span class="mgr">${esc(t.manager)}</span></span>
         <span class="stats">
           <span><b>${t.w}-${t.l}${t.d ? "-" + t.d : ""}</b><small>Record</small></span>
           <span><b>${num(t.pf, 0)}</b><small>Points</small></span>
@@ -629,7 +638,7 @@
     const needs = state.hasResults ? "" : "Needs matchups";
     const h2hRows = state.teams.filter((o) => o !== t).map((o) => {
       const r = t.h2h[o.rosterId];
-      return `<tr><td>${crest(o)}<span>${esc(o.name)}</span></td><td class="r">${r ? rec(r) : "–"}</td></tr>`;
+      return `<tr><td>${crest(o)}<span>${club(o)}</span></td><td class="r">${r ? rec(r) : "–"}</td></tr>`;
     }).join("");
 
     const el = $("#clubProfile");
@@ -639,7 +648,7 @@
       <div class="cp__banner">
         ${crest(t, "xl")}
         <div class="cp__id">
-          <h3>${esc(t.name)}</h3>
+          <h3>${club(t)}</h3>
           <p>Managed by ${esc(t.manager)} · ${ordinal(t.pos)} place <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></p>
           <p class="cp__badges">${cupBadge}${t.derby ? `<span class="badge badge--derby">${esc(t.derby.name)}</span>` : ""}</p>
         </div>
@@ -677,14 +686,14 @@
           return `<a class="cp-derby cp__wide" href="h2h.html#derby-${esc(t.derby.slug)}">
             <span class="cp-derby__label">Derby rival · ${esc(t.derby.tag)}</span>
             <span class="cp-derby__name">${esc(t.derby.name)}</span>
-            <span class="cp-derby__vs">${crest(t)}<b>vs</b>${crest(rival)}<span>${esc(rival.name)}</span></span>
+            <span class="cp-derby__vs">${crest(t)}<b>vs</b>${crest(rival)}<span>${club(rival)}</span></span>
             <span class="cp-derby__verdict">${esc(v.text)}.</span>
           </a>`;
         })() : ""}
 
         ${t.nemesis || t.cupcake ? `<div class="nc cp__wide">
-          ${t.nemesis ? `<div class="nc__item nc__item--nem"><small>Nemesis</small>${crest(state.byRoster[t.nemesis.id])}<b>${esc(teamName(t.nemesis.id))}</b><span>${rec(t.nemesis)}</span></div>` : ""}
-          ${t.cupcake ? `<div class="nc__item nc__item--cup"><small>Cupcake</small>${crest(state.byRoster[t.cupcake.id])}<b>${esc(teamName(t.cupcake.id))}</b><span>${rec(t.cupcake)}</span></div>` : ""}
+          ${t.nemesis ? `<div class="nc__item nc__item--nem"><small>Nemesis</small>${crest(state.byRoster[t.nemesis.id])}<b>${clubById(t.nemesis.id)}</b><span>${rec(t.nemesis)}</span></div>` : ""}
+          ${t.cupcake ? `<div class="nc__item nc__item--cup"><small>Cupcake</small>${crest(state.byRoster[t.cupcake.id])}<b>${clubById(t.cupcake.id)}</b><span>${rec(t.cupcake)}</span></div>` : ""}
         </div>` : ""}
 
         <div class="formation">
@@ -759,15 +768,15 @@
       outs: Object.keys(drops).filter((p) => drops[p] === t.rosterId).map(nm),
     }));
     let head;
-    if (tx.type === "trade") head = `${teams.map((t) => esc(t.name)).join(" and ")} agree a deal`;
+    if (tx.type === "trade") head = `${teams.map(club).join(" and ")} agree a deal`;
     else {
       const ins = perTeam[0] ? perTeam[0].ins : [];
       head = ins.length
-        ? `${esc(main.name)} ${tx.type === "waiver" ? "win the race for" : "snap up"} ${esc(ins.join(", "))}`
-        : `${esc(main.name)} release ${esc((perTeam[0] ? perTeam[0].outs : []).join(", "))}`;
+        ? `${club(main)} ${tx.type === "waiver" ? "win the race for" : "snap up"} ${esc(ins.join(", "))}`
+        : `${club(main)} release ${esc((perTeam[0] ? perTeam[0].outs : []).join(", "))}`;
     }
     const moves = perTeam.map(({ t, ins, outs }) => [
-      ...ins.map((n) => `<span class="in">${IN}<b>${esc(n)}</b>${tx.type === "trade" ? ` → ${esc(t.name)}` : " in"}</span>`),
+      ...ins.map((n) => `<span class="in">${IN}<b>${esc(n)}</b>${tx.type === "trade" ? ` → ${club(t)}` : " in"}</span>`),
       ...(tx.type === "trade" ? [] : outs.map((n) => `<span class="out">${OUT}<b>${esc(n)}</b> out</span>`)),
     ].join("")).join("");
     return { head, moves, main };
@@ -853,7 +862,7 @@
       stat(state.txns.filter((t) => t.type === "trade").length, "Trades") + stat("$" + topBid, "Top bid");
 
     const bar = (t, value, max, label, extra = "") => `<li class="mk-row">
-        ${crest(t)}<span class="mk-row__name">${esc(t.name)}</span><span class="mk-row__val">${label}</span>
+        ${crest(t)}<span class="mk-row__name">${club(t)}</span><span class="mk-row__val">${label}</span>
         <span class="mk-bar" aria-hidden="true"><span style="--w:${max ? Math.max(0, Math.min(1, value / max)) : 0}"></span></span>${extra}
       </li>`;
     const signed = (t) => `${ledger[t.rosterId].signings} paid signing${ledger[t.rosterId].signings === 1 ? "" : "s"}`;
@@ -877,9 +886,9 @@
       return txnSummary(tx).head + bid;
     });
     const leader = state.teams[0];
-    if (leader) items.unshift(`${esc(leader.name)} top the table on ${leader.w} wins`);
+    if (leader) items.unshift(`${club(leader)} top the table on ${leader.w} wins`);
     const hot = streakLeader();
-    if (hot) items.push(`${esc(hot.name)} on a ${esc(hot.streak)} streak`);
+    if (hot) items.push(`${club(hot)} on a ${esc(hot.streak)} streak`);
     state.derbies.forEach((d) => items.push(`${esc(d.name)}: ${esc(derbyVerdict(d).text)}`));
     items.push("Site in development: matchups &amp; the McQueen Cup coming soon");
     // two identical copies so the -50% marquee loop is seamless; the copy is hidden from screen readers
@@ -1057,7 +1066,7 @@
       : `<li><button type="button" class="rec-row cat-${r.cat}${recState.cards.indexOf(r) === recState.spot ? " is-on" : ""}" data-i="${recState.cards.indexOf(r)}" aria-label="${esc(r.title)}: ${esc(who(r).map((t) => t.name).join(" and "))}, ${esc(r.val)}. Show in spotlight">
           <span class="rec-row__light" aria-hidden="true"></span>
           <span class="rec-row__title">${esc(r.title)}</span>
-          <span class="rec-row__who">${who(r).slice(0, 2).map((t) => crest(t)).join("")}<span>${who(r).map((t) => esc(t.name)).join(" & ")}</span></span>
+          <span class="rec-row__who">${who(r).slice(0, 2).map((t) => crest(t)).join("")}<span>${who(r).map(club).join(" & ")}</span></span>
           <span class="rec-row__val">${flaps(r.val)}</span>
         </button></li>`).join("");
     if (el.dataset.seen) $$(".rec-row", el).forEach((row, i) => spinFlaps(row, i * 70));
@@ -1072,7 +1081,7 @@
     $("#spotTitle").textContent = c.title;
     $("#spotVal").innerHTML = flaps(c.val);
     $("#spotVal").setAttribute("aria-label", c.val);
-    $("#spotWho").innerHTML = who(c).slice(0, 3).map((t) => crest(t, "lg")).join("") + `<b>${who(c).map((t) => esc(t.name)).join(" & ")}</b>`;
+    $("#spotWho").innerHTML = who(c).slice(0, 3).map((t) => crest(t, "lg")).join("") + `<b>${who(c).map(club).join(" & ")}</b>`;
     $("#spotBlurb").textContent = c.blurb;
     $("#spotCount").textContent = `${recState.spot + 1} / ${recState.cards.length}`;
     $("#spotIcon").innerHTML = ICONS[c.icon] || "";
@@ -1219,7 +1228,7 @@
     const meta = t.complete ? (t.winner ? `Won on aggregate · ${legs}` : `Level on aggregate · ${legs}`)
       : t.legs.length < 2 ? `${legs} · Leg 2 to come` : legs;
     return `<div class="tie">${t.ids.map((id) => `<div class="tie__row ${t.winner === id ? "is-win" : t.winner ? "is-out" : ""}">
-        ${crest(state.byRoster[id])}<span class="tie__name">${esc(teamName(id))}${t.winner === id ? `<span class="visually-hidden"> (through)</span>` : ""}</span>
+        ${crest(state.byRoster[id])}<span class="tie__name">${clubById(id)}${t.winner === id ? `<span class="visually-hidden"> (through)</span>` : ""}</span>
         <span class="tie__agg">${num(t.agg[id])}</span>${t.winner === id ? CHECK : ""}</div>`).join("")}
       <p class="tie__meta">${meta}</p></div>`;
   }
@@ -1237,7 +1246,7 @@
             <span class="final-stage__pool" aria-hidden="true"></span>
             <p class="final-stage__kicker"><span class="live-dot"></span>${esc(lv.name)}</p>
             ${TROPHY}
-            <p class="final-stage__title">${champ ? `${esc(champ.name)} lift the cup` : "One tie. One cup."}</p>
+            <p class="final-stage__title">${champ ? `${club(champ)} lift the cup` : "One tie. One cup."}</p>
             ${t ? tieCard(t) : ""}
             <p class="final-stage__meta">Two legs. The aggregate winner lifts the McQueen Cup.</p>
           </div>
@@ -1262,8 +1271,8 @@
           return `<div class="vr__season ${champ ? "is-won" : ""}">
             <span class="vr__year">${s.year}</span>
             <svg class="vr__trophy" viewBox="0 0 60 70" aria-hidden="true"><use href="#trophy"/></svg>
-            <div class="vr__champ">${champ ? crest(champ) : ""}<b>${champ ? esc(champ.name) : "TBD"}</b></div>
-            <p class="vr__ru">Runner-up · ${ru ? esc(ru.name) : "TBD"}</p>
+            <div class="vr__champ">${champ ? crest(champ) : ""}<b>${champ ? club(champ) : "TBD"}</b></div>
+            <p class="vr__ru">Runner-up · ${ru ? club(ru) : "TBD"}</p>
             ${champ ? "" : `<span class="vr__status">${pending}</span>`}
           </div>`;
         }).join("")}
@@ -1295,7 +1304,7 @@
     if (!el) return;
     el.innerHTML = `<ul class="lc" role="list">${T.map((t) => `
       <li class="lc__row" tabindex="0" data-id="${t.rosterId}" aria-label="${esc(t.name)}: ${num(t.pf)} of ${num(t.pp)} possible, ${Math.round(eff(t) * 100)}%">
-        <span class="lc__name">${esc(t.name)}</span>
+        <span class="lc__name">${club(t)}</span>
         <span class="lc__track">
           <span class="lc__pot" style="width:${(t.pp / max) * 100}%"></span>
           <span class="lc__act" style="width:${(t.pf / max) * 100}%"></span>
@@ -1305,7 +1314,7 @@
       <p class="lc__key"><span class="k k--act"></span> Points scored <span class="k k--pot"></span> Best possible</p>`;
     bindTip(el, ".lc__row", (row) => {
       const t = state.byRoster[row.dataset.id];
-      return `<b>${esc(t.name)}</b><span>Scored <strong>${num(t.pf)}</strong></span><span>Best possible <strong>${num(t.pp)}</strong></span><span>Left on bench <strong>${num(t.pp - t.pf)}</strong> (${Math.round(eff(t) * 100)}% efficient)</span>`;
+      return `<b>${club(t)}</b><span>Scored <strong>${num(t.pf)}</strong></span><span>Best possible <strong>${num(t.pp)}</strong></span><span>Left on bench <strong>${num(t.pp - t.pf)}</strong> (${Math.round(eff(t) * 100)}% efficient)</span>`;
     });
   }
 
@@ -1326,7 +1335,7 @@
       </g>`;
     }).join("");
     el.innerHTML = `
-      <div class="rk__legend" role="group" aria-label="Highlight a club">${state.teams.map((t) => `<button type="button" class="rk__chip" data-id="${t.rosterId}" aria-pressed="false" style="--c:${t.color}"><span class="sw"></span>${esc(t.name)}</button>`).join("")}</div>
+      <div class="rk__legend" role="group" aria-label="Highlight a club">${state.teams.map((t) => `<button type="button" class="rk__chip" data-id="${t.rosterId}" aria-pressed="false" style="--c:${t.color}"><span class="sw"></span>${club(t)}</button>`).join("")}</div>
       <svg class="rk" viewBox="0 0 ${W} ${H}" role="img" aria-label="League position by week for each club">
         ${Array.from({ length: n }, (_, i) => `<line class="rk__grid" x1="${L}" x2="${W - R}" y1="${y(i + 1)}" y2="${y(i + 1)}"/><text class="rk__axis" x="${L - 10}" y="${y(i + 1) + 4}" text-anchor="end">${i + 1}</text>`).join("")}
         ${weeks.map((w, i) => `<text class="rk__axis" x="${x(i)}" y="${H - 8}" text-anchor="middle">GW${w}</text>`).join("")}
@@ -1356,7 +1365,7 @@
       const i = +hit.dataset.i;
       cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
       const order = [...state.teams].sort((a, b) => hist[a.rosterId][i] - hist[b.rosterId][i]);
-      showTip(`<b>Matchweek ${weeks[i]}</b>${order.map((t) => `<span class="tt-row"><i style="background:${t.color}"></i>${hist[t.rosterId][i]}. ${esc(t.name)}</span>`).join("")}`, e.clientX, e.clientY);
+      showTip(`<b>Matchweek ${weeks[i]}</b>${order.map((t) => `<span class="tt-row"><i style="background:${t.color}"></i>${hist[t.rosterId][i]}. ${club(t)}</span>`).join("")}`, e.clientX, e.clientY);
     });
     svg.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
   }
@@ -1438,8 +1447,8 @@
     $("#hubSummary").innerHTML = `
       <div class="hub-sum">
         ${crest(team, "lg")}
-        <div><p class="hub-sum__name">${esc(team.name)}</p>
-        <p class="hub-sum__sub">${hub.scope === "xi" ? "Current starting XI" : `Full squad (${team.players.length} players)`}, season to date${cmp ? ` · vs ${esc(cmp.name)}` : " · vs league average"}</p></div>
+        <div><p class="hub-sum__name">${club(team)}</p>
+        <p class="hub-sum__sub">${hub.scope === "xi" ? "Current starting XI" : `Full squad (${team.players.length} players)`}, season to date${cmp ? ` · vs ${club(cmp)}` : " · vs league average"}</p></div>
       </div>
       <div class="hub-sum__lists">
         <div><p class="hub-sum__label hub-sum__label--up">Strengths</p><ul>${best.map((r) => chip(r, "up")).join("") || "<li class=\"hub-chip\">Nothing top-two yet</li>"}</ul></div>
@@ -1472,8 +1481,8 @@
           </div>`;
         }).join("")}
       </section>`).join("");
-    $("#hubLegend").innerHTML = `<span class="hub-key hub-key--me"></span>${esc(team.name)}
-      ${cmp ? `<span class="hub-key hub-key--cmp"></span>${esc(cmp.name)}` : ""}
+    $("#hubLegend").innerHTML = `<span class="hub-key hub-key--me"></span>${club(team)}
+      ${cmp ? `<span class="hub-key hub-key--cmp"></span>${club(cmp)}` : ""}
       <span class="hub-key hub-key--avg"></span>League average <span class="hub-key hub-key--other"></span>Other clubs`;
     hubRowsCache = rows;
     renderLeaders();
@@ -1495,7 +1504,7 @@
       <li class="lead-row${owner[x.pid] === (state.byRoster[hub.team] || state.teams[0]) ? " is-mine" : ""}">
         <span class="lead-row__rank">${i + 1}</span>
         <span class="lead-row__photo" data-photo="${x.pid}" aria-hidden="true"><span>${esc(initials(x.p.n))}</span></span>
-        <span class="lead-row__name">${esc(x.p.n)}<small>${clubLogo(x.p.t)}${esc(x.p.c)} · ${esc(x.p.p)} · ${crest(owner[x.pid])}${esc(owner[x.pid].name)}</small></span>
+        <span class="lead-row__name">${esc(x.p.n)}<small>${clubLogo(x.p.t)}${esc(x.p.c)} · ${esc(x.p.p)} · ${crest(owner[x.pid])}${club(owner[x.pid])}</small></span>
         <span class="lead-row__val">${num(x.v, m.dp)}</span>
       </li>`).join("");
     loadPhotos(list.map((x) => x.pid), el);
@@ -1504,7 +1513,7 @@
   function initHub() {
     const sel = $("#hubTeam");
     if (!sel) return;
-    const opts = state.teams.map((t) => `<option value="${t.rosterId}">${esc(t.name)}</option>`).join("");
+    const opts = state.teams.map((t) => `<option value="${t.rosterId}">${esc(clubText(t))}</option>`).join("");
     sel.innerHTML = opts;
     $("#hubCompare").innerHTML = `<option value="avg">League average</option>` + opts;
     // default to the site owner's club when present
@@ -1523,7 +1532,7 @@
       const t = state.byRoster[d.dataset.id];
       const r = hubRowsCache.find((x) => x.m.key === d.dataset.m);
       const v = r.vals.find((x) => x.t === t).v;
-      return `<b>${esc(t.name)}</b><span>${esc(r.m.label)}: <strong>${num(v, r.m.dp)}</strong></span><span>${ordinal(ordinalRank(r.vals.map((x) => x.v), v, r.m.good))} of ${state.teams.length}</span>`;
+      return `<b>${club(t)}</b><span>${esc(r.m.label)}: <strong>${num(v, r.m.dp)}</strong></span><span>${ordinal(ordinalRank(r.vals.map((x) => x.v), v, r.m.good))} of ${state.teams.length}</span>`;
     });
   }
 
@@ -1596,7 +1605,7 @@
       const move = mv == null ? `<span class="pr-move">–</span>` : mv > 0 ? `<span class="pr-move is-up" title="Up ${mv}">▲${mv}</span>` : mv < 0 ? `<span class="pr-move is-down" title="Down ${-mv}">▼${-mv}</span>` : `<span class="pr-move" title="No change">=</span>`;
       return `<li class="pr-row">
         <span class="pr-row__pos">${i + 1}</span>${move}
-        <span class="pr-row__club">${crest(t)}<span><b>${esc(t.name)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)} in the table</small></span></span>
+        <span class="pr-row__club">${crest(t)}<span><b>${club(t)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)} in the table</small></span></span>
         <span class="pr-range" role="img" aria-label="Average ${num(x.avg, 2)}, best vote ${ordinal(x.best)}, worst vote ${ordinal(x.worst)}">
           <span class="pr-range__track"></span>
           <span class="pr-range__span" style="left:${pct(x.best)}%;width:${pct(x.worst) - pct(x.best)}%"></span>
@@ -1645,7 +1654,7 @@
   function renderWho() {
     const el = $("#prWho");
     el.innerHTML = state.teams.map((t) => `<button type="button" class="pr-who__club" role="radio" aria-checked="${pr.voter === t.manager.toLowerCase()}" data-m="${esc(t.manager.toLowerCase())}">
-      ${crest(t)}<span><b>${esc(t.name)}</b><small>${esc(t.manager)}</small></span></button>`).join("");
+      ${crest(t)}<span><b>${club(t)}</b><small>${esc(t.manager)}</small></span></button>`).join("");
     $$(".pr-who__club", el).forEach((b) => b.addEventListener("click", () => {
       pr.voter = b.dataset.m;
       $$(".pr-who__club", el).forEach((x) => x.setAttribute("aria-checked", String(x === b)));
@@ -1685,7 +1694,7 @@
   // ---- ballot: step 2, rank the other clubs ----
   function renderBallot(saved) {
     const me = teamByManager(pr.voter);
-    $("#prMe").innerHTML = `${crest(me)}<span>Voting as <b>${esc(me.name)}</b></span>`;
+    $("#prMe").innerHTML = `${crest(me)}<span>Voting as <b>${club(me)}</b></span>`;
     $("#prSavedNote").textContent = saved ? `You already voted this round (${new Date(saved.submitted_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}). Submitting again replaces it.` : "";
     const med = weekMedians();
     $("#prList").innerHTML = pr.order.map((id) => {
@@ -1696,7 +1705,7 @@
         <span class="pr-card__rank" aria-hidden="true"></span>
         <span class="pr-card__handle" aria-hidden="true" title="Drag to reorder"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.3"/><circle cx="11" cy="4" r="1.3"/><circle cx="5" cy="8" r="1.3"/><circle cx="11" cy="8" r="1.3"/><circle cx="5" cy="12" r="1.3"/><circle cx="11" cy="12" r="1.3"/></svg></span>
         <div class="pr-card__main">
-          <div class="pr-card__id">${crest(t)}<span><b>${esc(t.name)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)} in the table${t.streak ? ` · ${esc(t.streak)} streak` : ""}</small></span>
+          <div class="pr-card__id">${crest(t)}<span><b>${club(t)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)} in the table${t.streak ? ` · ${esc(t.streak)} streak` : ""}</small></span>
             <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></div>
           <div class="pr-card__stats">
             ${stat(`${t.w}-${t.d}-${t.l}`, "Record")}
@@ -1795,7 +1804,7 @@
         p_rankings: pr.order.map((id) => state.byRoster[id].manager.toLowerCase()), p_notes: notes,
       });
       if (!res.ok) { err.textContent = res.error; return; }
-      $("#prDoneList").innerHTML = pr.order.map((id) => `<li>${crest(state.byRoster[id])}<b>${esc(state.byRoster[id].name)}</b></li>`).join("");
+      $("#prDoneList").innerHTML = pr.order.map((id) => `<li>${crest(state.byRoster[id])}<b>${club(state.byRoster[id])}</b></li>`).join("");
       prStep(3);
       pr.viewing = pr.week;
       loadPRResults();
@@ -1805,6 +1814,18 @@
     } finally {
       btn.disabled = false; btn.textContent = "Submit ballot";
     }
+  }
+
+  // latest round with public results (3+ ballots) decides who wears the crown and the poo
+  async function loadEmblems() {
+    try {
+      const rounds = await rpc("get_rounds");
+      const round = rounds.find((r) => r.ballots >= 3);
+      if (!round) return null;
+      const res = await rpc("get_results", { p_week: round.week });
+      if (!res.teams || res.teams.length < 2) return null;
+      return { week: round.week, top: res.teams[0].manager, bottom: res.teams[res.teams.length - 1].manager };
+    } catch (_) { return null; }
   }
 
   function initPower() {
@@ -1841,7 +1862,7 @@
       table.innerHTML = state.teams.map((t) => `
         <li class="mini-row${t.pos <= PLAYOFF_SPOTS ? " is-po" : ""}${t.pos === state.teams.length ? " is-spoon" : ""}">
           <a href="clubs.html#club-${t.rosterId}">
-            <span class="mini-pos">${t.pos}</span>${crest(t)}<span class="mini-name">${esc(t.name)}</span>
+            <span class="mini-pos">${t.pos}</span>${crest(t)}<span class="mini-name">${club(t)}</span>
             <span class="mini-rec">${t.w}-${t.d}-${t.l}</span><span class="mini-pts">${num(t.pf)}</span>
           </a>
         </li>`).join("");
@@ -1899,15 +1920,21 @@
 
   async function boot() {
     try {
-      const [league, users, rosters, sportState, matchRows, cupRows] = await Promise.all([
+      const [league, users, rosters, sportState, matchRows, cupRows, emblems] = await Promise.all([
         get(`/league/${LEAGUE_ID}`), get(`/league/${LEAGUE_ID}/users`), get(`/league/${LEAGUE_ID}/rosters`), get(`/state/${SPORT}`).catch(() => ({})),
-        getCSV("data/matchups.csv"), getCSV("data/cup.csv"),
+        getCSV("data/matchups.csv"), getCSV("data/cup.csv"), loadEmblems(),
       ]);
       state.league = league;
       state.week = sportState.display_week || sportState.week || (league.settings && league.settings.leg) || 1;
       state.teams = rank(buildTeams(users, rosters));
       state.byRoster = Object.fromEntries(state.teams.map((t) => [t.rosterId, t]));
       state.derbies = buildDerbies();
+      if (emblems) {
+        state.prEmblemWeek = emblems.week;
+        const top = teamByManager(emblems.top), bottom = teamByManager(emblems.bottom);
+        if (top) top.prTag = "top";
+        if (bottom && bottom !== top) bottom.prTag = "bottom";
+      }
       state.results = loadResults(matchRows);
       state.cupRows = loadCupRows(cupRows);
       state.hasResults = state.results.length > 0;
