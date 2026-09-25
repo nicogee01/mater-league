@@ -79,7 +79,7 @@
     ticking = true;
     requestAnimationFrame(() => {
       const y = window.scrollY;
-      nav.classList.toggle("is-solid", y > 40 || nav.classList.contains("is-page"));
+      nav.classList.toggle("is-solid", y > 40 || nav.classList.contains("is-page") || nav.classList.contains("is-open"));
       const max = document.documentElement.scrollHeight - window.innerHeight;
       const p = max > 0 ? y / max : 0;
       const x = p * (window.innerWidth - 12);

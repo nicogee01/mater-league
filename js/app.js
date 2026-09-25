@@ -1408,8 +1408,10 @@
             <section class="mu-sheet" aria-label="${esc(A.name)} team sheet">${renderSheet(as, star)}</section>
           </div>`
         : `<p class="mu-card__none">Starting XIs for this gameweek aren't logged yet.</p>`;
-      return `<article class="mu-card reveal${open ? " is-open" : ""}">
-        <h2 class="visually-hidden">${esc(H.name)} v ${esc(A.name)}</h2>
+      const derby = H.derby && derbyRival(H) === A ? H.derby : null;
+      return `<article class="mu-card reveal${open ? " is-open" : ""}${derby ? " is-derby" : ""}">
+        <h2 class="visually-hidden">${esc(H.name)} v ${esc(A.name)}${derby ? `, ${esc(derby.name)}` : ""}</h2>
+        ${derby ? `<p class="mu-derby">Derby day <b>${esc(derby.name)}</b>${derby.tag ? `<small>${esc(derby.tag)}</small>` : ""}</p>` : ""}
         <button type="button" class="mu-card__head" aria-expanded="${open}" aria-controls="mu-body-${gi}" data-key="${key}">
           ${side(H, m.homePts, m.homePts > m.awayPts, hs, "home")}
           <span class="mu-card__mid"><span class="mu-card__ft">FT</span><span class="mu-card__chev" aria-hidden="true"></span></span>
@@ -1881,14 +1883,14 @@
     { group: "Creativity", key: "at", label: "Assists", dp: 0 },
     { group: "Creativity", key: "xa", label: "Expected assists (xA)", dp: 2 },
     { group: "Creativity", key: "kp", label: "Key passes", dp: 0 },
-    { group: "Defence", key: "tkw", label: "Tackles won", dp: 0 },
-    { group: "Defence", key: "int", label: "Interceptions", dp: 0 },
-    { group: "Defence", key: "clr", label: "Clearances", dp: 0 },
-    { group: "Defence", key: "aer", label: "Aerial duels won", dp: 0 },
-    { group: "Defence", key: "bs", label: "Blocked shots", dp: 0 },
-    { group: "Goalkeeping", key: "cs", label: "Clean sheets (GK)", dp: 0, pos: "GK" },
-    { group: "Goalkeeping", key: "sv", label: "Saves (GK)", dp: 0, pos: "GK" },
-    { group: "Goalkeeping", key: "ga", label: "Goals conceded (GK)", dp: 0, pos: "GK", good: -1 },
+    { group: "Defence & goalkeeping", key: "cs", label: "Clean sheets (DEF & GK)", dp: 0, pos: ["D", "GK"] },
+    { group: "Defence & goalkeeping", key: "ga", label: "Goals conceded (DEF & GK)", dp: 0, pos: ["D", "GK"], good: -1 },
+    { group: "Defence & goalkeeping", key: "sv", label: "Saves (GK)", dp: 0, pos: ["GK"] },
+    { group: "Defence & goalkeeping", key: "tkw", label: "Tackles won", dp: 0 },
+    { group: "Defence & goalkeeping", key: "int", label: "Interceptions", dp: 0 },
+    { group: "Defence & goalkeeping", key: "clr", label: "Clearances", dp: 0 },
+    { group: "Defence & goalkeeping", key: "aer", label: "Aerial duels won", dp: 0 },
+    { group: "Defence & goalkeeping", key: "bs", label: "Blocked shots", dp: 0 },
     { group: "Discipline", key: "yc", label: "Yellow cards", dp: 0, good: -1 },
     { group: "Discipline", key: "rc", label: "Red cards", dp: 0, good: -1 },
     { group: "Discipline", key: "dis", label: "Times dispossessed", dp: 0, good: -1 },
@@ -1909,11 +1911,13 @@
     }
     return out;
   }
+  // a metric limited to positions counts a player listed at any of them (a DEF/MID counts for defenders)
+  const playsIn = (p, pos) => !!p && (p.ps && p.ps.length ? p.ps : [p.p]).some((x) => pos.includes(x));
   function clubValue(t, m, scope) {
     const ids = scope === "xi" ? t.starters : t.players;
     return ids.reduce((sum, pid) => {
       const p = state.players[pid];
-      if (m.pos && (!p || p.p !== m.pos)) return sum;
+      if (m.pos && !playsIn(p, m.pos)) return sum;
       return sum + ((state.playerTotals[pid] || {})[m.key] || 0);
     }, 0);
   }
@@ -1997,7 +2001,7 @@
       : hub.pool === "rostered" ? Object.keys(owner) : [...new Set([...Object.keys(owner), ...Object.keys(state.playerTotals)])];
     const list = pool
       .map((pid) => ({ pid, p: state.players[pid], v: (state.playerTotals[pid] || {})[m.key] || 0 }))
-      .filter((x) => x.p && (!m.pos || x.p.p === m.pos) && (m.good !== -1 || (state.playerTotals[x.pid] || {}).min > 0))
+      .filter((x) => x.p && (!m.pos || playsIn(x.p, m.pos)) && (m.good !== -1 || (state.playerTotals[x.pid] || {}).min > 0))
       .sort((a, b) => (m.good === -1 ? a.v - b.v : b.v - a.v))
       .slice(0, 10);
     el.innerHTML = list.map((x, i) => `
@@ -2425,6 +2429,10 @@
     toggle.setAttribute("aria-expanded", String(open));
     toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
     menu.hidden = !open;
+    // the home nav is see-through over the hero; go solid while the menu is open so it reads on paper
+    const nav = $("#nav");
+    nav.classList.toggle("is-open", open);
+    nav.classList.toggle("is-solid", open || window.scrollY > 40 || nav.classList.contains("is-page"));
   });
   menu.addEventListener("click", (e) => { if (e.target.tagName === "A") toggle.click(); });
   document.addEventListener("keydown", (e) => {

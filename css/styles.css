@@ -302,7 +302,11 @@ button { cursor: pointer; touch-action: manipulation; }
 
 /* ================= LEAGUE TABLE ================= */
 .table-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
-.league-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.league-table { width: 100%; min-width: 760px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.league-table .hide-sm, .league-table .hide-md { display: table-cell; }
+.league-table th.c-club, .league-table td.c-club { position: sticky; left: 0; z-index: 1; }
+.league-table td.c-club { background: var(--surface); box-shadow: 1px 0 0 var(--line); }
+.league-table tbody tr:hover td.c-club { background: #f3ede1; }
 .league-table th {
   padding: 14px 10px; text-align: center; background: var(--ink);
   font-family: var(--f-label); font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: #d5dbe6;
@@ -669,6 +673,12 @@ button { cursor: pointer; touch-action: manipulation; }
 .mu-dot { width: 7px; height: 7px; border-radius: 50%; background: #b08a3e; }
 .mu-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); align-items: start; }
 .mu-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; min-width: 0; box-shadow: 0 1px 0 rgba(11, 31, 58, 0.06); }
+.mu-card.is-derby { border: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.12), 0 14px 30px -16px rgba(200, 16, 46, 0.55); }
+.mu-derby { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; padding: 8px var(--s5);
+  background: linear-gradient(110deg, #0b1f3a 0 58%, #c8102e 58% 100%); color: #fbf7ee;
+  font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; }
+.mu-derby b { font-family: var(--f-display); font-weight: 400; font-size: 18px; letter-spacing: 0.02em; text-transform: none; }
+.mu-derby small { font-family: var(--f-body); font-weight: 600; font-size: 12px; letter-spacing: 0; text-transform: none; opacity: 0.85; }
 .mu-card__head { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--s3); padding: var(--s4) var(--s5); }
 .mu-card__head:hover { background: var(--shade); }
 .mu-card__head:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
@@ -1390,6 +1400,10 @@ button { cursor: pointer; touch-action: manipulation; }
 .pr-dev__tag { display: inline-flex; align-items: center; gap: 8px; font-family: var(--f-display); font-size: 22px; text-transform: uppercase; letter-spacing: 0.04em; color: #e6c47a; }
 .pr-dev__tag svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .pr-dev p { margin: 0; color: #d5dbe6; }
+.pr-consider { margin: var(--s4) 0 0; padding: var(--s4) var(--s5); border-radius: 14px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--gold); }
+.pr-consider h3 { margin: 0 0 6px; font-family: var(--f-label); font-weight: 700; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+.pr-consider ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; color: var(--muted); font-size: 15px; }
+.pr-consider b { color: var(--text); }
 .pr-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s4); }
 .pr-round { margin: 0; color: var(--muted); }
 .pr-round b { color: var(--text); font-family: var(--f-label); font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -1576,13 +1590,13 @@ button { cursor: pointer; touch-action: manipulation; }
   .mu-side__name { font-size: 14px; }
   .mu-card__motm { padding: 10px var(--s4); }
   .mu-sheet { padding: var(--s2) 4px var(--s3); }
-  .mu-p__btn { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; padding: 4px; }
+  .mu-p__btn { grid-template-columns: 22px minmax(0, 1fr) auto; gap: 5px; padding: 4px 2px; }
+  .mu-p__photo { width: 22px; height: 22px; font-size: 9px; }
   .pd__head { padding: var(--s4) var(--s8) var(--s3) var(--s4); }
   .pd__name { font-size: 24px; }
   .pd__body { padding: var(--s3) var(--s4) var(--s4); }
   .pd__table .pd__stats { min-width: 0; font-size: 12px; }
   .pd__table td, .pd__table th { padding: 6px 5px; }
-  .mu-p__photo { display: none; }
   .mu-p__name { font-size: 13px; }
   .section, .section--alt { padding: var(--s8) var(--s4); }
   .hero { padding-left: var(--s4); padding-right: var(--s4); }
