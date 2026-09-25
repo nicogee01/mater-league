@@ -1352,9 +1352,223 @@
   // hover and keyboard focus both show the same tooltip
   function bindTip(root, sel, htmlFor) {
     root.addEventListener("pointermove", (e) => { const t = e.target.closest(sel); t ? showTip(htmlFor(t), e.clientX, e.clientY) : hideTip(); });
+    root.addEventListener("pointerdown", (e) => { const t = e.target.closest(sel); if (t) showTip(htmlFor(t), e.clientX, e.clientY); });
     root.addEventListener("pointerleave", hideTip);
     root.addEventListener("focusin", (e) => { const t = e.target.closest(sel); if (!t) return; const r = t.getBoundingClientRect(); showTip(htmlFor(t), r.left + r.width / 2, r.top); });
     root.addEventListener("focusout", hideTip);
+  }
+
+  // ---------- WEEK BY WEEK ----------
+  // One focus club scopes every chart below: it's drawn in its colour, the rest in grey.
+  const DIV = { pos: "#3a6cc0", neg: "#c8102e" };                          // diverging poles (validated)
+  const SEQ = ["#9aaec9", "#7089ae", "#4d6a96", "#2c4b76", "#0b1f3a"];     // navy sequential ramp (validated)
+  const wkState = { team: null };
+  const focusTeam = () => state.byRoster[wkState.team] || state.teams[0];
+  const playedWeeks = () => [...new Set(state.results.map((m) => m.week))].sort((a, b) => a - b);
+  const gameIn = (t, w) => t.games.find((g) => g.week === w);
+  const avgIn = (w) => { const s = state.teams.map((t) => gameIn(t, w)).filter(Boolean).map((g) => g.score); return s.reduce((a, b) => a + b, 0) / (s.length || 1); };
+  const rankIn = (g, w) => state.teams.map((t) => gameIn(t, w)).filter(Boolean).filter((o) => o.score > g.score).length + 1;
+  const seasonAvg = (t) => t.games.reduce((a, g) => a + g.score, 0) / (t.games.length || 1);
+  const ord = (n) => n + ((n % 100 > 10 && n % 100 < 14) ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+  // expected wins: each week, the share of the other clubs this score would have beaten (ties count half)
+  function expectedWins(t) {
+    return t.games.reduce((sum, g) => {
+      const others = state.teams.filter((o) => o !== t).map((o) => gameIn(o, g.week)).filter(Boolean);
+      if (!others.length) return sum;
+      return sum + others.reduce((a, o) => a + (o.score < g.score ? 1 : o.score === g.score ? 0.5 : 0), 0) / others.length;
+    }, 0);
+  }
+  const wins = (t) => t.games.filter((g) => g.res === "W").length + t.games.filter((g) => g.res === "D").length / 2;
+  const winsTxt = (t) => String(Math.round(wins(t) * 10) / 10);
+  const bench = (g) => (Number.isFinite(g.best) ? Math.max(0, g.best - g.score) : null);
+  const signed = (n, d = 2) => (n > 0.005 ? "+" : n < -0.005 ? "−" : "") + num(Math.abs(n), d);
+  function dataTable(caption, head, rows) {
+    return `<div class="table-scroll"><table class="data-table"><caption>${caption}</caption><thead><tr>${head.map((h) => `<th scope="col">${h}</th>`).join("")}</tr></thead>
+      <tbody>${rows.map((r) => `<tr>${r.map((c, i) => (i ? `<td>${c}</td>` : `<th scope="row">${c}</th>`)).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }
+  // every chart card has a Table button; the chosen view survives re-renders
+  function mountChart(el, viz, table) {
+    const showTable = el.dataset.view === "table";
+    el.innerHTML = `<div class="viz"${showTable ? " hidden" : ""}>${viz}</div><div class="viz-table"${showTable ? "" : " hidden"}>${table}</div>`;
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest(".chart-toggle");
+    if (!b) return;
+    const el = document.getElementById(b.getAttribute("aria-controls"));
+    if (!el || !$(".viz", el)) return;
+    const table = el.dataset.view !== "table";
+    el.dataset.view = table ? "table" : "chart";
+    $(".viz", el).hidden = table; $(".viz-table", el).hidden = !table;
+    b.setAttribute("aria-pressed", String(table)); b.textContent = table ? "Chart" : "Table";
+    hideTip();
+  });
+
+  // SVG charts are drawn at the card's real width so their text stays 12-13px on phones
+  const chartWidth = (el, max) => Math.round(Math.min(max, Math.max(300, el.clientWidth || max)));
+  // gameweek labels: every week while they fit (~44px each), otherwise every 2nd/3rd... plus the last
+  function weekTicks(weeks, span) {
+    const every = Math.max(1, Math.ceil(weeks.length / Math.max(1, Math.floor(span / 44))));
+    return weeks.map((w, i) => [w, i]).filter(([, i]) => i % every === 0 || i === weeks.length - 1);
+  }
+  let wkResize = 0, wkWidth = 0;
+  window.addEventListener("resize", () => {
+    clearTimeout(wkResize);
+    wkResize = setTimeout(() => {
+      const el = $("#scoreChart");
+      if (!el || !state.rankHistory || Math.abs(el.clientWidth - wkWidth) < 24) return;
+      wkWidth = el.clientWidth; renderScoreChart(); renderRankChart();
+    }, 150);
+  });
+
+  function renderWkTiles() {
+    const el = $("#wkTiles");
+    if (!el) return;
+    const t = focusTeam(), G = t.games;
+    if (!G.length) { el.innerHTML = ""; return; }
+    const avg = seasonAvg(t);
+    const avgRank = state.teams.filter((o) => seasonAvg(o) > avg).length + 1;
+    const best = [...G].sort((a, b) => b.score - a.score)[0];
+    const xw = expectedWins(t), luck = wins(t) - xw;
+    const benchPts = G.map(bench).filter((x) => x != null);
+    const benchSum = benchPts.reduce((a, b) => a + b, 0);
+    const tile = (v, label, sub) => `<div class="stat-tile"><span class="stat-tile__label">${label}</span><b class="stat-tile__v">${v}</b><span class="stat-tile__sub">${sub}</span></div>`;
+    el.innerHTML = tile(num(avg), "Average score", `${ord(avgRank)} of ${state.teams.length} in the league`)
+      + tile(num(best.score), "Best week", `Gameweek ${best.week} vs ${clubById(best.opp)}`)
+      + tile(signed(luck), "Luck", `${winsTxt(t)} ${wins(t) === 1 ? "win" : "wins"} from ${num(xw)} expected`)
+      + tile(benchPts.length ? num(benchSum) : "–", "Left on the bench", benchPts.length ? `${num(benchSum / benchPts.length)} a gameweek` : "Needs best lineups");
+  }
+
+  // weekly scores: focus club in colour, other clubs grey, league average as a neutral reference
+  function renderScoreChart() {
+    const el = $("#scoreChart");
+    if (!el) return;
+    const weeks = playedWeeks(), me = focusTeam();
+    if (!weeks.length) { el.innerHTML = `<p class="pending-note">No gameweeks logged yet.</p>`; return; }
+    const W = chartWidth(el, 760), narrow = W < 520, H = narrow ? 240 : 300, L = 40, R = narrow ? 14 : 104, Tp = 14, B = 30;
+    const all = state.results.flatMap((m) => [m.homePts, m.awayPts]);
+    const lo = Math.floor(Math.min(...all) / 20) * 20, hi = Math.ceil(Math.max(...all) / 20) * 20;
+    const x = (i) => L + (weeks.length === 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (weeks.length - 1));
+    const y = (v) => Tp + ((hi - v) * (H - Tp - B)) / (hi - lo || 1);
+    const path = (vals) => vals.map((v, i) => (v == null ? "" : `${i && vals[i - 1] != null ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`)).join("");
+    const ticks = []; for (let v = lo; v <= hi + 1e-9; v += (hi - lo) / 4) ticks.push(v);
+    const series = (t) => weeks.map((w) => { const g = gameIn(t, w); return g ? g.score : null; });
+    const avg = weeks.map(avgIn), mine = series(me);
+    const others = state.teams.filter((t) => t !== me).map((t) => `<path class="sc__bg" d="${path(series(t))}"/>`).join("");
+    const lastI = mine.map((v, i) => (v != null ? i : -1)).filter((i) => i >= 0).pop() ?? 0;
+    // keep the two end labels from colliding
+    let ly1 = y(mine[lastI] ?? avg[lastI]), ly2 = y(avg[weeks.length - 1]);
+    if (Math.abs(ly1 - ly2) < 16) { const mid = (ly1 + ly2) / 2, s = ly1 <= ly2 ? -1 : 1; ly1 = mid + s * 8; ly2 = mid - s * 8; }
+    const short = me.name.length > 14 ? me.name.slice(0, 13) + "…" : me.name;
+    const step = (W - L - R) / Math.max(1, weeks.length - 1);
+    const viz = `
+      <p class="viz-legend"><span><i class="sw" style="background:${me.color}"></i>${club(me)}</span><span><i class="sw sw--line sw--avg"></i>League average</span><span><i class="sw sw--line sw--bg"></i>Other clubs</span></p>
+      <svg class="sc" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weekly scores for ${esc(me.name)} against the league average">
+        ${ticks.map((v) => `<line class="ax__grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax__t" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${num(v, 0)}</text>`).join("")}
+        ${weekTicks(weeks, W - L - R).map(([w, i]) => `<text class="ax__t" x="${x(i)}" y="${H - 8}" text-anchor="middle">GW${w}</text>`).join("")}
+        <line class="ax__cross" x1="0" x2="0" y1="${Tp}" y2="${H - B}" visibility="hidden"/>
+        ${others}
+        <path class="sc__avg" d="${path(avg)}"/>
+        <path class="sc__me" style="--c:${me.color}" d="${path(mine)}"/>
+        ${mine.map((v, i) => (v == null ? "" : `<circle class="sc__dot" style="--c:${me.color}" cx="${x(i)}" cy="${y(v)}" r="5"/>`)).join("")}
+        ${narrow ? "" : `<text class="sc__lbl" x="${x(lastI) + 12}" y="${ly1 + 4}">${esc(short)}</text>
+        <text class="sc__lbl sc__lbl--avg" x="${x(weeks.length - 1) + 12}" y="${ly2 + 4}">League avg</text>`}
+        ${weeks.map((w, i) => `<rect class="ax__hit" data-i="${i}" x="${x(i) - step / 2}" y="0" width="${step}" height="${H}"/>`).join("")}
+      </svg>`;
+    const table = dataTable(`Weekly scores: ${esc(me.name)}`, ["Gameweek", "Score", "League avg", "Difference", "Result"],
+      weeks.map((w, i) => { const g = gameIn(me, w); return [`GW${w}`, g ? num(g.score) : "–", num(avg[i]), g ? signed(g.score - avg[i]) : "–", g ? `${g.res} vs ${clubById(g.opp)}` : "–"]; }));
+    mountChart(el, viz, table);
+    const svg = $(".sc", el);
+    const cross = $(".ax__cross", svg);
+    const move = (e) => {
+      const hit = e.target.closest(".ax__hit");
+      if (!hit) return;
+      const i = +hit.dataset.i, w = weeks[i], g = gameIn(me, w);
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+      showTip(`<b>Gameweek ${w}</b>${g ? `<span class="tt-row"><i style="background:${me.color}"></i>${club(me)} <strong>${num(g.score)}</strong></span><span>${ord(rankIn(g, w))} highest of the week · ${g.res} vs ${clubById(g.opp)}</span>` : ""}<span>League average <strong>${num(avg[i])}</strong></span>`, e.clientX, e.clientY);
+    };
+    svg.addEventListener("pointermove", move); svg.addEventListener("pointerdown", move);
+    svg.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
+  }
+
+  // luck: diverging bars around zero (actual wins minus expected wins)
+  function renderLuckChart() {
+    const el = $("#luckChart");
+    if (!el) return;
+    if (!state.hasResults) { el.innerHTML = `<p class="pending-note">Needs logged matchups.</p>`; return; }
+    const me = focusTeam();
+    const rows = state.teams.map((t) => ({ t, w: wins(t), x: expectedWins(t) })).map((r) => ({ ...r, d: r.w - r.x })).sort((a, b) => b.d - a.d);
+    const span = Math.max(1, ...rows.map((r) => Math.abs(r.d)));
+    const viz = `
+      <p class="viz-legend"><span><i class="sw" style="background:${DIV.pos}"></i>More wins than their scores earned</span><span><i class="sw" style="background:${DIV.neg}"></i>Fewer</span></p>
+      <ul class="lk" role="list">${rows.map((r) => `
+        <li class="lk__row${r.t === me ? " is-focus" : ""}" tabindex="0" data-id="${r.t.rosterId}" aria-label="${esc(r.t.name)}: ${signed(r.d)} wins against expected">
+          <span class="lk__name">${club(r.t)}</span>
+          <span class="lk__track"><span class="lk__zero"></span><span class="lk__bar ${r.d >= 0 ? "is-pos" : "is-neg"}" style="background:${r.d >= 0 ? DIV.pos : DIV.neg};${r.d >= 0 ? "left" : "right"}:50%;width:${(Math.abs(r.d) / span) * 50}%"></span></span>
+          <span class="lk__val">${signed(r.d)}</span>
+        </li>`).join("")}</ul>`;
+    const table = dataTable("Luck: wins against expected wins", ["Club", "Wins", "Expected", "Luck"], rows.map((r) => [esc(r.t.name), winsTxt(r.t), num(r.x), signed(r.d)]));
+    mountChart(el, viz, table);
+    bindTip(el, ".lk__row", (row) => {
+      const r = rows.find((q) => String(q.t.rosterId) === row.dataset.id);
+      return `<b>${club(r.t)}</b><span>Actual wins <strong>${winsTxt(r.t)}</strong></span><span>Expected wins <strong>${num(r.x)}</strong></span><span>${r.d >= 0 ? "Luckier" : "Unluckier"} by <strong>${num(Math.abs(r.d))}</strong> wins</span>`;
+    });
+  }
+
+  // bench points per gameweek for the focus club, with a league-average tick
+  function renderBenchChart() {
+    const el = $("#benchChart");
+    if (!el) return;
+    const me = focusTeam(), weeks = playedWeeks();
+    const lg = (w) => { const b = state.teams.map((t) => gameIn(t, w)).filter(Boolean).map(bench).filter((v) => v != null); return b.length ? b.reduce((a, c) => a + c, 0) / b.length : null; };
+    const cols = weeks.map((w) => { const g = gameIn(me, w); return { w, v: g ? bench(g) : null, avg: lg(w), g }; });
+    if (!cols.some((c) => c.v != null)) { el.innerHTML = `<p class="pending-note">Needs best lineups.</p>`; return; }
+    const max = (Math.max(...cols.flatMap((c) => [c.v || 0, c.avg || 0])) || 1) * 1.15;  // headroom for the top label
+    const top = Math.max(...cols.map((c) => c.v || 0));
+    const viz = `
+      <p class="viz-legend"><span><i class="sw" style="background:${me.color}"></i>${club(me)}</span><span><i class="sw sw--tick"></i>League average</span></p>
+      <div class="bc" role="list">${cols.map((c) => `
+        <div class="bc__col" role="listitem" tabindex="0" data-w="${c.w}" aria-label="Gameweek ${c.w}: ${c.v == null ? "no data" : num(c.v) + " points left on the bench"}">
+          <span class="bc__plot">
+            ${c.v != null ? `<span class="bc__bar" style="background:${me.color};height:${(c.v / max) * 100}%">${c.v === top && top > 0 ? `<em>${num(c.v)}</em>` : ""}</span>` : ""}
+            ${c.avg != null ? `<span class="bc__tick" style="bottom:${(c.avg / max) * 100}%"></span>` : ""}
+          </span>
+          <span class="bc__x">GW${c.w}</span>
+        </div>`).join("")}</div>`;
+    const table = dataTable(`Left on the bench: ${esc(me.name)}`, ["Gameweek", "Scored", "Best possible", "On the bench", "League avg"],
+      cols.map((c) => [`GW${c.w}`, c.g ? num(c.g.score) : "–", c.g && Number.isFinite(c.g.best) ? num(c.g.best) : "–", c.v != null ? num(c.v) : "–", c.avg != null ? num(c.avg) : "–"]));
+    mountChart(el, viz, table);
+    bindTip(el, ".bc__col", (col) => {
+      const c = cols.find((q) => String(q.w) === col.dataset.w);
+      return `<b>Gameweek ${c.w}</b>${c.g ? `<span>Scored <strong>${num(c.g.score)}</strong> of ${num(c.g.best)} possible</span>` : ""}<span>Left on the bench <strong>${c.v != null ? num(c.v) : "–"}</strong></span><span>League average <strong>${c.avg != null ? num(c.avg) : "–"}</strong></span>${c.g && c.g.res === "L" && c.g.best > c.g.oppScore ? `<span>The best lineup would have won this one</span>` : ""}`;
+    });
+  }
+
+  // score grid: clubs × gameweeks, one-hue sequential ramp in five steps
+  function renderHeatChart() {
+    const el = $("#heatChart");
+    if (!el) return;
+    const weeks = playedWeeks(), me = focusTeam();
+    if (!weeks.length) { el.innerHTML = `<p class="pending-note">No gameweeks logged yet.</p>`; return; }
+    const all = state.results.flatMap((m) => [m.homePts, m.awayPts]);
+    const lo = Math.min(...all), hi = Math.max(...all);
+    const bin = (v) => Math.min(SEQ.length - 1, Math.floor(((v - lo) / (hi - lo || 1)) * SEQ.length));
+    const T = [...state.teams].sort((a, b) => seasonAvg(b) - seasonAvg(a));
+    const viz = `
+      <div class="hm-scroll"><div class="hm" style="--cols:${weeks.length}">
+        <span></span>${weeks.map((w) => `<span class="hm__x">GW${w}</span>`).join("")}<span class="hm__x">Avg</span>
+        ${T.map((t) => `<span class="hm__y${t === me ? " is-focus" : ""}">${club(t)}</span>${weeks.map((w) => {
+          const g = gameIn(t, w);
+          return g ? `<span class="hm__c${t === me ? " is-focus" : ""}" data-id="${t.rosterId}" data-w="${w}" style="background:${SEQ[bin(g.score)]}"></span>` : `<span class="hm__c is-empty"></span>`;
+        }).join("")}<span class="hm__avg${t === me ? " is-focus" : ""}">${num(seasonAvg(t))}</span>`).join("")}
+      </div></div>
+      <p class="hm__key"><span>${num(lo)}</span>${SEQ.map((c) => `<i style="background:${c}"></i>`).join("")}<span>${num(hi)}</span></p>`;
+    const table = dataTable("Score grid", ["Club", ...weeks.map((w) => `GW${w}`), "Average"],
+      T.map((t) => [esc(t.name), ...weeks.map((w) => { const g = gameIn(t, w); return g ? num(g.score) : "–"; }), num(seasonAvg(t))]));
+    mountChart(el, viz, table);
+    bindTip(el, ".hm__c[data-id]", (c) => {
+      const t = state.byRoster[c.dataset.id], w = +c.dataset.w, g = gameIn(t, w);
+      return `<b>${club(t)} · GW${w}</b><span>Scored <strong>${num(g.score)}</strong> (${ord(rankIn(g, w))} of the week)</span><span>${g.res === "W" ? "Beat" : g.res === "L" ? "Lost to" : "Drew with"} ${clubById(g.opp)}, ${num(g.oppScore)}</span>`;
+    });
   }
 
   function renderLineupChart() {
@@ -1362,16 +1576,20 @@
     const max = Math.max(...T.map((t) => t.pp || t.pf));
     const el = $("#lineupChart");
     if (!el) return;
-    el.innerHTML = `<ul class="lc" role="list">${T.map((t) => `
-      <li class="lc__row" tabindex="0" data-id="${t.rosterId}" aria-label="${esc(t.name)}: ${num(t.pf)} of ${num(t.pp)} possible, ${Math.round(eff(t) * 100)}%">
+    const me = focusTeam();
+    const viz = `<p class="viz-legend"><span><i class="sw" style="background:var(--pos)"></i>Points scored</span><span><i class="sw sw--outline"></i>Best possible</span></p>
+      <ul class="lc" role="list">${T.map((t) => `
+      <li class="lc__row${t === me ? " is-focus" : ""}" tabindex="0" data-id="${t.rosterId}" aria-label="${esc(t.name)}: ${num(t.pf)} of ${num(t.pp)} possible, ${Math.round(eff(t) * 100)}%">
         <span class="lc__name">${club(t)}</span>
         <span class="lc__track">
           <span class="lc__pot" style="width:${(t.pp / max) * 100}%"></span>
           <span class="lc__act" style="width:${(t.pf / max) * 100}%"></span>
         </span>
         <span class="lc__val">${num(t.pf, 0)}<small> / ${num(t.pp, 0)}</small></span>
-      </li>`).join("")}</ul>
-      <p class="lc__key"><span class="k k--act"></span> Points scored <span class="k k--pot"></span> Best possible</p>`;
+      </li>`).join("")}</ul>`;
+    const table = dataTable("Points scored vs. best possible lineup", ["Club", "Scored", "Best possible", "On the bench", "Efficiency"],
+      T.map((t) => [esc(t.name), num(t.pf), num(t.pp), num(t.pp - t.pf), Math.round(eff(t) * 100) + "%"]));
+    mountChart(el, viz, table);
     bindTip(el, ".lc__row", (row) => {
       const t = state.byRoster[row.dataset.id];
       return `<b>${club(t)}</b><span>Scored <strong>${num(t.pf)}</strong></span><span>Best possible <strong>${num(t.pp)}</strong></span><span>Left on bench <strong>${num(t.pp - t.pf)}</strong> (${Math.round(eff(t) * 100)}% efficient)</span>`;
@@ -1382,52 +1600,69 @@
     const { weeks, hist, exact } = state.rankHistory;
     const el = $("#rankChart");
     if (!el) return;
-    const n = state.teams.length;
+    const n = state.teams.length, me = focusTeam();
     if (!weeks.length) { el.innerHTML = `<p class="pending-note">No matchweeks played yet.</p>`; return; }
-    const W = 720, H = 340, L = 34, R = 20, Tp = 16, B = 32;
+    const W = chartWidth(el, 720), H = W < 520 ? 280 : 340, L = 34, R = 20, Tp = 16, B = 32;
     const x = (i) => L + (weeks.length === 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (weeks.length - 1));
     const y = (r) => Tp + ((r - 1) * (H - Tp - B)) / (n - 1);
-    const lines = state.teams.map((t) => {
+    const step = (W - L - R) / Math.max(1, weeks.length - 1);
+    // focus club drawn last so it sits on top of the grey lines
+    const order = [...state.teams.filter((t) => t !== me), me];
+    const lines = order.map((t) => {
       const pts = hist[t.rosterId];
-      return `<g class="rk__series" data-id="${t.rosterId}" style="--c:${t.color}">
+      return `<g class="rk__series${t === me ? " is-on" : ""}" data-id="${t.rosterId}" style="--c:${t.color}">
         <path class="rk__line" d="${pts.map((r, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(r).toFixed(1)}`).join("")}"/>
         ${pts.map((r, i) => `<circle class="rk__dot" cx="${x(i)}" cy="${y(r)}" r="4.5"/>`).join("")}
       </g>`;
     }).join("");
-    el.innerHTML = `
-      <div class="rk__legend" role="group" aria-label="Highlight a club">${state.teams.map((t) => `<button type="button" class="rk__chip" data-id="${t.rosterId}" aria-pressed="false" style="--c:${t.color}"><span class="sw"></span>${club(t)}</button>`).join("")}</div>
-      <svg class="rk" viewBox="0 0 ${W} ${H}" role="img" aria-label="League position by week for each club">
-        ${Array.from({ length: n }, (_, i) => `<line class="rk__grid" x1="${L}" x2="${W - R}" y1="${y(i + 1)}" y2="${y(i + 1)}"/><text class="rk__axis" x="${L - 10}" y="${y(i + 1) + 4}" text-anchor="end">${i + 1}</text>`).join("")}
-        ${weeks.map((w, i) => `<text class="rk__axis" x="${x(i)}" y="${H - 8}" text-anchor="middle">GW${w}</text>`).join("")}
-        <line class="rk__cross" id="rkCross" x1="0" x2="0" y1="${Tp - 6}" y2="${H - B + 6}" visibility="hidden"/>
+    const viz = `
+      <div class="rk__legend" role="group" aria-label="Focus a club">${state.teams.map((t) => `<button type="button" class="rk__chip" data-id="${t.rosterId}" aria-pressed="${t === me}" style="--c:${t.color}"><span class="sw"></span>${club(t)}</button>`).join("")}</div>
+      <svg class="rk" viewBox="0 0 ${W} ${H}" role="img" aria-label="League position by week, ${esc(me.name)} highlighted">
+        ${Array.from({ length: n }, (_, i) => `<line class="ax__grid" x1="${L}" x2="${W - R}" y1="${y(i + 1)}" y2="${y(i + 1)}"/><text class="ax__t" x="${L - 10}" y="${y(i + 1) + 4}" text-anchor="end">${i + 1}</text>`).join("")}
+        ${weekTicks(weeks, W - L - R).map(([w, i]) => `<text class="ax__t" x="${x(i)}" y="${H - 8}" text-anchor="middle">GW${w}</text>`).join("")}
+        <line class="ax__cross" x1="0" x2="0" y1="${Tp - 6}" y2="${H - B + 6}" visibility="hidden"/>
         ${lines}
-        ${weeks.map((w, i) => `<rect class="rk__hit" data-i="${i}" x="${x(i) - (W - L - R) / Math.max(1, weeks.length - 1) / 2}" y="0" width="${(W - L - R) / Math.max(1, weeks.length - 1)}" height="${H}"/>`).join("")}
+        ${weeks.map((w, i) => `<rect class="ax__hit" data-i="${i}" x="${x(i) - step / 2}" y="0" width="${step}" height="${H}"/>`).join("")}
       </svg>
-      ${exact ? "" : `<p class="chart-note">Until matchups are logged, positions use each week's wins with ties split by season points for.</p>`}
-      <table class="visually-hidden"><caption>League position by week</caption><thead><tr><th>Club</th>${weeks.map((w) => `<th>GW${w}</th>`).join("")}</tr></thead>
-        <tbody>${state.teams.map((t) => `<tr><th>${esc(t.name)}</th>${hist[t.rosterId].map((r) => `<td>${r}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+      ${exact ? "" : `<p class="chart-note">Until matchups are logged, positions use each week's wins with ties split by season points for.</p>`}`;
+    const table = dataTable("League position by week", ["Club", ...weeks.map((w) => `GW${w}`)], state.teams.map((t) => [esc(t.name), ...hist[t.rosterId]]));
+    mountChart(el, viz, table);
 
-    const svg = $(".rk", el), cross = $("#rkCross", el);
-    const highlight = (id) => {
-      el.classList.toggle("is-focus", id != null);
-      $$(".rk__series", el).forEach((g) => g.classList.toggle("is-on", g.dataset.id === String(id)));
-      $$(".rk__chip", el).forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.id === String(id))));
-    };
-    let pinned = null;
+    const svg = $(".rk", el), cross = $(".ax__cross", svg);
+    // hovering a chip previews that club; clicking makes it the focus club for the whole section
+    const preview = (id) => $$(".rk__series", el).forEach((g) => g.classList.toggle("is-on", g.dataset.id === String(id ?? me.rosterId)));
     $$(".rk__chip", el).forEach((c) => {
-      c.addEventListener("click", () => { pinned = pinned === c.dataset.id ? null : c.dataset.id; highlight(pinned); });
-      c.addEventListener("pointerenter", () => highlight(c.dataset.id));
-      c.addEventListener("pointerleave", () => highlight(pinned));
+      c.addEventListener("click", () => setFocus(c.dataset.id));
+      c.addEventListener("pointerenter", () => preview(c.dataset.id));
+      c.addEventListener("pointerleave", () => preview(null));
     });
-    svg.addEventListener("pointermove", (e) => {
-      const hit = e.target.closest(".rk__hit");
+    const move = (e) => {
+      const hit = e.target.closest(".ax__hit");
       if (!hit) return;
       const i = +hit.dataset.i;
       cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
-      const order = [...state.teams].sort((a, b) => hist[a.rosterId][i] - hist[b.rosterId][i]);
-      showTip(`<b>Matchweek ${weeks[i]}</b>${order.map((t) => `<span class="tt-row"><i style="background:${t.color}"></i>${hist[t.rosterId][i]}. ${club(t)}</span>`).join("")}`, e.clientX, e.clientY);
-    });
+      const byRank = [...state.teams].sort((a, b) => hist[a.rosterId][i] - hist[b.rosterId][i]);
+      showTip(`<b>Gameweek ${weeks[i]}</b>${byRank.map((t) => `<span class="tt-row${t === me ? " is-me" : ""}"><i style="background:${t === me ? t.color : "rgba(255,255,255,0.35)"}"></i>${hist[t.rosterId][i]}. ${club(t)}</span>`).join("")}`, e.clientX, e.clientY);
+    };
+    svg.addEventListener("pointermove", move); svg.addEventListener("pointerdown", move);
     svg.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); hideTip(); });
+  }
+
+  function setFocus(id) {
+    wkState.team = +id;
+    const sel = $("#wkTeam");
+    if (sel) sel.value = String(id);
+    renderWeekly();
+  }
+  function renderWeekly() {
+    const sel = $("#wkTeam");
+    if (wkState.team == null) wkState.team = (state.teams.find((t) => t.manager.toLowerCase() === "nicog01") || state.teams[0]).rosterId;
+    if (sel && !sel.options.length) {
+      sel.innerHTML = [...state.teams].sort((a, b) => a.name.localeCompare(b.name)).map((t) => `<option value="${t.rosterId}">${esc(t.name)}</option>`).join("");
+      sel.value = String(wkState.team);
+      sel.addEventListener("change", () => setFocus(sel.value));
+    }
+    renderWkTiles(); renderScoreChart(); renderLuckChart(); renderBenchChart(); renderHeatChart(); renderLineupChart(); renderRankChart();
   }
 
   // ---------- DATA HUB ----------
@@ -2030,8 +2265,7 @@
       renderDerbies();
       renderCup();
       renderVictoryRoad();
-      renderLineupChart();
-      renderRankChart();
+      renderWeekly();
       initPower();
       observeReveals();
 

@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=42" />
+  <link rel="stylesheet" href="css/styles.css?v=43" />
 </head>
 <body data-page="analytics">
   <main id="main">
@@ -53,28 +53,73 @@
         </div>
       </section>
 
-      <div class="charts">
-        <figure class="chart-card reveal">
-          <figcaption>
-            <h3 class="chart-title">Points scored vs. best possible lineup</h3>
-            <p class="chart-sub">Solid bar: points scored. Outline: the most the club could have scored with a perfect lineup.</p>
+      <section class="wk" aria-labelledby="wkTitle">
+        <div class="hub__head reveal">
+          <p class="eyebrow">From the logged matchups</p>
+          <h2 class="subhead" id="wkTitle">Week by week</h2>
+          <p class="section__lede">Pick a club: it's drawn in colour and the rest of the league sits in grey behind it. Every chart has a table view.</p>
+        </div>
+        <div class="hub__controls reveal">
+          <label class="hub-field"><span>Focus club</span><select id="wkTeam"></select></label>
+        </div>
+        <div class="wk__tiles" id="wkTiles"></div>
+        <div class="charts charts--wk">
+        <figure class="chart-card reveal chart-card--wide">
+          <figcaption class="chart-cap">
+            <div><h3 class="chart-title">Weekly scores</h3>
+            <p class="chart-sub">Points scored each gameweek. The grey line is the league average that week.</p></div>
+            <button type="button" class="chart-toggle" aria-pressed="false" aria-controls="scoreChart">Table</button>
           </figcaption>
-          <div class="lineup-chart" id="lineupChart"></div>
+          <div class="chart-body" id="scoreChart"></div>
         </figure>
         <figure class="chart-card reveal">
-          <figcaption>
-            <h3 class="chart-title">Standings by week</h3>
-            <p class="chart-sub">League position after each matchweek. Higher is better.</p>
+          <figcaption class="chart-cap">
+            <div><h3 class="chart-title">Luck</h3>
+            <p class="chart-sub">Wins minus expected wins. Expected wins come from how often a score would have beaten the rest of the league that week.</p></div>
+            <button type="button" class="chart-toggle" aria-pressed="false" aria-controls="luckChart">Table</button>
           </figcaption>
-          <div class="rank-chart" id="rankChart"></div>
+          <div class="chart-body" id="luckChart"></div>
         </figure>
-      </div>
+        <figure class="chart-card reveal">
+          <figcaption class="chart-cap">
+            <div><h3 class="chart-title">Left on the bench</h3>
+            <p class="chart-sub">Points the best possible lineup would have added, by gameweek. The tick is the league average.</p></div>
+            <button type="button" class="chart-toggle" aria-pressed="false" aria-controls="benchChart">Table</button>
+          </figcaption>
+          <div class="chart-body" id="benchChart"></div>
+        </figure>
+        <figure class="chart-card reveal chart-card--wide">
+          <figcaption class="chart-cap">
+            <div><h3 class="chart-title">Score grid</h3>
+            <p class="chart-sub">Every club, every gameweek. Darker means a bigger score.</p></div>
+            <button type="button" class="chart-toggle" aria-pressed="false" aria-controls="heatChart">Table</button>
+          </figcaption>
+          <div class="chart-body" id="heatChart"></div>
+        </figure>
+        <figure class="chart-card reveal">
+          <figcaption class="chart-cap">
+            <div><h3 class="chart-title">Points scored vs. best possible lineup</h3>
+            <p class="chart-sub">Solid bar: points scored. Outline: the most the club could have scored with a perfect lineup.</p></div>
+            <button type="button" class="chart-toggle" aria-pressed="false" aria-controls="lineupChart">Table</button>
+          </figcaption>
+          <div class="chart-body" id="lineupChart"></div>
+        </figure>
+        <figure class="chart-card reveal">
+          <figcaption class="chart-cap">
+            <div><h3 class="chart-title">Standings by week</h3>
+            <p class="chart-sub">League position after each gameweek. Higher is better.</p></div>
+            <button type="button" class="chart-toggle" aria-pressed="false" aria-controls="rankChart">Table</button>
+          </figcaption>
+          <div class="chart-body" id="rankChart"></div>
+        </figure>
+        </div>
+      </section>
     </section>
   </main>
 
-  <script src="js/layout.js?v=42"></script>
-  <script src="data/league.js?v=42"></script>
-  <script src="js/motion.js?v=42"></script>
-  <script src="js/app.js?v=42"></script>
+  <script src="js/layout.js?v=43"></script>
+  <script src="data/league.js?v=43"></script>
+  <script src="js/motion.js?v=43"></script>
+  <script src="js/app.js?v=43"></script>
 </body>
 </html>
