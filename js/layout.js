@@ -7,6 +7,7 @@
   const PAGES = [
     { id: "table", href: "table.html", label: "Table", long: "League table" },
     { id: "matchups", href: "matchups.html", label: "Matchups" },
+    { id: "gazette", href: "gazette.html", label: "Gazette", long: "The Gazette" },
     { id: "clubs", href: "clubs.html", label: "Clubs" },
     { id: "h2h", href: "h2h.html", label: "H2H", long: "Head-to-Head" },
     { id: "transfers", href: "transfers.html", label: "Transfers" },

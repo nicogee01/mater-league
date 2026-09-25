@@ -1411,6 +1411,7 @@
           </div>`
         : `<p class="mu-card__none">Starting XIs for this gameweek aren't logged yet.</p>`;
       const derby = H.derby && derbyRival(H) === A ? H.derby : null;
+      const story = Object.keys(state.players || {}).length ? storyFor(m.week, m.home) : null;
       return `<article class="mu-card reveal${open ? " is-open" : ""}${derby ? " is-derby" : ""}">
         <h2 class="visually-hidden">${esc(H.name)} v ${esc(A.name)}${derby ? `, ${esc(derby.name)}` : ""}</h2>
         ${derby ? `<p class="mu-derby">Derby day <b>${esc(derby.name)}</b>${derby.tag ? `<small>${esc(derby.tag)}</small>` : ""}</p>` : ""}
@@ -1419,6 +1420,7 @@
           <span class="mu-card__mid"><span class="mu-card__ft">FT</span><span class="mu-card__chev" aria-hidden="true"></span></span>
           ${side(A, m.awayPts, m.awayPts > m.homePts, as, "away")}
         </button>
+        ${story ? `<p class="mu-card__news"><a href="gazette.html#gw${m.week}-${m.home}-${m.away}"><span>${GZ_TAGS[story.type] || "Result"}</span>${esc(story.headline)}</a></p>` : ""}
         <div class="mu-card__body" id="mu-body-${gi}"${open ? "" : " hidden"}>${body}</div>
       </article>`;
     }).join("");
@@ -1544,6 +1546,516 @@
     const pb = e.target.closest(".mu-p__btn");
     if (pb) { openPlayer(pb.dataset.pid, $(".mu-p__name", pb).firstChild.textContent.trim()); return; }
     if (e.target.id === "playerDlg" || e.target.closest(".pd__close")) $("#playerDlg").close();
+  });
+
+  // ---------- THE GAZETTE ----------
+  // Headlines, match reports, weekly awards and a Team of the Week, all written from the data:
+  // matchups.csv (scores) + lineups.csv (XIs, benches, projections). Every story type and award has a
+  // big pool of wordings; a pool is walked in a fixed shuffled order and a wording isn't reused until
+  // the pool runs dry, so weeks read differently. Same data in, same paper out (no randomness).
+  const G_HEADLINES = {
+    derby: [
+      "{W} claim bragging rights in {D}", "{D}: {W} own the city this week", "{S} decides {D}", "Local heroes: {W} win {D}",
+      "{D} goes the way of {W}", "Family feud settled: {W} {ws}, {L} {ls}", "{L} will hear about this one: {W} take {D}",
+      "{W} paint {D} their colours", "Derby day belongs to {W}", "{D}: no mercy from {W}", "{S} writes {D} into folklore",
+      "{W} win the only game that matters", "The group chat is {W}'s now after {D}", "{D} bragging rights head to {W}",
+    ],
+    thriller: [
+      "By a whisker: {W} edge {L}", "{m} points. That's it. {W} survive {L}", "Photo finish goes to {W}", "{W} win it on the line",
+      "Heart in mouth for {W}, heartbreak for {L}", "{L} lose by {m}. Somewhere a bench player is sorry", "Fine margins: {W} {ws}, {L} {ls}",
+      "{W} squeak past {L}", "Nervy, narrow, and {W}'s", "Split-second finish favours {W}", "{L} undone by {m} points",
+      "Thriller at the death: {W} hold on", "{W} win the one nobody could call",
+    ],
+    rout: [
+      "{W} run riot against {L}", "Demolition job: {W} win by {m}", "{L} blown away, {ws}–{ls}", "No contest: {W} crush {L}",
+      "{W} put {m} past {L}", "Mercy rule needed as {W} flatten {L}", "{L} left picking up the pieces", "{W} go full throttle on {L}",
+      "Statement win: {W} by {m}", "{W} turn {L} into a highlight reel", "One-way traffic from {W}", "{L} will want this week deleted",
+    ],
+    upset: [
+      "Shock result: {W} defy the projections", "Nobody saw {W} coming", "{W} rip up the script against {L}", "Upset alert: {L} stunned",
+      "Projected to lose, {W} win anyway", "{W} make the numbers look silly", "Underdogs {W} bite back", "{L} undone by the underdogs",
+      "The projections had {L}. The pitch had other ideas", "{W} beat the odds and {L}", "Upset of the week: {W} over {L}",
+    ],
+    star: [
+      "{S} goes nuclear with {sp}", "The {S} show: {sp} points", "{S} drags {SC} over the line", "{sp} from {S}. Enough said",
+      "{S} was unplayable", "One-man army: {S} hits {sp}", "{S} breaks the scoreboard", "Take a bow, {S}", "{S} puts up {sp} and a statement",
+      "Nobody could stop {S}", "{S} cooks {L}", "{SC} ride {S}'s {sp}-point haul",
+    ],
+    benchRegret: [
+      "{L} lose with {B} on the bench", "The one that got away: {B} scores {bp} for {L}'s bench", "{L}'s bench would have won it",
+      "Wrong lineup, wrong result for {L}", "{B} sat. {L} lost. Ouch", "{L} left the winner in the dugout", "Selection headache costs {L}",
+      "{B}'s {bp} wasted on {L}'s bench", "{L} rue a costly lineup call", "Should have started {B}: {L} fall to {W}",
+    ],
+    seasonHigh: [
+      "{W} post the highest score of the season: {ws}", "New benchmark: {W} hit {ws}", "{ws}! {W} set the season high",
+      "{W} raise the bar to {ws}", "Record week for {W}", "The league has a new high: {W}'s {ws}",
+      "Top of the charts: {W} with {ws}", "{W}'s {ws} is the number to beat now",
+    ],
+    shootout: [
+      "Shootout: {W} outgun {L} in a {ws}–{ls} classic", "Goals galore as {W} edge a shootout", "{W} and {L} trade blows, {W} land the last one",
+      "End to end: {W} {ws}, {L} {ls}", "Nobody defended, everybody scored: {W} win", "{L} score {ls} and still lose",
+    ],
+    snoozer: [
+      "{W} win an ugly one", "Scrappy but {W}'s", "{W} grind past {L}", "Not pretty, but {W} take it", "{L} and {W} forget to score; {W} forget less",
+      "A win's a win: {W} {ws}, {L} {ls}", "{W} survive a low-scoring slog", "Points are points for {W}",
+    ],
+    streak: [
+      "{W} make it {n} in a row", "{W} keep rolling: {n} straight", "Unstoppable {W} extend run to {n}", "{n} and counting for {W}",
+      "{W}'s winning habit continues", "Is anyone stopping {W}? {n} straight wins", "{W} stay perfect", "The {W} machine rolls on",
+    ],
+    skid: [
+      "{L}'s losing run hits {n}", "Crisis talks at {L} after {n} straight losses", "{L} still searching for answers", "{n} in a row: {L} can't catch a break",
+      "The slide goes on for {L}", "Pressure mounts on {L}", "{L} sink deeper", "Another one for {L}'s bad week collection",
+    ],
+    firstWin: [
+      "Finally! {W} get off the mark", "First win of the season for {W}", "{W} break their duck", "Off the mark: {W} beat {L}",
+      "{W} end the wait", "The drought is over for {W}", "{W} find a way at last",
+    ],
+    win: [
+      "{W} beat {L} {ws}–{ls}", "{W} take care of {L}", "{W} get the job done", "Three points for {W}", "{W} see off {L}",
+      "{W} too good for {L}", "{W} handle {L}", "Business as usual for {W}", "{W} win comfortably", "{L} come up short against {W}",
+      "{W} ease past {L}", "{S} leads {W} past {L}", "Solid shift from {W}", "{W} keep pace with a win over {L}",
+    ],
+    starLoss: [
+      "{S}'s {sp} not enough for {SC}", "In vain: {S} hits {sp} as {SC} lose", "{S} does everything but win it", "A {sp}-point losing effort from {S}",
+      "{S} deserved better than a defeat", "{sp} from {S}, still no win for {SC}", "{SC} waste a monster week from {S}", "{S} scores {sp}, {W} win anyway",
+      "Lonely at the top: {S}'s {sp} goes unrewarded", "{W} survive {S}'s {sp}-point onslaught",
+    ],
+    draw: [
+      "All square: {W} and {L} share the spoils", "Stalemate between {W} and {L}", "Nothing to separate {W} and {L}", "Honours even",
+    ],
+  };
+  const G_AWARDS = {
+    top: ["Manager of the Week", "Gaffer of the Week", "Top of the Class", "The Golden Clipboard", "Weekly High Score", "Tactical Genius Award", "The Big Number", "Boss of the Week"],
+    spoon: ["Wooden Spoon", "The Relegation Zone", "Bottom of the Barrel", "The Participation Medal", "Rock Bottom", "Please Try Again", "The Soggy Biscuit", "Back to the Drawing Board"],
+    potw: ["Player of the Week", "Star Man", "The Main Character", "Man of the Match", "Golden Boot of the Week", "Headline Act", "The Difference Maker", "Ballon d'Week"],
+    bench: ["Bench Blunder", "Left in the Dugout", "Should've Started", "Wasted on the Bench", "Warming the Wrong Seat", "The One That Got Away", "Sub-Optimal", "Unused Sub, Used Points"],
+    flop: ["Flop of the Week", "Minus Man", "The Shocker", "Negative Equity", "Off Day of the Week", "Anonymous Award", "Liability of the Week", "Went Missing"],
+    upset: ["Giant Killers", "Upset of the Week", "Beat the Odds", "Projection Busters", "Script Flippers", "Against All Odds", "Surprise Package"],
+    unlucky: ["Hard Luck Award", "Robbed", "Wrong Opponent, Wrong Week", "Cursed Scheduling", "Unlucky Loser", "It Wasn't Your Week", "The Groundhog Loss"],
+    lucky: ["Daylight Robbery", "Got Away With It", "Lucky Charms", "Right Place, Right Time", "Smash and Grab", "Winning Ugly", "The Great Escape"],
+    photo: ["Photo Finish", "Closest Call", "Nail-Biter of the Week", "Heart Attack Special", "Too Close to Call"],
+    rout: ["Demolition Job", "Biggest Beatdown", "Blowout of the Week", "Mercy Rule Award", "Wrecking Ball"],
+    over: ["Overachievers", "Beat the Projections", "Outperformers", "Exceeded Expectations", "Punching Above Their Weight"],
+    under: ["Underachievers", "Missed the Memo", "Below Par", "Didn't Show Up", "Expectations Not Met"],
+    wall: ["Brick Wall", "Clean Sheet Club", "The Back Line", "Defence Wins Titles", "Shut Up Shop"],
+    fire: ["Firepower", "Strike Force", "Frontline Fury", "The Goal Machine", "Attack Mode"],
+    engine: ["Engine Room", "Midfield Maestros", "Control Centre", "Middle of the Park", "Pass Masters"],
+  };
+  const G_POS = { D: "DEF", M: "MID", F: "FWD", GK: "GK", DEF: "DEF", MID: "MID", FWD: "FWD" };
+  const G_FORMATIONS = ["3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-3-2", "5-4-1"];
+  const ghash = (s) => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
+  const surname = (pid, name) => {
+    const p = state.players[pid];
+    if (p && p.l) return p.l;
+    const parts = String(name || "").trim().split(/\s+/);
+    return parts.length > 1 ? parts.slice(1).join(" ") : parts[0] || "";
+  };
+  // walk a pool in a per-kind shuffled order, skipping anything used recently
+  function makePicker() {
+    const used = {};
+    return (kind, pool) => {
+      const order = pool.map((x, i) => [ghash(kind + i), x]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+      const u = (used[kind] ||= []);
+      const pick = order.find((x) => !u.includes(x)) || order[0];
+      u.push(pick);
+      if (u.length >= pool.length) u.splice(0, u.length - Math.floor(pool.length / 2));
+      return pick;
+    };
+  }
+  const fill = (tpl, v) => tpl.replace(/\{(\w+)\}/g, (_, k) => (v[k] != null ? v[k] : ""));
+  const possessive = (t) => t.replace(/s's/g, "s'");
+  const gp = (n) => (Number.isInteger(n) ? String(n) : num(n, 2).replace(/(.d)0$/, "$1"));
+
+  function weekSquads(week) {
+    const out = {};
+    for (const r of state.lineups || []) {
+      if (+r.week !== week) continue;
+      const id = rosterOf(r.manager);
+      if (!id) continue;
+      const s = (out[id] ||= { xi: [], bench: [] });
+      const p = { pid: r.player_id, name: r.player, slot: r.slot, pts: +r.pts || 0, proj: r.proj === "" ? null : +r.proj, min: +r.min || 0, id };
+      (r.slot === "BN" ? s.bench : s.xi).push(p);
+    }
+    return out;
+  }
+  const posOf = (p) => (p.slot && p.slot !== "BN" ? p.slot : G_POS[((state.players[p.pid] || {}).ps || [])[0] || (state.players[p.pid] || {}).p] || null);
+  const canPlay = (p, slot) => {
+    const ps = ((state.players[p.pid] || {}).ps || []).map((x) => G_POS[x]);
+    return p.slot === slot || ps.includes(slot);
+  };
+  // best swap: a bench player who played, in place of the weakest starter he could have replaced
+  function bestSwap(sq) {
+    let best = null;
+    for (const b of sq.bench.filter((x) => x.min > 0)) {
+      for (const s of sq.xi) {
+        if (s.slot === "GK" ? !canPlay(b, "GK") : !canPlay(b, s.slot)) continue;
+        const gain = b.pts - s.pts;
+        if (gain > 0 && (!best || gain > best.gain)) best = { bench: b, starter: s, gain };
+      }
+    }
+    return best;
+  }
+  function streakBefore(t, week, res) {
+    let n = 0;
+    for (const g of [...t.games].filter((x) => x.week <= week).sort((a, b) => b.week - a.week)) { if (g.res === res) n++; else break; }
+    return n;
+  }
+
+  function buildGazette() {
+    if (!state.results.length) return [];
+    const pick = makePicker();
+    const weeks = [...new Set(state.results.map((m) => m.week))].sort((a, b) => a - b);
+    const all = [];
+    let seasonHigh = -Infinity;
+    for (const week of weeks) {
+      const games = state.results.filter((m) => m.week === week);
+      const sq = weekSquads(week);
+      const hasXI = Object.keys(sq).length > 0;
+      const scores = games.flatMap((m) => [m.homePts, m.awayPts]);
+      const weekHigh = Math.max(...scores);
+      const stories = games.map((m) => {
+        const H = state.byRoster[m.home], A = state.byRoster[m.away];
+        const draw = m.homePts === m.awayPts;
+        const Wt = m.homePts >= m.awayPts ? H : A, Lt = Wt === H ? A : H;
+        const ws = Wt === H ? m.homePts : m.awayPts, ls = Wt === H ? m.awayPts : m.homePts, margin = ws - ls;
+        const wsq = sq[Wt.rosterId] || { xi: [], bench: [] }, lsq = sq[Lt.rosterId] || { xi: [], bench: [] };
+        const xi = [...wsq.xi, ...lsq.xi];
+        const star = xi.length ? xi.reduce((a, b) => (b.pts > a.pts ? b : a)) : null;
+        const pj = (s) => (s.xi.some((p) => p.proj != null) ? s.xi.reduce((a, p) => a + (p.proj || 0), 0) : null);
+        const wproj = pj(wsq), lproj = pj(lsq);
+        const swap = bestSwap(lsq);
+        const derby = H.derby && derbyRival(H) === A ? H.derby : null;
+        const wStreak = streakBefore(Wt, week, "W"), lSkid = streakBefore(Lt, week, "L");
+        const wWins = Wt.games.filter((g) => g.week <= week && g.res === "W").length;
+        const cands = [];
+        if (draw) cands.push(["draw", 200]);
+        if (derby) cands.push(["derby", 100]);
+        if (ws > seasonHigh && week > weeks[0] && ws === weekHigh) cands.push(["seasonHigh", 92]);
+        if (margin < 2) cands.push(["thriller", 88]); else if (margin < 5) cands.push(["thriller", 70]);
+        if (wproj != null && lproj != null && lproj - wproj >= 10) cands.push(["upset", 78 + Math.min(10, (lproj - wproj) / 3)]);
+        if (margin >= 45) cands.push(["rout", 76]);
+        const starWon = star && !draw && wsq.xi.includes(star);
+        if (star && star.pts >= 30) cands.push([starWon ? "star" : "starLoss", 72 + Math.min(10, star.pts - 30)]);
+        if (swap && swap.gain > margin) cands.push(["benchRegret", 74]);
+        if (ws >= 110 && ls >= 110) cands.push(["shootout", 66]);
+        if (ws < 80) cands.push(["snoozer", 58]);
+        if (wWins === 1 && week > weeks[0]) cands.push(["firstWin", 62]);
+        if (wStreak >= 3) cands.push(["streak", 55 + wStreak]);
+        if (lSkid >= 3) cands.push(["skid", 50 + lSkid]);
+        cands.push(["win", 10]);
+        cands.sort((a, b) => b[1] - a[1]);
+        const [type, weight] = cands[0];
+        const starClub = star ? (wsq.xi.includes(star) ? Wt : Lt) : Wt;
+        const v = {
+          W: Wt.name, L: Lt.name, ws: num(ws, 2), ls: num(ls, 2), m: num(margin, 2), D: derby ? derby.name : "",
+          S: star ? surname(star.pid, star.name) : Wt.name, sp: star ? gp(star.pts) : "", SC: starClub.name,
+          B: swap ? surname(swap.bench.pid, swap.bench.name) : "", bp: swap ? gp(swap.bench.pts) : "",
+          n: type === "skid" ? lSkid : wStreak,
+        };
+        // headline pools that lean on the star/bench need that data; fall back to a plain win
+        // lines that credit the star with the win only when his club actually won
+        let pool = G_HEADLINES[type];
+        if (type !== "starLoss" && (!star || !starWon)) pool = pool.filter((t) => !/\{S|\{sp|\{SC/.test(t));
+        const headline = possessive(fill(pick(type, pool.length ? pool : G_HEADLINES.win.filter((t) => starWon || !/\{S/.test(t))), v));
+        const lines = [];
+        lines.push(draw ? `${H.name} and ${A.name} finished level on ${num(ws, 2)}.` : pickLine("result", [
+          `${Wt.name} beat ${Lt.name} ${num(ws, 2)}–${num(ls, 2)}.`, `${Wt.name} saw off ${Lt.name}, ${num(ws, 2)} to ${num(ls, 2)}.`,
+          `Final score: ${Wt.name} ${num(ws, 2)}, ${Lt.name} ${num(ls, 2)}.`, `${Lt.name} fell to ${Wt.name}, ${num(ls, 2)}–${num(ws, 2)}.`,
+        ], pick));
+        if (derby) lines.push(`That's ${derby.name}${derby.tag ? ` (${derby.tag})` : ""} bragging rights until the next one.`);
+        if (star) lines.push(pickLine("star", [
+          `${star.name} led everyone with ${gp(star.pts)}.`, `${star.name}'s ${gp(star.pts)} was the best individual return on the pitch.`,
+          `Top scorer on the day: ${star.name}, ${gp(star.pts)}.`, `${star.name} did the heavy lifting with ${gp(star.pts)}.`,
+        ], pick));
+        if (wproj != null && lproj != null) {
+          const d = ws - wproj;
+          lines.push(Math.abs(d) >= 15 ? `${Wt.name} ${d > 0 ? "beat" : "fell short of"} their projection (${num(wproj, 2)}) by ${num(Math.abs(d), 2)}.`
+            : `${Wt.name} were projected ${num(wproj, 2)}, ${Lt.name} ${num(lproj, 2)}.`);
+        }
+        if (swap && swap.gain >= 5) lines.push(`${Lt.name} had ${swap.bench.name} (${gp(swap.bench.pts)}) on the bench while ${swap.starter.name} started and scored ${gp(swap.starter.pts)}${swap.gain > margin ? ": that swap alone would have won it" : ""}.`);
+        const s = { week, match: m, H, A, W: Wt, L: Lt, ws, ls, margin, draw, type, weight, headline, derby, star, starClub, report: possessive(lines.join(" ")), hasXI };
+        return s;
+      });
+      seasonHigh = Math.max(seasonHigh, weekHigh);
+      stories.sort((a, b) => b.weight - a.weight);
+      all.push({ week, stories, awards: hasXI ? buildAwards(week, games, sq, pick) : buildScoreAwards(week, games, pick), totw: hasXI ? teamOfTheWeek(sq) : null });
+    }
+    return all;
+  }
+  function pickLine(kind, pool, pick) { return pick("line-" + kind, pool); }
+
+  // awards: the always-on three plus the three most notable of the rest, each with a rotating title
+  function buildAwards(week, games, sq, pick) {
+    const T = state.teams.filter((t) => sq[t.rosterId]);
+    const score = (t) => { const m = games.find((g) => g.home === t.rosterId || g.away === t.rosterId); return m ? (m.home === t.rosterId ? m.homePts : m.awayPts) : 0; };
+    const proj = (t) => sq[t.rosterId].xi.reduce((a, p) => a + (p.proj || 0), 0);
+    const starters = T.flatMap((t) => sq[t.rosterId].xi);
+    const out = [];
+    const award = (kind, who, stat, blurb, weight) => out.push({ kind, title: pick("award-" + kind, G_AWARDS[kind]), who, stat, blurb: possessive(blurb), weight });
+    const top = [...T].sort((a, b) => score(b) - score(a));
+    award("top", top[0], num(score(top[0]), 2), `The week's highest score.`, 1000);
+    award("spoon", top[top.length - 1], num(score(top[top.length - 1]), 2), `The week's lowest score.`, 999);
+    const potw = starters.reduce((a, b) => (b.pts > a.pts ? b : a));
+    award("potw", potw, gp(potw.pts), `Best starter in the league for ${state.byRoster[potw.id].name}.`, 998);
+    const benchers = T.flatMap((t) => sq[t.rosterId].bench).filter((p) => p.min > 0);
+    if (benchers.length) { const b = benchers.reduce((a, c) => (c.pts > a.pts ? c : a)); award("bench", b, gp(b.pts), `Scored ${gp(b.pts)} on ${state.byRoster[b.id].name}'s bench.`, b.pts * 3); }
+    const flop = starters.reduce((a, b) => (b.pts < a.pts ? b : a));
+    if (flop.pts <= 0) award("flop", flop, gp(flop.pts), `Started for ${state.byRoster[flop.id].name} and cost them.`, 40 - flop.pts * 6);
+    const res = games.map((m) => {
+      const wH = m.homePts >= m.awayPts, W = state.byRoster[wH ? m.home : m.away], L = state.byRoster[wH ? m.away : m.home];
+      return { W, L, ws: Math.max(m.homePts, m.awayPts), ls: Math.min(m.homePts, m.awayPts), margin: Math.abs(m.homePts - m.awayPts) };
+    });
+    const ups = res.filter((r) => sq[r.W.rosterId] && sq[r.L.rosterId]).map((r) => ({ ...r, gap: proj(r.L) - proj(r.W) })).sort((a, b) => b.gap - a.gap)[0];
+    if (ups && ups.gap >= 8) award("upset", ups.W, `+${num(ups.gap, 1)}`, `Projected ${num(ups.gap, 1)} behind ${ups.L.name} and won anyway.`, 60 + ups.gap * 2);
+    const allScores = T.map(score).sort((a, b) => b - a);
+    const unlucky = res.map((r) => ({ ...r, beaten: allScores.filter((x) => x < r.ls).length })).sort((a, b) => b.ls - a.ls)[0];
+    if (unlucky && unlucky.beaten >= 4) award("unlucky", unlucky.L, num(unlucky.ls, 2), `Would have beaten ${unlucky.beaten} of the other 7 clubs, but drew ${unlucky.W.name}.`, 50 + unlucky.beaten * 6);
+    const lucky = [...res].sort((a, b) => a.ws - b.ws)[0];
+    const lBeaten = allScores.filter((x) => x < lucky.ws).length;
+    if (lBeaten <= 3) award("lucky", lucky.W, num(lucky.ws, 2), `Won with a score that only beats ${lBeaten} of the 8 this week.`, 55 - lBeaten * 5);
+    const close = [...res].sort((a, b) => a.margin - b.margin)[0];
+    if (close.margin < 6) award("photo", close.W, `by ${num(close.margin, 2)}`, `${close.W.name} ${num(close.ws, 2)}, ${close.L.name} ${num(close.ls, 2)}.`, 70 - close.margin * 5);
+    const big = [...res].sort((a, b) => b.margin - a.margin)[0];
+    if (big.margin >= 30) award("rout", big.W, `by ${num(big.margin, 2)}`, `${big.W.name} ${num(big.ws, 2)}, ${big.L.name} ${num(big.ls, 2)}.`, 30 + big.margin / 2);
+    const vs = T.map((t) => ({ t, d: score(t) - proj(t) })).sort((a, b) => b.d - a.d);
+    if (vs[0].d >= 15) award("over", vs[0].t, `+${num(vs[0].d, 1)}`, `Beat their projection by ${num(vs[0].d, 1)}.`, 35 + vs[0].d / 2);
+    if (vs[vs.length - 1].d <= -15) award("under", vs[vs.length - 1].t, num(vs[vs.length - 1].d, 1), `Fell ${num(-vs[vs.length - 1].d, 1)} short of their projection.`, 30 - vs[vs.length - 1].d / 3);
+    const line = (slots) => T.map((t) => ({ t, v: sq[t.rosterId].xi.filter((p) => slots.includes(p.slot)).reduce((a, p) => a + p.pts, 0) })).sort((a, b) => b.v - a.v)[0];
+    const wall = line(["DEF", "GK"]), fire = line(["FWD"]), eng = line(["MID"]);
+    award("wall", wall.t, num(wall.v, 2), `Most points from defence and goalkeeper.`, 20 + wall.v / 4);
+    award("fire", fire.t, num(fire.v, 2), `Most points from the forward line.`, 20 + fire.v / 4);
+    award("engine", eng.t, num(eng.v, 2), `Most points from midfield.`, 20 + eng.v / 4);
+    const fixed = out.filter((a) => a.weight >= 998);
+    // rotate the supporting cast: prefer the most notable, but nudge categories used last week down
+    const rest = out.filter((a) => a.weight < 998).map((a) => ({ ...a, w: a.weight - (lastAwardKinds.has(a.kind) ? 25 : 0) })).sort((a, b) => b.w - a.w).slice(0, 4);
+    lastAwardKinds = new Set(rest.map((a) => a.kind));
+    return [...fixed, ...rest];
+  }
+  let lastAwardKinds = new Set();
+  function buildScoreAwards(week, games, pick) {
+    const rows = games.flatMap((m) => [{ t: state.byRoster[m.home], s: m.homePts }, { t: state.byRoster[m.away], s: m.awayPts }]).sort((a, b) => b.s - a.s);
+    return [
+      { kind: "top", title: pick("award-top", G_AWARDS.top), who: rows[0].t, stat: num(rows[0].s, 2), blurb: "The week's highest score." },
+      { kind: "spoon", title: pick("award-spoon", G_AWARDS.spoon), who: rows[rows.length - 1].t, stat: num(rows[rows.length - 1].s, 2), blurb: "The week's lowest score." },
+    ];
+  }
+
+  // best XI from everyone rostered that week (starters and bench), in the best-scoring legal shape
+  function teamOfTheWeek(sq) {
+    const pool = Object.values(sq).flatMap((s) => [...s.xi, ...s.bench]).filter((p) => p.min > 0);
+    const byPos = (slot) => pool.filter((p) => posOf(p) === slot).sort((a, b) => b.pts - a.pts);
+    const gk = byPos("GK")[0];
+    let best = null;
+    for (const f of G_FORMATIONS) {
+      const [d, m, fw] = f.split("-").map(Number);
+      const taken = new Set(gk ? [gk.pid] : []);
+      const take = (slot, n) => byPos(slot).filter((p) => !taken.has(p.pid)).slice(0, n).map((p) => (taken.add(p.pid), p));
+      const lines = { DEF: take("DEF", d), MID: take("MID", m), FWD: take("FWD", fw) };
+      if (lines.DEF.length < d || lines.MID.length < m || lines.FWD.length < fw) continue;
+      const total = (gk ? gk.pts : 0) + [...lines.DEF, ...lines.MID, ...lines.FWD].reduce((a, p) => a + p.pts, 0);
+      if (!best || total > best.total) best = { f, gk, lines, total };
+    }
+    return best;
+  }
+
+  // ---- rendering ----
+  const gz = { data: null, week: null };
+  const GZ_TAGS = { derby: "Derby day", thriller: "Nail-biter", starLoss: "Losing effort", rout: "Blowout", upset: "Upset", star: "Star turn", benchRegret: "Bench regret",
+    seasonHigh: "Season high", shootout: "Shootout", snoozer: "Grind", streak: "On a run", skid: "Crisis", firstWin: "First win", win: "Result", draw: "Draw" };
+  const SITE_URL = "https://nicogee01.github.io/mater-league/";
+  // built once the player list is in (surnames and positions come from it); cached after that
+  function gazetteData() {
+    if (gz.data) return gz.data;
+    lastAwardKinds = new Set();
+    const d = buildGazette();
+    if (Object.keys(state.players || {}).length) gz.data = d;
+    return d;
+  }
+  function storyCard(s, lead) {
+    const id = `gw${s.week}-${s.match.home}-${s.match.away}`;
+    return `<article class="gz-story${lead ? " gz-story--lead" : ""}${s.derby ? " is-derby" : ""}" id="${id}">
+      <p class="gz-story__tag"><span>${GZ_TAGS[s.type] || "Result"}</span>${s.derby ? `<em>${esc(s.derby.name)}</em>` : ""}</p>
+      <h3 class="gz-story__head">${esc(s.headline)}</h3>
+      <p class="gz-story__score">${crest(s.W)}<b>${club(s.W)}</b><span class="gz-count" data-to="${s.ws}">${num(s.ws, 2)}</span><i>–</i><span class="gz-count" data-to="${s.ls}">${num(s.ls, 2)}</span><b>${club(s.L)}</b>${crest(s.L)}</p>
+      <p class="gz-story__body">${esc(s.report)}</p>
+      <div class="gz-share">
+        <button type="button" class="gz-btn" data-share="${id}">Share to chat</button>
+        <button type="button" class="gz-btn gz-btn--ghost" data-img="${id}">Save image</button>
+      </div>
+    </article>`;
+  }
+  function renderGazette() {
+    const root = $("#gzRoot");
+    if (!root) return;
+    const data = gazetteData();
+    if (!data.length) { root.innerHTML = `<p class="pending-note">No gameweeks logged yet.</p>`; return; }
+    const fromHash = +(location.hash.match(/gw(\d+)/) || [])[1];
+    if (gz.week == null) gz.week = data.some((d) => d.week === fromHash) ? fromHash : data[data.length - 1].week;
+    const wk = data.find((d) => d.week === gz.week) || data[data.length - 1];
+    $("#gzWeeks").innerHTML = data.map((d) => `<button type="button" class="chip${d.week === wk.week ? " is-active" : ""}" data-gzweek="${d.week}" aria-pressed="${d.week === wk.week}">GW${d.week}</button>`).join("");
+    const [lead, ...rest] = wk.stories;
+    const who = (a) => (a.who.rosterId ? `${crest(a.who)}<b>${club(a.who)}</b>` : `<span class="gz-award__photo" data-photo="${esc(a.who.pid)}"><span>${esc(initials(a.who.name))}</span></span><b>${esc(a.who.name)}</b><small>${club(state.byRoster[a.who.id])}</small>`);
+    const t = wk.totw;
+    const pl = (p) => `<div class="pl"><span class="pl__photo" data-photo="${esc(p.pid)}"><span>${esc(initials(p.name))}</span></span><span class="pl__proj">${gp(p.pts)}</span><span class="pl__name">${esc(surname(p.pid, p.name))}</span><span class="pl__club">${esc(state.byRoster[p.id].name)}${p.slot === "BN" ? " · bench" : ""}</span></div>`;
+    root.innerHTML = `
+      <div class="gz-front">
+        ${storyCard(lead, true)}
+        <div class="gz-side">${rest.map((s) => storyCard(s, false)).join("")}</div>
+      </div>
+      <section class="gz-awards" aria-labelledby="gzAwardsTitle">
+        <h2 class="subhead" id="gzAwardsTitle">Gameweek ${wk.week} awards</h2>
+        <div class="gz-award-grid">${wk.awards.map((a) => `
+          <div class="gz-award gz-award--${a.kind}">
+            <p class="gz-award__title">${esc(a.title)}</p>
+            <p class="gz-award__who">${who(a)}</p>
+            <p class="gz-award__stat">${esc(a.stat)}</p>
+            <p class="gz-award__blurb">${esc(a.blurb)}</p>
+          </div>`).join("")}</div>
+      </section>
+      ${t ? `<section class="gz-totw" aria-labelledby="gzTotwTitle">
+        <div class="gz-totw__head"><h2 class="subhead" id="gzTotwTitle">Team of the Week</h2><p><b>${t.f}</b> · ${num(t.total, 2)} pts</p>
+          <button type="button" class="gz-btn gz-btn--ghost" data-img="totw">Save image</button></div>
+        <div class="pitch gz-pitch" role="img" aria-label="Team of the week in a ${t.f}: ${esc([t.gk, ...t.lines.DEF, ...t.lines.MID, ...t.lines.FWD].filter(Boolean).map((p) => p.name).join(", "))}">
+          <span class="box"></span><span class="box box--six"></span>
+          <div class="pitch__row">${t.gk ? pl(t.gk) : ""}</div>
+          <div class="pitch__row">${t.lines.DEF.map(pl).join("")}</div>
+          <div class="pitch__row">${t.lines.MID.map(pl).join("")}</div>
+          <div class="pitch__row">${t.lines.FWD.map(pl).join("")}</div>
+        </div>
+        <p class="chart-note">Best eleven from every player on a roster that week, starters and bench, in whichever formation scores most. "Bench" means his manager left him out.</p>
+      </section>` : `<p class="pending-note">Team of the Week needs that gameweek's lineups.</p>`}`;
+    if (Object.keys(state.players || {}).length) loadPhotos($$("[data-photo]", root).map((e) => e.dataset.photo), root);
+    countUp(root);
+  }
+  function renderHomeNews() {
+    const el = $("#homeNews");
+    if (!el) return;
+    const data = gazetteData();
+    if (!data.length) { el.closest("section").hidden = true; return; }
+    const wk = data[data.length - 1];
+    el.innerHTML = wk.stories.slice(0, 3).map((s, i) => `
+      <a class="hn-item${i === 0 ? " hn-item--lead" : ""}${s.derby ? " is-derby" : ""}" href="gazette.html#gw${s.week}-${s.match.home}-${s.match.away}">
+        <span class="hn-item__tag">GW${s.week} · ${GZ_TAGS[s.type] || "Result"}</span>
+        <b class="hn-item__head">${esc(s.headline)}</b>
+        <span class="hn-item__score">${esc(s.W.name)} ${num(s.ws, 2)}–${num(s.ls, 2)} ${esc(s.L.name)}</span>
+      </a>`).join("");
+  }
+  // headline strip on each matchup card
+  function storyFor(week, home) {
+    const wk = gazetteData().find((d) => d.week === week);
+    return wk && wk.stories.find((s) => s.match.home === home);
+  }
+
+  // scores tick up when they scroll into view
+  function countUp(root) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const els = $$(".gz-count:not(.is-counted)", root);
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      io.unobserve(e.target);
+      const el = e.target, to = +el.dataset.to, t0 = performance.now(), dur = 900;
+      el.classList.add("is-counted");
+      const step = (t) => { const k = Math.min(1, (t - t0) / dur), v = to * (1 - Math.pow(1 - k, 3)); el.textContent = num(v, 2); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }), { threshold: 0.4 });
+    els.forEach((el) => io.observe(el));
+  }
+
+  // ---- sharing: text for the group chat, and a picture ----
+  function findStory(id) {
+    for (const wk of gazetteData()) for (const s of wk.stories) if (`gw${s.week}-${s.match.home}-${s.match.away}` === id) return s;
+    return null;
+  }
+  const OPENERS = ["📰 This just in:", "🚨 Breaking:", "🗞️ From the Gazette:", "⚽ Full time:", "📣 Hot off the press:", "🔥 Gameweek {w}:", "🎙️ Stop the press:"];
+  async function shareStory(id, btn) {
+    const s = findStory(id);
+    if (!s) return;
+    const open = OPENERS[ghash(id) % OPENERS.length].replace("{w}", s.week);
+    const text = `${open} ${s.headline}\n${s.W.name} ${num(s.ws, 2)}–${num(s.ls, 2)} ${s.L.name}`;
+    const url = `${SITE_URL}gazette.html#${id}`;
+    try {
+      if (navigator.share) { await navigator.share({ title: s.headline, text, url }); return; }
+    } catch (_) { return; }
+    try { await navigator.clipboard.writeText(`${text}\n${url}`); flash(btn, "Copied, paste it in the chat"); }
+    catch (_) { flash(btn, "Couldn't copy"); }
+  }
+  function flash(btn, msg) { const o = btn.textContent; btn.textContent = msg; btn.disabled = true; setTimeout(() => { btn.textContent = o; btn.disabled = false; }, 2200); }
+  function wrapText(ctx, text, x, y, maxW, lh) {
+    const words = text.split(" "); let line = "", yy = y;
+    for (const w of words) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, yy); line = w; yy += lh; } else line = t; }
+    if (line) ctx.fillText(line, x, yy);
+    return yy;
+  }
+  async function saveImage(id, btn) {
+    await document.fonts.ready;
+    const c = document.createElement("canvas"), W = 1080, H = 1080;
+    c.width = W; c.height = H;
+    const x = c.getContext("2d");
+    const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#0b1f3a"); g.addColorStop(1, "#16335e");
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.fillStyle = "#c8102e"; x.fillRect(0, 0, W, 14);
+    x.fillStyle = "#e6c47a"; x.font = "700 34px 'Barlow Condensed', sans-serif"; x.textBaseline = "top";
+    x.fillText("THE MATER LEAGUE GAZETTE", 72, 72);
+    if (id === "totw") {
+      const wk = gazetteData().find((d) => d.week === gz.week), t = wk && wk.totw;
+      if (!t) return;
+      x.fillStyle = "#fbf7ee"; x.font = "96px Anton, Impact, sans-serif"; x.fillText(`TEAM OF GW${wk.week}`, 72, 130);
+      x.font = "600 34px Barlow, sans-serif"; x.fillStyle = "#d5dbe6"; x.fillText(`${t.f} · ${num(t.total, 2)} points`, 72, 250);
+      const rows = [t.lines.FWD, t.lines.MID, t.lines.DEF, [t.gk].filter(Boolean)];
+      x.fillStyle = "#0f6c36"; x.fillRect(72, 320, W - 144, 680);
+      x.strokeStyle = "rgba(255,255,255,0.5)"; x.lineWidth = 3; x.strokeRect(72, 320, W - 144, 680);
+      rows.forEach((r, ri) => r.forEach((p, i) => {
+        const cx = 72 + ((W - 144) * (i + 1)) / (r.length + 1), cy = 390 + ri * 165;
+        x.fillStyle = "#0b1f3a"; x.beginPath(); x.arc(cx, cy, 34, 0, Math.PI * 2); x.fill();
+        const label = gp(p.pts);
+        x.fillStyle = "#e6c47a"; x.font = `${label.length > 3 ? 22 : 30}px Anton, Impact, sans-serif`; x.textAlign = "center"; x.fillText(label, cx, cy - (label.length > 3 ? 12 : 16));
+        x.fillStyle = "#fbf7ee"; x.font = "700 24px Barlow, sans-serif"; x.fillText(surname(p.pid, p.name).slice(0, 14), cx, cy + 42);
+        x.textAlign = "left";
+      }));
+    } else {
+      const s = findStory(id);
+      if (!s) return;
+      x.fillStyle = "#ff5468"; x.font = "700 30px 'Barlow Condensed', sans-serif"; x.fillText(`GAMEWEEK ${s.week} · ${(GZ_TAGS[s.type] || "RESULT").toUpperCase()}${s.derby ? " · " + s.derby.name.toUpperCase() : ""}`, 72, 130);
+      x.fillStyle = "#fbf7ee"; x.font = "88px Anton, Impact, sans-serif";
+      const end = wrapText(x, s.headline.toUpperCase(), 72, 200, W - 144, 100);
+      x.font = "700 40px Barlow, sans-serif"; x.fillStyle = "#d5dbe6";
+      x.fillText(s.W.name, 72, end + 160); x.fillText(s.L.name, 72, end + 260);
+      x.font = "84px Anton, Impact, sans-serif"; x.textAlign = "right";
+      x.fillStyle = "#e6c47a"; x.fillText(num(s.ws, 2), W - 72, end + 140);
+      x.fillStyle = "#a9b4c6"; x.fillText(num(s.ls, 2), W - 72, end + 240);
+      x.textAlign = "left";
+      let y = end + 360;
+      if (s.star && y < H - 260) {
+        x.fillStyle = "#e6c47a"; x.font = "700 28px 'Barlow Condensed', sans-serif"; x.fillText("TOP SCORER", 72, y);
+        x.fillStyle = "#fbf7ee"; x.font = "700 36px Barlow, sans-serif"; x.fillText(`${s.star.name} · ${gp(s.star.pts)} pts`, 72, y + 38);
+        y += 120;
+      }
+      x.strokeStyle = "rgba(255,255,255,0.18)"; x.lineWidth = 2; x.beginPath(); x.moveTo(72, y - 24); x.lineTo(W - 72, y - 24); x.stroke();
+      x.fillStyle = "#d5dbe6"; x.font = "500 30px Barlow, sans-serif";
+      const words = s.report.split(" "); let line = "", yy = y;
+      for (const w of words) {
+        const t = line ? line + " " + w : w;
+        if (x.measureText(t).width > W - 144 && line) { if (yy + 84 > H - 90) { x.fillText(line + "…", 72, yy); line = ""; break; } x.fillText(line, 72, yy); line = w; yy += 42; } else line = t;
+      }
+      if (line) x.fillText(line, 72, yy);
+    }
+    x.fillStyle = "#a9b4c6"; x.font = "600 26px Barlow, sans-serif"; x.fillText("nicogee01.github.io/mater-league", 72, H - 60);
+    c.toBlob(async (blob) => {
+      const file = new File([blob], `mater-${id}.png`, { type: "image/png" });
+      try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; } } catch (_) { return; }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      flash(btn, "Saved");
+    }, "image/png");
+  }
+  document.addEventListener("click", (e) => {
+    const w = e.target.closest("[data-gzweek]");
+    if (w) { gz.week = +w.dataset.gzweek; history.replaceState(null, "", `#gw${gz.week}`); renderGazette(); return; }
+    const sb = e.target.closest("[data-share]");
+    if (sb) { shareStory(sb.dataset.share, sb); return; }
+    const ib = e.target.closest("[data-img]");
+    if (ib) saveImage(ib.dataset.img, ib);
   });
 
   // ---------- ANALYTICS ----------
@@ -2456,7 +2968,7 @@
     try {
       const [league, users, rosters, sportState, matchRows, cupRows, emblems, lineupRows] = await Promise.all([
         get(`/league/${LEAGUE_ID}`), get(`/league/${LEAGUE_ID}/users`), get(`/league/${LEAGUE_ID}/rosters`), get(`/state/${SPORT}`).catch(() => ({})),
-        getCSV("data/matchups.csv"), getCSV("data/cup.csv"), loadEmblems(), $("#muList") ? getCSV("data/lineups.csv") : [],
+        getCSV("data/matchups.csv"), getCSV("data/cup.csv"), loadEmblems(), $("#muList") || $("#gzRoot") || $("#homeNews") ? getCSV("data/lineups.csv") : [],
       ]);
       state.lineups = lineupRows;
       state.league = league;
@@ -2502,6 +3014,8 @@
       ]);
       state.players = players;
       renderMatchups();
+      renderGazette();
+      renderHomeNews();
       const { proj, season: seasonPts } = buildProjections(statsWeeks, league.scoring_settings || {});
       state.projections = proj;
       state.seasonPts = seasonPts;
