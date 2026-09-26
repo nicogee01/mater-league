@@ -1767,6 +1767,8 @@ button { cursor: pointer; touch-action: manipulation; }
 .dh { display: grid; gap: 8px; }
 .dh__title { margin: 8px 0 0; font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
 .dh__none { margin: 0; color: var(--muted); font-size: 14px; }
+.dh__more summary { cursor: pointer; width: max-content; font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); padding: 2px 0; }
+.dh__more[open] summary { margin-bottom: 6px; }
 .dh__list, .dh__legends { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .dh__game { display: grid; grid-template-columns: 44px auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--bg-2); }
 .dh__wk { font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.1em; color: var(--faint); }
@@ -1804,12 +1806,11 @@ button { cursor: pointer; touch-action: manipulation; }
 .dt.dt--brothers::before, .dt.dt--upstate::before, .dt.dt--i95::before { z-index: -3; }
 .dt.dt--brothers::after, .dt.dt--upstate::after, .dt.dt--i95::after { z-index: -1; left: 0; width: auto; transform: none; }
 
-/* El Sutphin Clásico: the Sutphin Blvd station wall, still. The photo was widened with its own tiles
-   (media/derby-sutphin-wide.jpg) so the sign sits on the right and the name reads over plain tiles. */
+/* El Sutphin Clásico: the original Sutphin Blvd station photo, still, with the sign centred.
+   An even shade keeps the derby name readable over it. */
 .dt.dt--brothers { --accent: #ffb347; background: #1f140a; }
 .dt.dt--brothers::before {
-  background: linear-gradient(90deg, rgba(20, 12, 4, 0.78) 0%, rgba(20, 12, 4, 0.55) 45%, rgba(20, 12, 4, 0.12) 72%, rgba(20, 12, 4, 0.05) 100%),
-    url("../media/derby-sutphin-wide.jpg") right 46% / cover no-repeat;
+  background: linear-gradient(rgba(20, 12, 4, 0.5), rgba(20, 12, 4, 0.5)), url("../media/derby-sutphin.jpg") center 36% / cover no-repeat;
 }
 .dt.dt--brothers::after { content: none; }
 

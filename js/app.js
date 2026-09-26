@@ -609,14 +609,20 @@
     if (!games.length) return `<div class="dh"><p class="dh__none">No meetings yet. The first one is still to come.</p></div>`;
     return `<div class="dh">
       <h4 class="dh__title">Derby history</h4>
-      <ol class="dh__list">${[...games].reverse().map((g) => {
+      ${(() => {
+        const row = (g) => {
         const H = state.byRoster[g.m.home], A = state.byRoster[g.m.away];
         return `<li class="dh__game">
           <span class="dh__wk">GW${g.m.week}</span>
           <span class="dh__score">${crest(H)}<b class="${g.winId === H.rosterId ? "is-win" : ""}">${num(g.m.homePts, 2)}</b><i>–</i><b class="${g.winId === A.rosterId ? "is-win" : ""}">${num(g.m.awayPts, 2)}</b>${crest(A)}</span>
           <span class="dh__motm">${g.motm ? `<span class="dh__photo" data-photo="${esc(g.motm.pid)}" aria-hidden="true"><span>${esc(initials(g.motm.name))}</span></span><span><small>Man of the match</small><b>${esc(g.motm.name)}</b> ${gp(g.motm.pts)} for ${club(state.byRoster[g.winId])}</span>` : `<span><small>Man of the match</small>${g.winId ? "Lineups not logged" : "Honours even"}</span>`}</span>
         </li>`;
-      }).join("")}</ol>
+        };
+        // newest three on show; older meetings fold away so the card never gets long
+        const newest = [...games].reverse(), shown = newest.slice(0, 3), older = newest.slice(3);
+        return `<ol class="dh__list">${shown.map(row).join("")}</ol>
+          ${older.length ? `<details class="dh__more"><summary>Show ${older.length} earlier ${older.length === 1 ? "meeting" : "meetings"}</summary><ol class="dh__list">${older.map(row).join("")}</ol></details>` : ""}`;
+      })()}
       ${legends.length ? `<h4 class="dh__title">Derby legends</h4>
       <ol class="dh__legends">${legends.map((p, i) => `<li><span class="dh__rank">${i + 1}</span><span class="dh__photo" data-photo="${esc(p.pid)}" aria-hidden="true"><span>${esc(initials(p.name))}</span></span><span class="dh__who"><b>${esc(p.name)}</b><small>${club(state.byRoster[p.id])} · ${p.apps} ${p.apps === 1 ? "derby" : "derbies"}${p.motm ? ` · ${"★".repeat(p.motm)}` : ""}</small></span><span class="dh__pts">${gp(Math.round(p.pts * 100) / 100)}</span></li>`).join("")}</ol>` : ""}
     </div>`;
