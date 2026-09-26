@@ -6,6 +6,8 @@ Videos and images used by the site.
 |------|----------|
 | `hero-match.mp4` / `.jpg` | Hero background on wide screens (8 s loop, 1920×1080) |
 | `hero-celebration.mp4` / `.jpg` | Hero background on phones (4 s loop, 720×1280) |
+| `hero-stadium.mp4` / `.jpg` | Hero rotation: stadium from the street (12 s, 1920×1080) |
+| `hero-aerial.mp4` / `.jpg` | Hero rotation on phones: drone over a packed stadium (16 s, 720×1280) |
 | `mcqueen-cup.png` | The McQueen Cup trophy (background removed): cup final stage + Victory Road |
 | `league-trophy.png` | The Mater League trophy (background removed): Victory Road |
 

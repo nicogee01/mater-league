@@ -16,13 +16,12 @@
     const PLAYLIST = {
       wide: [
         { src: "media/hero-match.mp4", poster: "media/hero-match.jpg" },
-        { src: "media/stadium.mp4" },
-        { src: "media/fans-celebrating.mp4" },
+        { src: "media/hero-stadium.mp4", poster: "media/hero-stadium.jpg" },
       ],
       tall: [
+        { src: "media/hero-aerial.mp4", poster: "media/hero-aerial.jpg" },
         { src: "media/hero-celebration.mp4", poster: "media/hero-celebration.jpg" },
-        { src: "media/fans-celebrating.mp4", pos: "35% 50%" },
-        { src: "media/stadium.mp4", pos: "30% 50%" },
+        { src: "media/hero-stadium.mp4", pos: "72% 50%" },
       ],
     };
     const MIN_SHOW = 7;   // seconds each clip stays up (short clips loop until then)
@@ -36,6 +35,7 @@
     video.after(back);
     const players = [video, back];
     let cur = 0, list = [], idx = 0, shown = 0, lastT = 0, fading = false;
+    const played = new Set();
     const active = () => players[cur], standby = () => players[1 - cur];
 
     let onScreen = true;
@@ -50,7 +50,7 @@
     }
     function start() {
       const el = active(), clip = list[idx];
-      el.loop = list.length === 1 || (el.duration && el.duration < MIN_SHOW);
+      el.loop = list.length === 1 || (Number.isFinite(el.duration) && el.duration < MIN_SHOW);
       shown = 0; lastT = 0;
       if (list.length > 1) load(standby(), list[(idx + 1) % list.length]);
       sync();
@@ -68,19 +68,31 @@
       setTimeout(() => { from.pause(); cur = 1 - cur; fading = false; start(); }, FADE * 1000);
     }
     players.forEach((el) => {
-      el.addEventListener("loadedmetadata", () => { if (el === active()) el.loop = list.length === 1 || el.duration < MIN_SHOW; });
+      el.addEventListener("loadedmetadata", () => { if (el === active()) el.loop = list.length === 1 || (Number.isFinite(el.duration) && el.duration < MIN_SHOW); });
       el.addEventListener("timeupdate", () => {
         if (el !== active() || fading) return;
-        const t = el.currentTime, d = el.duration || 0;
+        const t = el.currentTime, d = Number.isFinite(el.duration) ? el.duration : Infinity;
         shown += t >= lastT ? t - lastT : t;
         lastT = t;
         const longClip = d >= MIN_SHOW;
         if (list.length > 1 && ((longClip && t >= d - FADE - 0.15) || (!longClip && shown >= MIN_SHOW))) advance();
       });
-      // a clip that won't load is dropped from the rotation
+      // browser-recorded clips don't always report their length up front, so also move on the
+      // moment a clip ends (a clip that must keep looping has loop set and never fires this)
+      el.addEventListener("ended", () => {
+        if (el !== active() || fading) return;
+        if (list.length > 1) advance(); else { el.currentTime = 0; el.play().catch(() => {}); }
+      });
+      el.addEventListener("loadeddata", () => { if (el.dataset.src) played.add(el.dataset.src); });
+      // a clip that has never loaded is dropped; one that hiccups mid-download just skips ahead
       el.addEventListener("error", () => {
         const bad = el.dataset.src;
         if (!bad) return;
+        if (played.has(bad) && list.length > 1) {
+          el.dataset.src = "";
+          if (el === active()) advance();
+          return;
+        }
         list = list.filter((c) => c.src !== bad);
         el.dataset.src = "";
         if (!list.length) return;
