@@ -2231,6 +2231,7 @@
         club: p.metadata.team_abbr || "", team: p.metadata.team || "",
         label: `${p.round}.${String(((p.pick_no - 1) % teams) + 1).padStart(2, "0")}`,
         draftRank, seasonRank, delta: seasonRank ? draftRank - seasonRank : null, pts: pts[p.player_id] ?? 0, now,
+        min: ((state.playerTotals || {})[p.player_id] || {}).min || 0, inj: (state.players[p.player_id] || {}).i || "",
       };
     });
     const slots = Array.from({ length: teams }, (_, i) => raw.full.slot_to_roster_id[i + 1]);
@@ -2245,7 +2246,9 @@
     // summary: steals, busts (from the first six rounds, where it hurts), and each club's haul
     const ranked = picks.filter((x) => x.delta != null);
     const steals = [...ranked].sort((a, b) => b.delta - a.delta || b.pts - a.pts).slice(0, 3);
-    const busts = ranked.filter((x) => x.round <= 6).sort((a, b) => a.delta - b.delta || a.pts - b.pts).slice(0, 3);
+    // busts only count players who've had a fair go: half the minutes available so far, and not flagged injured
+    const fairMin = 0.5 * 90 * (state.scoredWeeks || 1);
+    const busts = ranked.filter((x) => x.round <= 6 && x.min >= fairMin && !x.inj).sort((a, b) => a.delta - b.delta || a.pts - b.pts).slice(0, 3);
     const haul = slots.map((id) => ({ id, pts: picks.filter((x) => x.roster === id).reduce((a, x) => a + x.pts, 0), kept: picks.filter((x) => x.roster === id && x.now === id).length }))
       .sort((a, b) => b.pts - a.pts);
     const mini = (x, cls) => `<li class="db-mini ${cls}" data-pid="${esc(x.pid)}"><span class="db-mini__photo" data-photo="${esc(x.pid)}"><span>${esc(initials(x.name))}</span></span>
@@ -2253,7 +2256,7 @@
       <span class="db-mini__rank"><b>${DRAFT_POS[x.pos][0]}${x.draftRank} → ${DRAFT_POS[x.pos][0]}${x.seasonRank}</b><small>${num(x.pts, 0)} pts</small></span></li>`;
     $("#draftSummary").innerHTML = `
       <section class="db-card db-card--up"><h2 class="db-card__title">Steals</h2><ol>${steals.map((x) => mini(x, "up")).join("")}</ol></section>
-      <section class="db-card db-card--down"><h2 class="db-card__title">Busts so far <small>rounds 1–6</small></h2><ol>${busts.map((x) => mini(x, "down")).join("")}</ol></section>
+      <section class="db-card db-card--down"><h2 class="db-card__title">Busts so far <small>rounds 1–6, regular starters only</small></h2><ol>${busts.map((x) => mini(x, "down")).join("")}</ol></section>
       <section class="db-card"><h2 class="db-card__title">Draft haul <small>points from each club's picks</small></h2>
         <ol class="db-haul">${haul.map((h, i) => `<li><span class="db-haul__n">${i + 1}</span>${crest(T(h.id))}<b>${club(T(h.id))}</b><span>${num(h.pts, 0)}<small>${h.kept}/${rounds} kept</small></span></li>`).join("")}</ol></section>`;
     // board: one column per draft slot, one row per round (snake: even rounds run right to left)
@@ -2288,7 +2291,36 @@
     const L = DRAFT_POS_LONG[x.pos], owner = state.byRoster[x.roster];
     return `<b>${esc(x.name)} · ${x.label}</b><span>Drafted by ${club(owner)} as the ${ordinal(x.draftRank)} ${L}</span>
       <span>${x.seasonRank ? `Now the ${ordinal(x.seasonRank)}-best ${L}: <strong>${num(x.pts)}</strong> pts` : "No points yet this season"}</span>
+      <span>${num(x.min, 0)} minutes played${x.inj ? ` · <strong>${esc(x.inj)}</strong>` : ""}</span>
       <span>${x.now === x.roster ? `Still at ${club(owner)}` : x.now ? `Now at ${club(state.byRoster[x.now])}` : "Dropped: free agent"}</span>`;
+  }
+  // desktop: arrow buttons and click-and-drag to move the board sideways (phones just swipe)
+  function bindDraftScroll() {
+    const sc = $(".db-scroll"), prev = $("#dbPrev"), next = $("#dbNext");
+    if (!sc || sc.dataset.bound) return;
+    sc.dataset.bound = "1";
+    const sync = () => {
+      const max = sc.scrollWidth - sc.clientWidth;
+      prev.disabled = sc.scrollLeft <= 2; next.disabled = sc.scrollLeft >= max - 2;
+      $(".db-nav").hidden = max <= 2;
+    };
+    const step = (dir) => sc.scrollBy({ left: dir * Math.max(260, sc.clientWidth * 0.7), behavior: reduceMotion() ? "auto" : "smooth" });
+    prev.addEventListener("click", () => step(-1));
+    next.addEventListener("click", () => step(1));
+    sc.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", sync);
+    let drag = null, moved = false;
+    sc.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" || e.button !== 0) return; drag = { x: e.clientX, left: sc.scrollLeft }; moved = false; });
+    window.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      if (Math.abs(dx) > 5) { moved = true; sc.classList.add("is-dragging"); hideTip(); }
+      if (moved) sc.scrollLeft = drag.left - dx;
+    });
+    window.addEventListener("pointerup", () => { drag = null; setTimeout(() => sc.classList.remove("is-dragging"), 0); });
+    // a drag shouldn't count as tapping the pick it ended on
+    sc.addEventListener("click", (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+    sync();
   }
   async function initDraft() {
     if (!$("#draftBoard")) return;
@@ -2297,6 +2329,7 @@
       if (!raw) { $("#draftBoard").innerHTML = `<p class="pending-note">No draft found for this league.</p>`; return; }
       draft.data = buildDraft(raw);
       renderDraft();
+      bindDraftScroll();
       bindTip($("#draftBoard"), ".db-pick[data-pid]", draftTip);
       bindTip($("#draftSummary"), ".db-mini", draftTip);
     } catch (err) {
@@ -3278,6 +3311,7 @@
       const { proj, season: seasonPts } = buildProjections(statsWeeks, league.scoring_settings || {});
       state.projections = proj;
       state.seasonPts = seasonPts;
+      if ($("#draftBoard")) { state.playerTotals = buildPlayerTotals(statsWeeks, league.scoring_settings || {}); state.scoredWeeks = statsWeeks.length; }
       if ($("#hubGroups")) {
         state.playerTotals = buildPlayerTotals(statsWeeks, league.scoring_settings || {});
         initHub();

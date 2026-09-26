@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=86" />
+  <link rel="stylesheet" href="css/styles.css?v=87" />
 </head>
 <body data-page="draft">
   <main id="main">
@@ -33,6 +33,10 @@
           <button type="button" class="chip" data-pos="F" aria-pressed="false">FWD</button>
         </div>
         <p class="db-hint">Tap a club to highlight its picks. Tap a player for his season.</p>
+        <div class="db-nav" hidden>
+          <button type="button" class="db-arrow" id="dbPrev" aria-label="Scroll the board left"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button>
+          <button type="button" class="db-arrow" id="dbNext" aria-label="Scroll the board right"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>
+        </div>
       </div>
       <div class="db-scroll" tabindex="0" aria-label="Draft board, scrollable"><div class="db" id="draftBoard"></div></div>
       <p class="chart-note">Ranks compare season fantasy points with every player at the same position (the position he was drafted at). Faded picks have left the club that drafted them.</p>
@@ -44,9 +48,9 @@
     </dialog>
   </main>
 
-  <script src="js/layout.js?v=86"></script>
-  <script src="data/league.js?v=86"></script>
-  <script src="js/motion.js?v=86"></script>
-  <script src="js/app.js?v=86"></script>
+  <script src="js/layout.js?v=87"></script>
+  <script src="data/league.js?v=87"></script>
+  <script src="js/motion.js?v=87"></script>
+  <script src="js/app.js?v=87"></script>
 </body>
 </html>
