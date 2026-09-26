@@ -1470,8 +1470,29 @@ button { cursor: pointer; touch-action: manipulation; }
 /* ================= POWER RANKINGS ================= */
 /* crown / poo emblem next to a club's name, everywhere */
 .pr-emblem { display: inline-block; margin-left: 0.3em; font-size: 0.95em; line-height: 1; font-style: normal; text-transform: none; letter-spacing: 0; vertical-align: 0.02em; cursor: default; }
-.pr-emblem--top { filter: drop-shadow(0 1px 2px rgba(176, 138, 62, 0.6)); animation: crown-bob 3.2s ease-in-out infinite; }
-@keyframes crown-bob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-2px) rotate(4deg); } }
+/* top of the power rankings: the crown hops and catches the light every few seconds */
+.pr-emblem--top { transform-origin: 50% 90%; animation: crown-bounce 3.6s var(--ease-out) infinite, crown-glint 3.6s ease-in-out infinite; }
+@keyframes crown-bounce {
+  0%, 62%, 100% { transform: translateY(0) rotate(-6deg); }
+  70% { transform: translateY(-5px) rotate(4deg) scale(1.08); }
+  78% { transform: translateY(0) rotate(-3deg) scale(0.96, 1.04); }
+  84% { transform: translateY(-2px) rotate(2deg); }
+  90% { transform: translateY(0) rotate(-6deg); }
+}
+@keyframes crown-glint {
+  0%, 64%, 100% { filter: drop-shadow(0 1px 2px rgba(176, 138, 62, 0.6)); }
+  72% { filter: drop-shadow(0 0 6px rgba(255, 214, 102, 0.95)) brightness(1.15); }
+}
+/* bottom of the power rankings: the poo wobbles like it knows */
+.pr-emblem--bottom { transform-origin: 50% 100%; animation: poo-wobble 4.2s ease-in-out infinite; }
+@keyframes poo-wobble {
+  0%, 58%, 100% { transform: rotate(0) scale(1); }
+  64% { transform: rotate(-12deg) scale(1.06, 0.94); }
+  70% { transform: rotate(10deg) scale(0.96, 1.05); }
+  76% { transform: rotate(-7deg); }
+  82% { transform: rotate(4deg); }
+  88% { transform: rotate(0); }
+}
 .pr-dev {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-bottom: var(--s5);
   padding: var(--s3) var(--s5); background: #0b1f3a; color: #fbf7ee;
@@ -1769,7 +1790,7 @@ button { cursor: pointer; touch-action: manipulation; }
 .dt--clifton, .derby--clifton { --d1: #1d5c3a; --d2: #c9a227; }
 .dt--brothers, .derby--brothers { --d1: #9b1024; --d2: #1a0b0e; }
 .dt--upstate, .derby--upstate { --d1: #0e3b5c; --d2: #9fd3f0; }
-.dt--i95, .derby--i95 { --d1: #ffd100; --d2: #0073cf; }
+.dt--i95, .derby--i95 { --d1: #0073cf; --d2: #ffd100; }
 .dt.dt--clifton, .dt.dt--brothers, .dt.dt--upstate, .dt.dt--i95 {
   --text: #fbf7ee; --muted: #efe8d6; --faint: #ddd4bf; color: #fbf7ee; position: relative; overflow: hidden;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); border-color: transparent;
@@ -1781,8 +1802,10 @@ button { cursor: pointer; touch-action: manipulation; }
 /* The Snow Belt Derby: lake-effect snow over a glacier-blue night */
 .dt.dt--upstate { --accent: #bfe8ff; background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1.2px, transparent 1.9px) 0 0 / 26px 26px, radial-gradient(circle, rgba(255, 255, 255, 0.55) 0 1px, transparent 1.5px) 13px 9px / 19px 19px, linear-gradient(165deg, #081c2e 0%, #0e3b5c 55%, #3f7fa6 100%); animation: snowfall 16s linear infinite; }
 @keyframes snowfall { to { background-position: 0 260px, 13px 199px, 0 0; } }
-/* El Clásico de las Américas: La Tri's yellow-blue-red meets La H's blue-white-blue */
-.dt.dt--i95 { --accent: #ffd100; background: linear-gradient(90deg, rgba(6, 14, 32, 0.78), rgba(6, 14, 32, 0.55) 50%, rgba(6, 14, 32, 0.78)), linear-gradient(180deg, #ffd100 0 50%, #034ea2 50% 75%, #ed1c24 75%) left / 50% 100% no-repeat, linear-gradient(180deg, #0073cf 0 33.3%, #f4f7fb 33.3% 66.6%, #0073cf 66.6%) right / 50% 100% no-repeat; }
+/* El Clásico de las Américas: La H's blue-white-blue (Up the Guppys) meets La Tri's yellow-blue-red (GlenM22).
+   Honduras sits on the left by default; .dt--flip swaps the halves when GlenM22 is the club drawn on the left. */
+.dt.dt--i95 { --accent: #ffd100; background: linear-gradient(90deg, rgba(6, 14, 32, 0.78), rgba(6, 14, 32, 0.55) 50%, rgba(6, 14, 32, 0.78)), linear-gradient(180deg, #0073cf 0 33.3%, #f4f7fb 33.3% 66.6%, #0073cf 66.6%) left / 50% 100% no-repeat, linear-gradient(180deg, #ffd100 0 50%, #034ea2 50% 75%, #ed1c24 75%) right / 50% 100% no-repeat; }
+.dt.dt--i95.dt--flip { background: linear-gradient(90deg, rgba(6, 14, 32, 0.78), rgba(6, 14, 32, 0.55) 50%, rgba(6, 14, 32, 0.78)), linear-gradient(180deg, #ffd100 0 50%, #034ea2 50% 75%, #ed1c24 75%) left / 50% 100% no-repeat, linear-gradient(180deg, #0073cf 0 33.3%, #f4f7fb 33.3% 66.6%, #0073cf 66.6%) right / 50% 100% no-repeat; }
 /* where the palette shows up */
 .derby[class*="derby--"] { --ca: var(--d1); --cb: var(--d2); }
 .derby[class*="derby--"] .derby__head { margin: calc(-1 * var(--s5)) calc(-1 * var(--s5)) 0; padding: calc(var(--s5) + 8px) var(--s5) var(--s4); }
@@ -1952,6 +1975,7 @@ button { cursor: pointer; touch-action: manipulation; }
 
 /* ================= REDUCED MOTION ================= */
 @media (prefers-reduced-motion: reduce) {
+  .pr-emblem--top, .pr-emblem--bottom { animation: none; }
   .tk.is-ripping, .tk.is-ripping .tk__stub, .club-profile.cp-enter, .club-profile.cp-enter .cp-strip, .club-profile.cp-enter .cp-col { animation: none !important; }
   .dt.dt--upstate { animation: none; }
   .tk { transform: none !important; }

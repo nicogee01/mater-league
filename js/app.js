@@ -528,6 +528,8 @@
       return derby;
     }).filter(Boolean);
   }
+  // themed derby surface; flags/halves follow whichever club is drawn on the left
+  const dtClass = (d, left) => `dt dt--${esc(d.slug)}${left && left === d.b ? " dt--flip" : ""}`;
   const derbyRival = (t) => (t.derby ? (t.derby.a === t ? t.derby.b : t.derby.a) : null);
   // who holds bragging rights: derby wins first, then league position
   function derbyVerdict(d) {
@@ -759,7 +761,7 @@
     const derbyCard = t.derby ? (() => {
       const rival = derbyRival(t), v = derbyVerdict(t.derby);
       const last = derbyHistory(t.derby).games.slice(-1)[0];
-      return `<a class="cp-derby dt dt--${esc(t.derby.slug)}" href="h2h.html#derby-${esc(t.derby.slug)}">
+      return `<a class="cp-derby ${dtClass(t.derby, t)}" href="h2h.html#derby-${esc(t.derby.slug)}">
         <span class="cp-derby__label">Derby rival · ${esc(t.derby.tag)}</span>
         <span class="cp-derby__name">${esc(t.derby.name)}</span>
         <span class="cp-derby__vs">${crest(t)}<b>vs</b>${crest(rival)}<span>${club(rival)}</span></span>
@@ -1531,7 +1533,7 @@
       const story = Object.keys(state.players || {}).length ? storyFor(m.week, m.home) : null;
       return `<article class="mu-card reveal${open ? " is-open" : ""}${derby ? ` is-derby derby--${esc(derby.slug)}` : ""}">
         <h2 class="visually-hidden">${esc(H.name)} v ${esc(A.name)}${derby ? `, ${esc(derby.name)}` : ""}</h2>
-        ${derby ? `<p class="mu-derby dt dt--${esc(derby.slug)}">Derby day <b>${esc(derby.name)}</b>${derby.tag ? `<small>${esc(derby.tag)}</small>` : ""}</p>` : ""}
+        ${derby ? `<p class="mu-derby ${dtClass(derby, H)}">Derby day <b>${esc(derby.name)}</b>${derby.tag ? `<small>${esc(derby.tag)}</small>` : ""}</p>` : ""}
         <button type="button" class="mu-card__head" aria-expanded="${open}" aria-controls="mu-body-${gi}" data-key="${key}">
           ${side(H, m.homePts, m.homePts > m.awayPts, hs, "home")}
           <span class="mu-card__mid"><span class="mu-card__ft">FT</span><span class="mu-card__chev" aria-hidden="true"></span></span>
