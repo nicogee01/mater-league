@@ -1812,7 +1812,7 @@ section.wk { margin-top: var(--s8); }
 .dt.dt--brothers::before, .dt.dt--upstate::before, .dt.dt--i95::before { z-index: -3; }
 .dt.dt--brothers::after, .dt.dt--upstate::after, .dt.dt--i95::after { z-index: -1; left: 0; width: auto; transform: none; }
 
-/* El Sutphin Clásico: the original Sutphin Blvd station photo, still, with the sign centred.
+/* Le Classique de Sutphin: the original Sutphin Blvd station photo, still, with the sign centred.
    An even shade keeps the derby name readable over it. */
 .dt.dt--brothers { --accent: #ffb347; background: #1f140a; }
 .dt.dt--brothers::before {
