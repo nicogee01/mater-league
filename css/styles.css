@@ -1665,6 +1665,43 @@ button { cursor: pointer; touch-action: manipulation; }
 .tk[data-pos="1"] .tk__stub small { color: #0b1f3a; }
 .tk[data-pos="8"] .tk__stub { background: linear-gradient(170deg, #c8102e, #7a0a1c); }
 
+/* ticket rip: tug the ticket, tear the stub off along the perforation, let it fall */
+.tk__kit { grid-column: 1; grid-row: 1; }
+.tk__main { grid-column: 2; grid-row: 1; }
+.tk__stub, .tk__seat { grid-column: 3; grid-row: 1; }
+.tk__stub { z-index: 1; transform-origin: 0 100%; transition: opacity 300ms var(--ease-out), transform 420ms var(--ease-spring); }
+.tk__seat {
+  display: grid; place-content: center; justify-items: center; text-align: center; gap: 2px; margin: 10px 8px 10px 4px;
+  border: 2px dashed var(--line-2); border-radius: 10px; color: var(--accent);
+  font-family: var(--f-display); font-size: 17px; line-height: 1; text-transform: uppercase; opacity: 0;
+}
+.tk__seat small { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: 0.16em; color: var(--faint); }
+.tk.is-ripping { animation: tk-tug 640ms var(--ease-out); }
+.tk.is-ripping .tk__stub { clip-path: polygon(0 0%, 7px 5%, 0 10%, 7px 15%, 0 20%, 7px 25%, 0 30%, 7px 35%, 0 40%, 7px 45%, 0 50%, 7px 55%, 0 60%, 7px 65%, 0 70%, 7px 75%, 0 80%, 7px 85%, 0 90%, 7px 95%, 0 100%, 100% 100%, 100% 0); animation: tk-rip 640ms cubic-bezier(0.55, 0, 0.7, 0.2) forwards; }
+.tk.is-torn .tk__stub { opacity: 0; transform: translate(70px, 160px) rotate(40deg); pointer-events: none; }
+.tk.is-torn .tk__seat { opacity: 1; transition: opacity 300ms 120ms; }
+.tk.is-torn::before, .tk.is-torn::after { opacity: 0; }
+@keyframes tk-tug { 0% { transform: none; } 20% { transform: translateX(-4px) rotate(-1.2deg); } 38% { transform: translateX(3px) rotate(0.4deg); } 55%, 100% { transform: translateY(-2px); } }
+@keyframes tk-rip {
+  0% { transform: none; opacity: 1; }
+  22% { transform: rotate(5deg) translateX(3px); }
+  40% { transform: rotate(-3deg) translateX(8px); opacity: 1; }
+  100% { transform: translate(70px, 160px) rotate(40deg); opacity: 0; }
+}
+/* the club summary unfolds in once the stub is gone */
+.club-profile.cp-enter { animation: cp-unfold 700ms var(--ease-out); }
+.club-profile.cp-enter .cp-strip, .club-profile.cp-enter .cp-col { animation: cp-rise 600ms var(--ease-out) both; }
+.club-profile.cp-enter .cp-col:nth-child(1) { animation-delay: 120ms; }
+.club-profile.cp-enter .cp-col:nth-child(2) { animation-delay: 220ms; }
+@keyframes cp-unfold { from { opacity: 0; transform: translateY(20px) scale(0.985); clip-path: inset(0 0 92% 0 round 24px); } to { opacity: 1; transform: none; clip-path: inset(0 0 0 0 round 24px); } }
+@keyframes cp-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+/* season sparkline hover */
+.spark__hit { fill: transparent; cursor: crosshair; outline: none; }
+.spark__guide { stroke: rgba(11, 31, 58, 0.35); stroke-width: 1; }
+.spark__dot { transition: r var(--t-fast); }
+.spark__dot.is-hot { r: 7; }
+
 /* ================= CLUB PROFILE (compact) ================= */
 .cp-strip { display: flex; flex-wrap: wrap; gap: 8px; padding: var(--s4) var(--s6); background: var(--bg-2); border-bottom: 1px solid var(--line); }
 .cp-chip { display: grid; gap: 2px; padding: 8px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); min-width: 92px; }
@@ -1915,6 +1952,7 @@ button { cursor: pointer; touch-action: manipulation; }
 
 /* ================= REDUCED MOTION ================= */
 @media (prefers-reduced-motion: reduce) {
+  .tk.is-ripping, .tk.is-ripping .tk__stub, .club-profile.cp-enter, .club-profile.cp-enter .cp-strip, .club-profile.cp-enter .cp-col { animation: none !important; }
   .dt.dt--upstate { animation: none; }
   .tk { transform: none !important; }
   .mu-derby::after { animation: none; display: none; }

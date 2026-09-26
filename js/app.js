@@ -634,7 +634,7 @@
       const form = t.record.slice(-5).split("").map((r) => `<i class="${r}">${r === "T" ? "D" : r}</i>`).join("");
       const star = starMan(t);
       return `
-      <button type="button" class="tk" data-pos="${t.pos}" data-open="${t.rosterId}" aria-pressed="${open === t.rosterId}" aria-controls="clubProfile" style="--c1:${t.kit[0]};--c2:${t.kit[1]}">
+      <button type="button" class="tk${open === t.rosterId ? " is-torn" : ""}" data-pos="${t.pos}" data-open="${t.rosterId}" aria-pressed="${open === t.rosterId}" aria-controls="clubProfile" style="--c1:${t.kit[0]};--c2:${t.kit[1]}">
         <span class="tk__kit">${crest(t, "lg")}</span>
         <span class="tk__main">
           ${t.derby ? `<span class="tk__ribbon dt dt--${esc(t.derby.slug)}">${esc(t.derby.name)}</span>` : ""}
@@ -650,6 +650,7 @@
             ${ticketSpark(t)}
           </span>
         </span>
+        <span class="tk__seat" aria-hidden="true"><small>Now</small>viewing</span>
         <span class="tk__stub" aria-label="Position ${t.pos}"><small>Pos</small><b>${String(t.pos).padStart(2, "0")}</b><span class="tk__barcode" aria-hidden="true"></span></span>
       </button>`;
     }).join("");
@@ -676,8 +677,13 @@
       <line x1="${P}" x2="${W - P}" y1="${H - P}" y2="${H - P}" class="spark__axis"/>
       ${hasBest ? `<path d="${line("best")}" class="spark__best"/>` : ""}
       <path d="${line("score")}" class="spark__line"/>
-      ${games.map((g, i) => `<circle cx="${x(i)}" cy="${y(g.score)}" r="4" class="spark__dot"><title>GW ${g.week}: ${num(g.score)}${hasBest ? ` (best ${num(g.best)})` : ""}</title></circle>
+      <line class="spark__guide" x1="0" x2="0" y1="${P - 8}" y2="${H - P}" visibility="hidden"/>
+      ${games.map((g, i) => `<circle cx="${x(i)}" cy="${y(g.score)}" r="4" class="spark__dot" data-i="${i}"/>
         <text x="${x(i)}" y="${H - 4}" class="spark__lbl">GW${g.week}</text>`).join("")}
+      ${games.map((g, i) => {
+        const band = games.length === 1 ? W - 2 * P : (W - 2 * P) / (games.length - 1);
+        return `<rect class="spark__hit" data-i="${i}" data-x="${x(i)}" x="${Math.max(0, x(i) - band / 2)}" y="0" width="${band}" height="${H}" tabindex="0" aria-label="Gameweek ${g.week}: ${num(g.score)} points"/>`;
+      }).join("")}
     </svg>
     <p class="spark__key"><span class="k k--act"></span> Actual${hasBest ? ` <span class="k k--best"></span> Best possible` : ""}</p>`;
   }
@@ -833,8 +839,30 @@
         </div>
       </div>`;
     el.hidden = false;
+    // unfold the summary in (after the ticket rip)
+    el.classList.remove("cp-enter"); void el.offsetWidth; el.classList.add("cp-enter");
+    // sparkline: hover or tap a gameweek for the numbers
+    const spark = $(".spark", el);
+    if (spark) {
+      const guide = $(".spark__guide", spark);
+      const hot = (i) => {
+        $$(".spark__dot", spark).forEach((d) => d.classList.toggle("is-hot", d.dataset.i === String(i)));
+        const hit = i == null ? null : $(`.spark__hit[data-i="${i}"]`, spark);
+        guide.setAttribute("visibility", hit ? "visible" : "hidden");
+        if (hit) { guide.setAttribute("x1", hit.dataset.x); guide.setAttribute("x2", hit.dataset.x); }
+      };
+      bindTip(spark.parentNode, ".spark__hit", (h) => {
+        const g = t.games[+h.dataset.i];
+        hot(h.dataset.i);
+        const opp = state.byRoster[g.opp];
+        const res = g.res === "W" ? "Won" : g.res === "L" ? "Lost" : "Drew";
+        return `<b>Gameweek ${g.week}</b><span>${res} vs ${opp ? club(opp) : "–"}</span><span>Scored <strong>${num(g.score, 2)}</strong> · conceded <strong>${num(g.oppScore, 2)}</strong></span>${Number.isFinite(g.best) ? `<span>Best possible <strong>${num(g.best, 2)}</strong> (${num(g.best - g.score, 2)} left on the bench)</span>` : ""}`;
+      });
+      spark.addEventListener("pointerleave", () => hot(null));
+      spark.addEventListener("focusout", () => hot(null));
+    }
     $(".cp__close", el).addEventListener("click", closeClub);
-    $$(".tk").forEach((c) => c.setAttribute("aria-pressed", String(+c.dataset.open === id)));
+    $$(".tk").forEach((c) => { const on = +c.dataset.open === id; c.setAttribute("aria-pressed", String(on)); c.classList.toggle("is-torn", on); });
     history.replaceState(null, "", `#club-${id}`);
     if (scroll) el.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
     loadPhotos([...t.starters, ...squad.filter((p) => !starters.has(p))], el);
@@ -843,7 +871,7 @@
     const el = $("#clubProfile");
     const open = $('.tk[aria-pressed="true"]');
     el.hidden = true;
-    $$(".tk").forEach((c) => c.setAttribute("aria-pressed", "false"));
+    $$(".tk").forEach((c) => { c.setAttribute("aria-pressed", "false"); c.classList.remove("is-torn"); });
     history.replaceState(null, "", location.pathname);
     open && open.focus();
   }
@@ -852,6 +880,15 @@
     if (!b) return;
     if (!$("#clubProfile")) { location.href = `clubs.html#club-${b.dataset.open}`; return; }
     if (b.classList.contains("tk") && b.getAttribute("aria-pressed") === "true") return closeClub();
+    if (b.classList.contains("tk")) {
+      if (b.classList.contains("is-ripping")) return;
+      $$(".tk.is-torn").forEach((x) => x.classList.remove("is-torn"));
+      if (reduceMotion()) { b.classList.add("is-torn"); openClub(+b.dataset.open, true); return; }
+      // tug, tear the stub off along the perforation, then unfold the club summary
+      b.classList.add("is-ripping");
+      setTimeout(() => { b.classList.remove("is-ripping"); b.classList.add("is-torn"); openClub(+b.dataset.open, true); }, 640);
+      return;
+    }
     openClub(+b.dataset.open, true);
   });
   const ordinal = (n) => n + (["th", "st", "nd", "rd"][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] || "th");
