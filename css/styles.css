@@ -1788,7 +1788,7 @@ button { cursor: pointer; touch-action: manipulation; }
    Each rivalry dresses in its own colours. .dt = a themed surface (banner, badge, card);
    .derby--<slug> just carries the palette for borders and stripes. Slugs come from data/league.js. */
 .dt--clifton, .derby--clifton { --d1: #1d5c3a; --d2: #c9a227; }
-.dt--brothers, .derby--brothers { --d1: #9b1024; --d2: #1a0b0e; }
+.dt--brothers, .derby--brothers { --d1: #996633; --d2: #f2a900; }
 .dt--upstate, .derby--upstate { --d1: #0e3b5c; --d2: #9fd3f0; }
 .dt--i95, .derby--i95 { --d1: #0073cf; --d2: #ffd100; }
 .dt.dt--clifton, .dt.dt--brothers, .dt.dt--upstate, .dt.dt--i95 {
@@ -1797,15 +1797,54 @@ button { cursor: pointer; touch-action: manipulation; }
 }
 /* The Clifton Derby: family heritage, bottle green with gold pinstripe */
 .dt.dt--clifton { --accent: #f0d27a; background: repeating-linear-gradient(135deg, rgba(240, 210, 122, 0.16) 0 2px, transparent 2px 13px), linear-gradient(120deg, #0f3a24 0%, #1d5c3a 55%, #2d7d52 100%); }
-/* El Sutphin Clásico: brothers from the J train (placeholder colours until the J-train background image arrives) */
-.dt.dt--brothers { --accent: #ff9aa8; background: radial-gradient(120% 110% at 100% 0%, rgba(214, 36, 60, 0.6), transparent 62%), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 18px), linear-gradient(115deg, #0d0709 0%, #2a070d 45%, #7a0c1c 100%); }
-/* The Snow Belt Derby: lake-effect snow over a glacier-blue night */
-.dt.dt--upstate { --accent: #bfe8ff; background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1.2px, transparent 1.9px) 0 0 / 26px 26px, radial-gradient(circle, rgba(255, 255, 255, 0.55) 0 1px, transparent 1.5px) 13px 9px / 19px 19px, linear-gradient(165deg, #081c2e 0%, #0e3b5c 55%, #3f7fa6 100%); animation: snowfall 16s linear infinite; }
+/* ---- image-backed derbies: the picture sits on ::before, the effect on ::after, text stays on top ---- */
+.dt.dt--brothers, .dt.dt--upstate, .dt.dt--i95 { isolation: isolate; background: #0b1f3a; }
+.dt.dt--brothers::before, .dt.dt--upstate::before, .dt.dt--i95::before,
+.dt.dt--brothers::after, .dt.dt--upstate::after, .dt.dt--i95::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+.dt.dt--brothers::before, .dt.dt--upstate::before, .dt.dt--i95::before { z-index: -3; }
+.dt.dt--brothers::after, .dt.dt--upstate::after, .dt.dt--i95::after { z-index: -1; left: 0; width: auto; transform: none; }
+
+/* El Sutphin Clásico: the Sutphin Blvd station sign, and every few seconds a J train rushes past */
+.dt.dt--brothers { --accent: #ffb347; }
+.dt.dt--brothers::before {
+  background: linear-gradient(90deg, rgba(24, 14, 6, 0.92) 0%, rgba(24, 14, 6, 0.7) 38%, rgba(24, 14, 6, 0.15) 70%, rgba(24, 14, 6, 0.3) 100%),
+    url("../media/derby-sutphin.jpg") right 46% / auto 205% no-repeat, #3a2a18;
+  animation: rumble 9s linear infinite;
+}
+.dt.dt--brothers::after {
+  opacity: 0; background-size: 284px 100%;
+  background-image: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.62) 0 70px, rgba(0, 0, 0, 0.28) 70px 84px, rgba(255, 214, 150, 0.24) 84px 128px, rgba(0, 0, 0, 0.28) 128px 142px);
+  animation: train-pass 9s linear infinite;
+}
+@keyframes train-pass { 0%, 60% { opacity: 0; background-position: 0 0; } 63% { opacity: 1; } 84% { opacity: 1; background-position: 1500px 0; } 88%, 100% { opacity: 0; background-position: 1700px 0; } }
+@keyframes rumble { 0%, 61%, 87%, 100% { transform: none; } 64%, 70%, 76%, 82% { transform: translate(1px, -1px); } 67%, 73%, 79%, 85% { transform: translate(-1px, 1px); } }
+
+/* The Snow Belt Derby: the lake-effect snow clip (JS drops a looping video in the big banners) */
+.dt.dt--upstate { --accent: #bfe8ff; }
+.dt.dt--upstate::before { background: url("../media/derby-snow.jpg") center 90% / cover; }
+.dt.dt--upstate::after {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 1.1px, transparent 1.7px) 0 0 / 26px 26px,
+    radial-gradient(circle, rgba(255, 255, 255, 0.5) 0 0.9px, transparent 1.4px) 13px 9px / 19px 19px,
+    linear-gradient(90deg, rgba(8, 24, 40, 0.72), rgba(8, 24, 40, 0.18) 60%, rgba(8, 24, 40, 0.35));
+  animation: snowfall 16s linear infinite;
+}
 @keyframes snowfall { to { background-position: 0 260px, 13px 199px, 0 0; } }
-/* El Clásico de las Américas: La H's blue-white-blue (Up the Guppys) meets La Tri's yellow-blue-red (GlenM22).
-   Honduras sits on the left by default; .dt--flip swaps the halves when GlenM22 is the club drawn on the left. */
-.dt.dt--i95 { --accent: #ffd100; background: linear-gradient(90deg, rgba(6, 14, 32, 0.78), rgba(6, 14, 32, 0.55) 50%, rgba(6, 14, 32, 0.78)), linear-gradient(180deg, #0073cf 0 33.3%, #f4f7fb 33.3% 66.6%, #0073cf 66.6%) left / 50% 100% no-repeat, linear-gradient(180deg, #ffd100 0 50%, #034ea2 50% 75%, #ed1c24 75%) right / 50% 100% no-repeat; }
-.dt.dt--i95.dt--flip { background: linear-gradient(90deg, rgba(6, 14, 32, 0.78), rgba(6, 14, 32, 0.55) 50%, rgba(6, 14, 32, 0.78)), linear-gradient(180deg, #ffd100 0 50%, #034ea2 50% 75%, #ed1c24 75%) left / 50% 100% no-repeat, linear-gradient(180deg, #0073cf 0 33.3%, #f4f7fb 33.3% 66.6%, #0073cf 66.6%) right / 50% 100% no-repeat; }
+.dt__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 90%; z-index: -2; pointer-events: none; }
+
+/* El Clásico de las Américas: the real flags (Honduras | Ecuador), waving, with a glare rolling across.
+   .dt--flip uses the Ecuador | Honduras copy when GlenM22 is the club drawn on the left. */
+.dt.dt--i95 { --accent: #ffd100; }
+.dt.dt--i95::before { inset: -8%; background: linear-gradient(90deg, rgba(6, 14, 32, 0.74), rgba(6, 14, 32, 0.34) 50%, rgba(6, 14, 32, 0.7)), url("../media/derby-flags-hn-ec.jpg") center / cover; animation: flag-wave 7s ease-in-out infinite; }
+.dt.dt--i95.dt--flip::before { background: linear-gradient(90deg, rgba(6, 14, 32, 0.74), rgba(6, 14, 32, 0.34) 50%, rgba(6, 14, 32, 0.7)), url("../media/derby-flags-ec-hn.jpg") center / cover; }
+.dt.dt--i95::after {
+  background-image: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.34) 49%, transparent 60%),
+    repeating-linear-gradient(98deg, rgba(0, 0, 0, 0.14) 0 9%, rgba(255, 255, 255, 0.07) 13% 17%, rgba(0, 0, 0, 0.1) 22% 26%);
+  background-size: 260% 100%, 70% 100%;
+  animation: flag-ripple 6s linear infinite;
+}
+@keyframes flag-wave { 0%, 100% { transform: skewY(-1.2deg) scale(1.02) translateX(-1%); } 50% { transform: skewY(1.2deg) scale(1.06) translateX(1%); } }
+@keyframes flag-ripple { from { background-position: 160% 0, 0 0; } to { background-position: -70% 0, 140% 0; } }
+
 /* where the palette shows up */
 .derby[class*="derby--"] { --ca: var(--d1); --cb: var(--d2); }
 .derby[class*="derby--"] .derby__head { margin: calc(-1 * var(--s5)) calc(-1 * var(--s5)) 0; padding: calc(var(--s5) + 8px) var(--s5) var(--s4); }
@@ -1975,6 +2014,9 @@ button { cursor: pointer; touch-action: manipulation; }
 
 /* ================= REDUCED MOTION ================= */
 @media (prefers-reduced-motion: reduce) {
+  .dt.dt--brothers::before, .dt.dt--brothers::after, .dt.dt--upstate::after, .dt.dt--i95::before, .dt.dt--i95::after { animation: none; }
+  .dt.dt--brothers::after { opacity: 0; }
+  .dt__video { display: none; }
   .pr-emblem--top, .pr-emblem--bottom { animation: none; }
   .tk.is-ripping, .tk.is-ripping .tk__stub, .club-profile.cp-enter, .club-profile.cp-enter .cp-strip, .club-profile.cp-enter .cp-col { animation: none !important; }
   .dt.dt--upstate { animation: none; }

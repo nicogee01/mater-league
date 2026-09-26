@@ -530,6 +530,14 @@
   }
   // themed derby surface; flags/halves follow whichever club is drawn on the left
   const dtClass = (d, left) => `dt dt--${esc(d.slug)}${left && left === d.b ? " dt--flip" : ""}`;
+  // the Snow Belt banners get the looping snow clip behind them (big banners only; small badges keep the still)
+  function attachDerbyVideos(root) {
+    if (!root || reduceMotion()) return;
+    $$(".dt--upstate.derby__head, .dt--upstate.mu-derby, .dt--upstate.cp-derby", root).forEach((el) => {
+      if ($(".dt__video", el)) return;
+      el.insertAdjacentHTML("afterbegin", `<video class="dt__video" src="media/derby-snow.mp4" poster="media/derby-snow.jpg" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video>`);
+    });
+  }
   const derbyRival = (t) => (t.derby ? (t.derby.a === t ? t.derby.b : t.derby.a) : null);
   // who holds bragging rights: derby wins first, then league position
   function derbyVerdict(d) {
@@ -566,6 +574,7 @@
         <button type="button" class="derby__open" data-a="${d.a.rosterId}" data-b="${d.b.rosterId}">Full head-to-head</button>
       </article>`;
     }).join("");
+    attachDerbyVideos(el);
     $$(".derby__open", el).forEach((b) => b.addEventListener("click", () => {
       const A = $("#h2hA"), B = $("#h2hB");
       if (!A || !B) return;
@@ -841,6 +850,7 @@
         </div>
       </div>`;
     el.hidden = false;
+    attachDerbyVideos(el);
     // unfold the summary in (after the ticket rip)
     el.classList.remove("cp-enter"); void el.offsetWidth; el.classList.add("cp-enter");
     // sparkline: hover or tap a gameweek for the numbers
@@ -1543,6 +1553,7 @@
         <div class="mu-card__body" id="mu-body-${gi}"${open ? "" : " hidden"}>${body}</div>
       </article>`;
     }).join("");
+    attachDerbyVideos(list);
     $("#muNote").textContent = withXI.has(mu.week)
       ? "Tap a fixture to open both team sheets, then tap any player for recent games. Starting XIs come from Sleeper's matchup screens and add up to each club's score; benches show only players on that roster at the end of the gameweek. Projections are Sleeper's."
       : "";
