@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=88" />
+  <link rel="stylesheet" href="css/styles.css?v=90" />
 </head>
 <body data-page="draft">
   <main id="main">
@@ -32,6 +32,11 @@
           <button type="button" class="chip" data-pos="M" aria-pressed="false">MID</button>
           <button type="button" class="chip" data-pos="F" aria-pressed="false">FWD</button>
         </div>
+        <div class="filters" id="draftValue" role="group" aria-label="Show value">
+          <button type="button" class="chip is-active" data-val="" aria-pressed="true">All</button>
+          <button type="button" class="chip chip--up" data-val="up" aria-pressed="false">Outperforming ▲</button>
+          <button type="button" class="chip chip--down" data-val="down" aria-pressed="false">Underperforming ▼</button>
+        </div>
         <p class="db-hint">Tap a club to highlight its picks. Tap a player for his season.</p>
         <div class="db-nav" hidden>
           <button type="button" class="db-arrow" id="dbPrev" aria-label="Scroll the board left"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button>
@@ -48,9 +53,9 @@
     </dialog>
   </main>
 
-  <script src="js/layout.js?v=88"></script>
-  <script src="data/league.js?v=88"></script>
-  <script src="js/motion.js?v=88"></script>
-  <script src="js/app.js?v=88"></script>
+  <script src="js/layout.js?v=90"></script>
+  <script src="data/league.js?v=90"></script>
+  <script src="js/motion.js?v=90"></script>
+  <script src="js/app.js?v=90"></script>
 </body>
 </html>

@@ -2198,7 +2198,7 @@
   // midfielder, now the 5th-best midfielder by season points. Ranks use the drafted position.
   const DRAFT_POS = { GK: "GK", D: "DEF", M: "MID", F: "FWD" };
   const DRAFT_POS_LONG = { GK: "goalkeeper", D: "defender", M: "midfielder", F: "forward" };
-  const draft = { data: null, team: null, pos: "" };
+  const draft = { data: null, team: null, pos: "", val: "" };
   async function loadDraft() {
     const d = (await get(`/league/${LEAGUE_ID}/drafts`))[0];
     if (!d) return null;
@@ -2269,7 +2269,8 @@
         if (!x) { body += `<div class="db-pick is-empty"></div>`; continue; }
         const gone = x.now !== x.roster;
         const cls = x.delta == null ? "" : x.delta > 0 ? "up" : x.delta < 0 ? "down" : "flat";
-        const dim = (draft.team && x.roster !== draft.team) || (draft.pos && x.pos !== draft.pos);
+        const valOk = !draft.val || (draft.val === "up" ? x.delta > 0 : x.delta < 0);
+        const dim = (draft.team && x.roster !== draft.team) || (draft.pos && x.pos !== draft.pos) || !valOk;
         const hl = draft.team && x.roster === draft.team;
         body += `<button type="button" class="db-pick pos-${x.pos}${gone ? " is-gone" : ""}${dim ? " is-dim" : ""}${hl ? " is-hl" : ""}" data-pid="${esc(x.pid)}" data-team="${x.roster}" data-pos="${x.pos}">
           <span class="db-pick__top"><span class="db-pick__no">${x.label}</span><span class="db-pick__pos">${DRAFT_POS[x.pos]}</span></span>
@@ -2339,6 +2340,12 @@
   document.addEventListener("click", (e) => {
     const t = e.target.closest(".db-team");
     if (t) { draft.team = draft.team === +t.dataset.team ? null : +t.dataset.team; renderDraft(); return; }
+    const vb = e.target.closest("#draftValue .chip");
+    if (vb) {
+      draft.val = vb.dataset.val;
+      $$("#draftValue .chip").forEach((c) => { const on = c === vb; c.classList.toggle("is-active", on); c.setAttribute("aria-pressed", String(on)); });
+      renderDraft(); return;
+    }
     const pb = e.target.closest("#draftPos .chip");
     if (pb) {
       draft.pos = pb.dataset.pos;

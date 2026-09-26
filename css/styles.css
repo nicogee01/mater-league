@@ -1898,6 +1898,9 @@ section.wk { margin-top: var(--s8); }
 
 .db-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2) var(--s4); margin-bottom: var(--s3); }
 .db-bar .filters { margin: 0; }
+.db-bar .filters + .filters { padding-left: var(--s3); border-left: 1px solid var(--line-2); }
+.chip--up.is-active { background: #1f7a45; border-color: #1f7a45; }
+.chip--down.is-active { background: var(--accent); border-color: var(--accent); }
 .db-hint { margin: 0 auto 0 0; font-size: 13px; color: var(--faint); }
 .db-nav { display: flex; gap: 8px; }
 .db-nav[hidden] { display: none; }
@@ -2013,6 +2016,7 @@ section.wk { margin-top: var(--s8); }
   .cp__kpis { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
+  .db-bar .filters + .filters { padding-left: 0; border-left: 0; }
   .db { grid-template-columns: 40px repeat(var(--teams, 8), 112px); }
   .db-round b { font-size: 18px; }
   .derby__head.dt { min-height: 112px; }
