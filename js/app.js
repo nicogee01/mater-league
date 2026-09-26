@@ -490,7 +490,7 @@
       : "No meetings logged yet";
     $("#h2hMeetings").innerHTML = r.games.sort((x, y) => y.week - x.week).map((g) => `<li><span class="wk">GW ${g.week}</span>
         <span class="a ${g.homePts > g.awayPts ? "win" : ""}">${clubById(g.home)}</span>
-        <span class="sc">${num(g.homePts)} – ${num(g.awayPts)}</span>
+        <span class="sc">${num(g.homePts, 2)} – ${num(g.awayPts, 2)}</span>
         <span class="${g.awayPts > g.homePts ? "win" : ""}">${clubById(g.away)}</span></li>`).join("");
   }
   function renderMatrix() {
@@ -556,11 +556,12 @@
     el.innerHTML = state.derbies.map((d) => {
       const { lead, r, text } = derbyVerdict(d);
       const share = d.a.pf + d.b.pf ? d.a.pf / (d.a.pf + d.b.pf) : 0.5;
+      const kingId = r.wa > r.wb ? d.a.rosterId : r.wb > r.wa ? d.b.rosterId : null;
       const side = (t, cls) => `<div class="derby__side derby__side--${cls}${lead === t ? " is-lead" : ""}">
-          ${crest(t, "lg")}<b>${club(t)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)}</small></div>`;
+          <span class="derby__crestwrap">${crest(t, "lg")}${kingId === t.rosterId ? `<span class="derby__crown" role="img" aria-label="Most derby wins" title="Most derby wins">👑</span>` : ""}</span><b>${club(t)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)}</small></div>`;
       const row = (a, label, b) => `<div class="derby__row"><span>${a}</span><small>${label}</small><span>${b}</span></div>`;
       return `<article class="derby reveal derby--${esc(d.slug)}" id="derby-${esc(d.slug)}">
-        <header class="derby__head dt dt--${esc(d.slug)}"><span class="derby__tag">${esc(d.tag)}</span><h3>${esc(d.name)}</h3></header>
+        <header class="derby__head dt dt--${esc(d.slug)}"><h3>${esc(d.name)}</h3></header>
         <div class="derby__clash">${side(d.a, "a")}<span class="derby__vs" aria-hidden="true">VS</span>${side(d.b, "b")}</div>
         <p class="derby__story">${esc(d.story)}</p>
         <div class="derby__stats">
@@ -618,10 +619,8 @@
           <span class="dh__motm">${g.motm ? `<span class="dh__photo" data-photo="${esc(g.motm.pid)}" aria-hidden="true"><span>${esc(initials(g.motm.name))}</span></span><span><small>Man of the match</small><b>${esc(g.motm.name)}</b> ${gp(g.motm.pts)} for ${club(state.byRoster[g.winId])}</span>` : `<span><small>Man of the match</small>${g.winId ? "Lineups not logged" : "Honours even"}</span>`}</span>
         </li>`;
         };
-        // newest three on show; older meetings fold away so the card never gets long
-        const newest = [...games].reverse(), shown = newest.slice(0, 3), older = newest.slice(3);
-        return `<ol class="dh__list">${shown.map(row).join("")}</ol>
-          ${older.length ? `<details class="dh__more"><summary>Show ${older.length} earlier ${older.length === 1 ? "meeting" : "meetings"}</summary><ol class="dh__list">${older.map(row).join("")}</ol></details>` : ""}`;
+        // only the three most recent meetings, so the card never gets long
+        return `<ol class="dh__list">${[...games].reverse().slice(0, 3).map(row).join("")}</ol>`;
       })()}
       ${legends.length ? `<h4 class="dh__title">Derby legends</h4>
       <ol class="dh__legends">${legends.map((p, i) => `<li><span class="dh__rank">${i + 1}</span><span class="dh__photo" data-photo="${esc(p.pid)}" aria-hidden="true"><span>${esc(initials(p.name))}</span></span><span class="dh__who"><b>${esc(p.name)}</b><small>${club(state.byRoster[p.id])} · ${p.apps} ${p.apps === 1 ? "derby" : "derbies"}${p.motm ? ` · ${"★".repeat(p.motm)}` : ""}</small></span><span class="dh__pts">${gp(Math.round(p.pts * 100) / 100)}</span></li>`).join("")}</ol>` : ""}
@@ -777,7 +776,7 @@
       const rival = derbyRival(t), v = derbyVerdict(t.derby);
       const last = derbyHistory(t.derby).games.slice(-1)[0];
       return `<a class="cp-derby ${dtClass(t.derby, t)}" href="h2h.html#derby-${esc(t.derby.slug)}">
-        <span class="cp-derby__label">Derby rival · ${esc(t.derby.tag)}</span>
+        <span class="cp-derby__label">Derby rival</span>
         <span class="cp-derby__name">${esc(t.derby.name)}</span>
         <span class="cp-derby__vs">${crest(t)}<b>vs</b>${crest(rival)}<span>${club(rival)}</span></span>
         <span class="cp-derby__verdict">${esc(v.text)}.</span>
@@ -1549,7 +1548,7 @@
       const story = Object.keys(state.players || {}).length ? storyFor(m.week, m.home) : null;
       return `<article class="mu-card reveal${open ? " is-open" : ""}${derby ? ` is-derby derby--${esc(derby.slug)}` : ""}">
         <h2 class="visually-hidden">${esc(H.name)} v ${esc(A.name)}${derby ? `, ${esc(derby.name)}` : ""}</h2>
-        ${derby ? `<p class="mu-derby ${dtClass(derby, H)}">Derby day <b>${esc(derby.name)}</b>${derby.tag ? `<small>${esc(derby.tag)}</small>` : ""}</p>` : ""}
+        ${derby ? `<p class="mu-derby ${dtClass(derby, H)}">Derby day <b>${esc(derby.name)}</b></p>` : ""}
         <button type="button" class="mu-card__head" aria-expanded="${open}" aria-controls="mu-body-${gi}" data-key="${key}">
           ${side(H, m.homePts, m.homePts > m.awayPts, hs, "home")}
           <span class="mu-card__mid"><span class="mu-card__ft">FT</span><span class="mu-card__chev" aria-hidden="true"></span></span>
@@ -1899,7 +1898,7 @@
           `${Wt.name} beat ${Lt.name} ${num(ws, 2)}–${num(ls, 2)}.`, `${Wt.name} saw off ${Lt.name}, ${num(ws, 2)} to ${num(ls, 2)}.`,
           `Final score: ${Wt.name} ${num(ws, 2)}, ${Lt.name} ${num(ls, 2)}.`, `${Lt.name} fell to ${Wt.name}, ${num(ls, 2)}–${num(ws, 2)}.`,
         ], pick));
-        if (derby) lines.push(`That's ${derby.name}${derby.tag ? ` (${derby.tag})` : ""} bragging rights until the next one.`);
+        if (derby) lines.push(`That's ${derby.name} bragging rights until the next one.`);
         if (star) lines.push(pickLine("star", [
           `${star.name} led everyone with ${gp(star.pts)}.`, `${star.name}'s ${gp(star.pts)} was the best individual return on the pitch.`,
           `Top scorer on the day: ${star.name}, ${gp(star.pts)}.`, `${star.name} did the heavy lifting with ${gp(star.pts)}.`,

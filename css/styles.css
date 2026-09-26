@@ -378,14 +378,17 @@ button { cursor: pointer; touch-action: manipulation; }
 .versus__meta { margin: var(--s2) 0 0; color: var(--muted); font-size: 15px; }
 
 .meetings { list-style: none; margin: var(--s5) 0 0; padding: 0; display: grid; gap: var(--s2); }
+/* symmetric columns (the ::after mirrors the GW label) so the score sits dead centre */
 .meetings li {
-  display: grid; grid-template-columns: 90px 1fr auto 1fr; gap: var(--s4); align-items: center;
+  display: grid; grid-template-columns: 64px minmax(0, 1fr) auto minmax(0, 1fr) 64px; gap: var(--s4); align-items: center;
   padding: 12px var(--s5); background: var(--surface); border-radius: 12px; border: 1px solid var(--line);
   font-variant-numeric: tabular-nums;
 }
 .meetings .wk { font-family: var(--f-label); text-transform: uppercase; letter-spacing: 0.1em; color: var(--faint); font-weight: 700; font-size: 14px; }
 .meetings .sc { font-family: var(--f-display); font-size: 22px; padding: 2px 12px; background: var(--ink); color: var(--bg); border-radius: 8px; }
 .meetings .a { text-align: right; }
+.meetings li::after { content: ""; }
+.meetings .sc { white-space: nowrap; }
 .meetings .win { color: var(--pos); font-weight: 700; }
 
 .matrix-wrap { margin-top: var(--s8); }
@@ -883,7 +886,7 @@ button { cursor: pointer; touch-action: manipulation; }
 .lc__row.is-focus .lc__name { font-weight: 800; }
 
 /* ---- week by week ---- */
-.wk { margin-top: var(--s8); }
+section.wk { margin-top: var(--s8); }
 .wk .subhead { margin: 0; }
 .wk__tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s3); margin-bottom: var(--s4); }
 .stat-tile { display: grid; gap: 2px; padding: var(--s4) var(--s5); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; min-width: 0; }
@@ -1767,6 +1770,9 @@ button { cursor: pointer; touch-action: manipulation; }
 .dh { display: grid; gap: 8px; }
 .dh__title { margin: 8px 0 0; font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
 .dh__none { margin: 0; color: var(--muted); font-size: 14px; }
+.derby__crestwrap { position: relative; display: inline-block; }
+.derby__crown { position: absolute; top: -14px; left: -10px; font-size: 26px; line-height: 1; transform: rotate(-22deg); transform-origin: 50% 90%; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3)); animation: derby-crown 3.6s var(--ease-out) infinite, crown-glint 3.6s ease-in-out infinite; }
+@keyframes derby-crown { 0%, 62%, 100% { transform: rotate(-22deg); } 70% { transform: translateY(-5px) rotate(-12deg) scale(1.1); } 78% { transform: rotate(-26deg) scale(0.96, 1.04); } 88% { transform: rotate(-20deg); } }
 .dh__more summary { cursor: pointer; width: max-content; font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); padding: 2px 0; }
 .dh__more[open] summary { margin-bottom: 6px; }
 .dh__list, .dh__legends { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -1810,7 +1816,7 @@ button { cursor: pointer; touch-action: manipulation; }
    An even shade keeps the derby name readable over it. */
 .dt.dt--brothers { --accent: #ffb347; background: #1f140a; }
 .dt.dt--brothers::before {
-  background: linear-gradient(rgba(20, 12, 4, 0.5), rgba(20, 12, 4, 0.5)), url("../media/derby-sutphin.jpg") center 36% / cover no-repeat;
+  background: linear-gradient(rgba(20, 12, 4, 0.5), rgba(20, 12, 4, 0.5)), url("../media/derby-sutphin.jpg") center 33% / cover no-repeat;
 }
 .dt.dt--brothers::after { content: none; }
 
@@ -1955,8 +1961,9 @@ button { cursor: pointer; touch-action: manipulation; }
   .matrix__name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .club-cell .mgr { display: none; }
   .crest { width: 32px; height: 32px; }
-  .meetings li { grid-template-columns: 1fr auto 1fr; }
-  .meetings .wk { grid-column: 1 / -1; }
+  .meetings li { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px var(--s3); padding: 10px var(--s3); }
+  .meetings .wk { grid-column: 1 / -1; grid-row: 1; text-align: center; }
+  .meetings li::after { display: none; }
   .feed__item { grid-template-columns: 1fr auto; }
   .feed__item > .crest { display: none; }
   .cp__banner { padding: var(--s5); gap: var(--s4); }
@@ -2011,6 +2018,7 @@ button { cursor: pointer; touch-action: manipulation; }
 
 /* ================= REDUCED MOTION ================= */
 @media (prefers-reduced-motion: reduce) {
+  .derby__crown { animation: none; }
   .dt.dt--upstate::after, .dt.dt--i95::before, .dt.dt--i95::after { animation: none; }
   .dt__video { display: none; }
   .pr-emblem--top, .pr-emblem--bottom { animation: none; }
