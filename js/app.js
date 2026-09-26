@@ -549,8 +549,8 @@
       const side = (t, cls) => `<div class="derby__side derby__side--${cls}${lead === t ? " is-lead" : ""}">
           ${crest(t, "lg")}<b>${club(t)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)}</small></div>`;
       const row = (a, label, b) => `<div class="derby__row"><span>${a}</span><small>${label}</small><span>${b}</span></div>`;
-      return `<article class="derby reveal" id="derby-${esc(d.slug)}">
-        <header class="derby__head"><span class="derby__tag">${esc(d.tag)}</span><h3>${esc(d.name)}</h3></header>
+      return `<article class="derby reveal derby--${esc(d.slug)}" id="derby-${esc(d.slug)}">
+        <header class="derby__head dt dt--${esc(d.slug)}"><span class="derby__tag">${esc(d.tag)}</span><h3>${esc(d.name)}</h3></header>
         <div class="derby__clash">${side(d.a, "a")}<span class="derby__vs" aria-hidden="true">VS</span>${side(d.b, "b")}</div>
         <p class="derby__story">${esc(d.story)}</p>
         <div class="derby__stats">
@@ -560,6 +560,7 @@
         </div>
         <div class="derby__bar" role="img" aria-label="Share of combined points: ${esc(d.a.name)} ${Math.round(share * 100)}%, ${esc(d.b.name)} ${100 - Math.round(share * 100)}%"><span style="--share:${share}"></span></div>
         <p class="derby__verdict">${esc(text)}.</p>
+        ${derbyHistoryHTML(d)}
         <button type="button" class="derby__open" data-a="${d.a.rosterId}" data-b="${d.b.rosterId}">Full head-to-head</button>
       </article>`;
     }).join("");
@@ -572,20 +573,87 @@
     }));
   }
 
+  // every meeting of a derby, its man of the match (top scorer on the winning side), and the
+  // derby's all-time top performers. Builds up on its own as seasons of lineups are logged.
+  function derbyHistory(d) {
+    const meets = state.results.filter((m) => (m.home === d.a.rosterId && m.away === d.b.rosterId) || (m.home === d.b.rosterId && m.away === d.a.rosterId))
+      .sort((x, y) => x.week - y.week);
+    const perf = {};
+    const games = meets.map((m) => {
+      const sq = weekSquads(m.week);
+      const winId = m.homePts === m.awayPts ? null : m.homePts > m.awayPts ? m.home : m.away;
+      const top = (id) => { const xi = (sq[id] || {}).xi || []; return xi.length ? xi.reduce((a, b) => (b.pts > a.pts ? b : a)) : null; };
+      for (const id of [m.home, m.away]) for (const p of ((sq[id] || {}).xi || [])) {
+        const r = (perf[p.pid + "|" + id] ||= { pid: p.pid, name: p.name, id, pts: 0, apps: 0, motm: 0 });
+        r.pts += p.pts; r.apps++;
+      }
+      const motm = winId ? top(winId) : null;
+      if (motm) perf[motm.pid + "|" + winId].motm++;
+      return { m, winId, motm };
+    });
+    return { games, legends: Object.values(perf).sort((a, b) => b.pts - a.pts || b.motm - a.motm).slice(0, 5) };
+  }
+  function derbyHistoryHTML(d) {
+    const { games, legends } = derbyHistory(d);
+    if (!games.length) return `<div class="dh"><p class="dh__none">No meetings yet. The first one is still to come.</p></div>`;
+    return `<div class="dh">
+      <h4 class="dh__title">Derby history</h4>
+      <ol class="dh__list">${[...games].reverse().map((g) => {
+        const H = state.byRoster[g.m.home], A = state.byRoster[g.m.away];
+        return `<li class="dh__game">
+          <span class="dh__wk">GW${g.m.week}</span>
+          <span class="dh__score">${crest(H)}<b class="${g.winId === H.rosterId ? "is-win" : ""}">${num(g.m.homePts, 2)}</b><i>–</i><b class="${g.winId === A.rosterId ? "is-win" : ""}">${num(g.m.awayPts, 2)}</b>${crest(A)}</span>
+          <span class="dh__motm">${g.motm ? `<span class="dh__photo" data-photo="${esc(g.motm.pid)}" aria-hidden="true"><span>${esc(initials(g.motm.name))}</span></span><span><small>Man of the match</small><b>${esc(g.motm.name)}</b> ${gp(g.motm.pts)} for ${club(state.byRoster[g.winId])}</span>` : `<span><small>Man of the match</small>${g.winId ? "Lineups not logged" : "Honours even"}</span>`}</span>
+        </li>`;
+      }).join("")}</ol>
+      ${legends.length ? `<h4 class="dh__title">Derby legends</h4>
+      <ol class="dh__legends">${legends.map((p, i) => `<li><span class="dh__rank">${i + 1}</span><span class="dh__photo" data-photo="${esc(p.pid)}" aria-hidden="true"><span>${esc(initials(p.name))}</span></span><span class="dh__who"><b>${esc(p.name)}</b><small>${club(state.byRoster[p.id])} · ${p.apps} ${p.apps === 1 ? "derby" : "derbies"}${p.motm ? ` · ${"★".repeat(p.motm)}` : ""}</small></span><span class="dh__pts">${gp(Math.round(p.pts * 100) / 100)}</span></li>`).join("")}</ol>` : ""}
+    </div>`;
+  }
+
   // ---------- CLUBS ----------
   const POS_ORDER = { GK: 0, D: 1, M: 2, F: 3 };
+  // the club's top scorer this season (players currently on the roster)
+  function starMan(t) {
+    const pts = state.seasonPts || {};
+    const pid = [...t.players].filter((x) => pts[x] != null).sort((a, b) => pts[b] - pts[a])[0];
+    return pid ? { pid, pts: pts[pid], p: state.players[pid] || {} } : null;
+  }
+  function ticketSpark(t) {
+    const g = [...t.games].sort((a, b) => a.week - b.week);
+    if (g.length < 2) return "";
+    const W = 120, H = 34, lo = Math.min(...g.map((x) => x.score)), hi = Math.max(...g.map((x) => x.score));
+    const pts = g.map((x, i) => `${((i * W) / (g.length - 1)).toFixed(1)},${(H - 3 - ((x.score - lo) / (hi - lo || 1)) * (H - 6)).toFixed(1)}`);
+    return `<svg class="tk__spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${pts.join(" ")}"/><circle cx="${pts[pts.length - 1].split(",")[0]}" cy="${pts[pts.length - 1].split(",")[1]}" r="3"/></svg>`;
+  }
   function renderClubs() {
-    if (!$("#clubGrid")) return;
-    $("#clubGrid").innerHTML = state.teams.map((t) => `
-      <button type="button" class="club-card" data-open="${t.rosterId}" aria-pressed="false" aria-controls="clubProfile" style="--c1:${t.kit[0]};--c2:${t.kit[1]}">
-        <span class="top">${crest(t, "lg")}<span class="rank" aria-label="Position ${t.pos}">${String(t.pos).padStart(2, "0")}</span></span>
-        <span><span class="cc-name">${club(t)}</span><span class="mgr">${esc(t.manager)}</span></span>
-        <span class="stats">
-          <span><b>${t.w}-${t.l}${t.d ? "-" + t.d : ""}</b><small>Record</small></span>
-          <span><b>${num(t.pf, 0)}</b><small>Points</small></span>
-          <span><b>${t.streak || "–"}</b><small>Streak</small></span>
+    const grid = $("#clubGrid");
+    if (!grid) return;
+    const open = +(($('.tk[aria-pressed="true"]') || {}).dataset || {}).open || null;
+    grid.innerHTML = state.teams.map((t) => {
+      const form = t.record.slice(-5).split("").map((r) => `<i class="${r}">${r === "T" ? "D" : r}</i>`).join("");
+      const star = starMan(t);
+      return `
+      <button type="button" class="tk" data-pos="${t.pos}" data-open="${t.rosterId}" aria-pressed="${open === t.rosterId}" aria-controls="clubProfile" style="--c1:${t.kit[0]};--c2:${t.kit[1]}">
+        <span class="tk__kit">${crest(t, "lg")}</span>
+        <span class="tk__main">
+          ${t.derby ? `<span class="tk__ribbon dt dt--${esc(t.derby.slug)}">${esc(t.derby.name)}</span>` : ""}
+          <span class="tk__name">${club(t)}</span>
+          <span class="tk__mgr">${esc(t.manager)}</span>
+          <span class="tk__row">
+            <span class="tk__stat"><b>${t.w}-${t.l}${t.d ? "-" + t.d : ""}</b><small>Record</small></span>
+            <span class="tk__stat"><b>${num(t.pf, 0)}</b><small>Points</small></span>
+            <span class="form tk__form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span>
+          </span>
+          <span class="tk__foot">
+            ${star ? `<span class="tk__star"><span class="tk__photo" data-photo="${star.pid}" aria-hidden="true"><span>${esc(initials(star.p.n || ""))}</span></span><span><small>Star man</small><b>${esc(star.p.l || star.p.n || "")}</b> ${num(star.pts, 0)} pts</span></span>` : `<span class="tk__star"></span>`}
+            ${ticketSpark(t)}
+          </span>
         </span>
-      </button>`).join("");
+        <span class="tk__stub" aria-label="Position ${t.pos}"><small>Pos</small><b>${String(t.pos).padStart(2, "0")}</b><span class="tk__barcode" aria-hidden="true"></span></span>
+      </button>`;
+    }).join("");
+    if (Object.keys(state.players || {}).length) loadPhotos($$("[data-photo]", grid).map((e) => e.dataset.photo), grid);
   }
 
   const rec = (r) => (r ? `${r.w}-${r.l}${r.d ? "-" + r.d : ""}` : "–");
@@ -667,103 +735,115 @@
     const el = $("#clubProfile");
     el.style.setProperty("--c1", t.kit[0]);
     el.style.setProperty("--c2", t.kit[1]);
+    const ledger = faabLedger()[t.rosterId];
+    const chip = (v, l) => `<span class="cp-chip"><b>${v}</b><small>${l}</small></span>`;
+    // this club's Gazette headlines, newest first
+    const story = Object.keys(state.players || {}).length ? gazetteData().slice().reverse().map((wk) => {
+      const st = wk.stories.find((x) => x.W === t || x.L === t);
+      if (!st) return "";
+      const res = st.draw ? "D" : st.W === t ? "W" : "L";
+      return `<li><a href="gazette.html#gw${st.week}-${st.match.home}-${st.match.away}"><span class="cp-story__res ${res}">${res}</span><span class="cp-story__wk">GW${st.week}</span><span class="cp-story__head">${esc(st.headline)}</span></a></li>`;
+    }).join("") : "";
+    const h2hChips = state.teams.filter((o) => o !== t).map((o) => {
+      const r = t.h2h[o.rosterId];
+      const cls = !r ? "" : r.w > r.l ? "up" : r.w < r.l ? "down" : "even";
+      const isDerby = t.derby && derbyRival(t) === o;
+      return `<li class="cp-h2h__item ${cls}${isDerby ? ` is-derby dt--${esc(t.derby.slug)}` : ""}" title="${esc(o.name)}">${crest(o)}<span class="cp-h2h__name">${club(o)}</span><b>${r ? rec(r) : "–"}</b></li>`;
+    }).join("");
+    const derbyCard = t.derby ? (() => {
+      const rival = derbyRival(t), v = derbyVerdict(t.derby);
+      const last = derbyHistory(t.derby).games.slice(-1)[0];
+      return `<a class="cp-derby dt dt--${esc(t.derby.slug)}" href="h2h.html#derby-${esc(t.derby.slug)}">
+        <span class="cp-derby__label">Derby rival · ${esc(t.derby.tag)}</span>
+        <span class="cp-derby__name">${esc(t.derby.name)}</span>
+        <span class="cp-derby__vs">${crest(t)}<b>vs</b>${crest(rival)}<span>${club(rival)}</span></span>
+        <span class="cp-derby__verdict">${esc(v.text)}.</span>
+        ${last ? `<span class="cp-derby__last">Last meeting GW${last.m.week}: ${num(last.m.homePts, 2)}–${num(last.m.awayPts, 2)}${last.motm ? ` · Man of the match <b>${esc(last.motm.name)}</b> (${gp(last.motm.pts)})` : ""}</span>` : `<span class="cp-derby__last">First meeting still to come.</span>`}
+      </a>`;
+    })() : "";
     el.innerHTML = `
       <div class="cp__banner">
         ${crest(t, "xl")}
         <div class="cp__id">
           <h3>${club(t)}</h3>
           <p>Managed by ${esc(t.manager)} · ${ordinal(t.pos)} place <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></p>
-          <p class="cp__badges">${cupBadge}${t.derby ? `<span class="badge badge--derby">${esc(t.derby.name)}</span>` : ""}${supports(t)}</p>
+          <p class="cp__badges">${cupBadge}${t.derby ? `<span class="badge badge--derby dt dt--${esc(t.derby.slug)}">${esc(t.derby.name)}</span>` : ""}${supports(t)}</p>
         </div>
         <button class="cp__close" type="button" aria-label="Close club profile"><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
       </div>
-      <div class="cp__body">
-        <div class="cp__groups">
-          <p class="cp__glabel">Record</p>
-          <div class="cp__kpis">
-            ${kpi(rec({ w: t.w, l: t.l, d: t.d }), "Overall")}
-            ${kpi(state.hasResults ? rec(t.home) : "–", "Home", needs)}
-            ${kpi(state.hasResults ? rec(t.away) : "–", "Away", needs)}
-            ${kpi(rec(t.allPlay), "All-Play", needs)}
+      <div class="cp-strip">
+        ${chip(rec({ w: t.w, l: t.l, d: t.d }), "Record")}
+        ${chip(num(t.pf), "Points for")}
+        ${chip(num(t.pa), "Against")}
+        ${chip(rec(t.allPlay), "All-Play")}
+        ${chip(Math.round(eff(t) * 100) + "%", "Lineup efficiency")}
+        ${chip("$" + faabLeft(t), "FAAB left")}
+        <details class="cp-more">
+          <summary>More numbers</summary>
+          <div class="cp-more__grid">
+            ${chip(state.hasResults ? rec(t.home) : "–", "Home")}
+            ${chip(state.hasResults ? rec(t.away) : "–", "Away")}
+            ${chip(t.stdDev != null ? num(t.stdDev) : "–", "Std dev (consistency)")}
+            ${chip(num(t.pp - t.pf), "Bench points left")}
+            ${chip(rec(t.optimal), "Optimal-lineup record")}
+            ${chip(state.hasResults ? t.robbed : "–", "Losses a better lineup wins")}
+            ${chip("$" + ledger.paid, "FAAB spent")}
+            ${ledger.traded ? chip(`${ledger.traded > 0 ? "+" : "−"}$${Math.abs(ledger.traded)}`, "FAAB traded") : ""}
           </div>
-          <p class="cp__glabel">Scoring</p>
-          <div class="cp__kpis">
-            ${kpi(num(t.pf), "Points for")}
-            ${kpi(num(t.pa), "Points against")}
-            ${kpi(t.stdDev != null ? num(t.stdDev) : "–", "Std dev", needs)}
-            ${kpi("$" + faabLeft(t), "FAAB left", (() => { const x = faabLedger()[t.rosterId]; return `$${x.paid} spent${x.traded ? ` · ${x.traded > 0 ? "+" : "−"}$${Math.abs(x.traded)} traded` : ""}`; })())}
+        </details>
+      </div>
+      <div class="cp-main">
+        <div class="cp-col cp-col--pitch">
+          <div class="formation">
+            <div class="formation__label"><h4 class="subhead" style="margin:0">Starting XI</h4><b>${shape || "–"}</b></div>
+            <div class="pitch" role="img" aria-label="${esc(t.name)} starting eleven in a ${shape} formation: ${esc(t.starters.map((pid) => pl(pid).n).join(", "))}">
+              <span class="box"></span><span class="box box--six"></span>
+              ${row(lines.GK)}${row(lines.D)}${row(lines.M)}${row(lines.F)}
+            </div>
+            ${shapeHistory ? `<p class="formation__hist"><b>Formations used:</b> ${shapeHistory}</p>` : ""}
+            <p class="formation__note">Formation as set in Sleeper. Red tag = projected points per 90 minutes (per game for players under 90 minutes this season).</p>
           </div>
-          <p class="cp__glabel">Lineup management</p>
-          <div class="cp__kpis">
-            ${kpi(Math.round(eff(t) * 100) + "%", "Efficiency")}
-            ${kpi(num(t.pp - t.pf), "Bench points left")}
-            ${kpi(rec(t.optimal), "Optimal record", state.hasResults ? "" : needs)}
-            ${kpi(state.hasResults ? t.robbed : "–", "Robbed by bench", needs)}
-          </div>
+          <details class="squad">
+            <summary><h4>Squad (${t.players.length})</h4><span>Show all players</span></summary>
+            <ul>${squad.map((pid) => {
+              const p = pl(pid);
+              const tag = reserve.has(pid) ? `<span class="tag inj">IR</span>`
+                : p.i ? `<span class="tag inj">${esc(p.i)}</span>`
+                : starters.has(pid) ? `<span class="tag xi">XI</span>` : `<span class="tag">Bench</span>`;
+              const sp = state.seasonPts[pid];
+              return `<li><span class="posb ${esc(p.p)}">${esc(p.p || "–")}</span>
+                <span class="sq__photo" data-photo="${pid}" aria-hidden="true"></span>
+                <span class="nm">${esc(p.n)}<small>${clubLogo(p.t)}${esc(p.c)}${sp != null ? ` · ${num(sp)} pts` : ""}${pj(pid) ? ` · ${pj(pid)}` : ""}</small></span>${tag}</li>`;
+            }).join("")}</ul>
+          </details>
+          <section class="cp-card cp-card--rt"><h4 class="cp-card__title">Club record transfer</h4>
+            ${rt ? `<div class="rt"><span class="rt__fee">$${rt.bid}</span><b>${esc(rt.name)}</b><small>${new Date(rt.when).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</small></div>`
+                 : `<p class="dim">No waiver fees paid yet.</p>`}
+          </section>
         </div>
-
-        ${t.games.length ? `<div class="cp__block cp__wide"><h4 class="subhead">Season sparkline</h4>${sparklineSVG(t.games)}</div>` : ""}
-
-        ${t.derby ? (() => {
-          const rival = derbyRival(t), v = derbyVerdict(t.derby);
-          return `<a class="cp-derby cp__wide" href="h2h.html#derby-${esc(t.derby.slug)}">
-            <span class="cp-derby__label">Derby rival · ${esc(t.derby.tag)}</span>
-            <span class="cp-derby__name">${esc(t.derby.name)}</span>
-            <span class="cp-derby__vs">${crest(t)}<b>vs</b>${crest(rival)}<span>${club(rival)}</span></span>
-            <span class="cp-derby__verdict">${esc(v.text)}.</span>
-          </a>`;
-        })() : ""}
-
-        ${t.nemesis || t.cupcake ? `<div class="nc cp__wide">
-          ${t.nemesis ? `<div class="nc__item nc__item--nem"><small>Nemesis</small>${crest(state.byRoster[t.nemesis.id])}<b>${clubById(t.nemesis.id)}</b><span>${rec(t.nemesis)}</span></div>` : ""}
-          ${t.cupcake ? `<div class="nc__item nc__item--cup"><small>Cupcake</small>${crest(state.byRoster[t.cupcake.id])}<b>${clubById(t.cupcake.id)}</b><span>${rec(t.cupcake)}</span></div>` : ""}
-        </div>` : ""}
-
-        <div class="formation">
-          <div class="formation__label"><h4 class="subhead" style="margin:0">Starting XI</h4><b>${shape || "–"}</b></div>
-          <div class="pitch" role="img" aria-label="${esc(t.name)} starting eleven in a ${shape} formation: ${esc(t.starters.map((pid) => pl(pid).n).join(", "))}">
-            <span class="box"></span><span class="box box--six"></span>
-            ${row(lines.GK)}${row(lines.D)}${row(lines.M)}${row(lines.F)}
-          </div>
-          ${shapeHistory ? `<p class="formation__hist"><b>Formations used:</b> ${shapeHistory}</p>` : ""}
-          <p class="formation__note">Formation as set in Sleeper. Red tag = projected points per 90 minutes (per game for players under 90 minutes this season).</p>
-        </div>
-        <div class="squad">
-          <h4>Squad (${t.players.length})</h4>
-          <ul>${squad.map((pid) => {
-            const p = pl(pid);
-            const tag = reserve.has(pid) ? `<span class="tag inj">IR</span>`
-              : p.i ? `<span class="tag inj">${esc(p.i)}</span>`
-              : starters.has(pid) ? `<span class="tag xi">XI</span>` : `<span class="tag">Bench</span>`;
-            const sp = state.seasonPts[pid];
-            return `<li><span class="posb ${esc(p.p)}">${esc(p.p || "–")}</span>
-              <span class="sq__photo" data-photo="${pid}" aria-hidden="true"></span>
-              <span class="nm">${esc(p.n)}<small>${clubLogo(p.t)}${esc(p.c)}${sp != null ? ` · ${num(sp)} pts` : ""}${pj(pid) ? ` · ${pj(pid)}` : ""}</small></span>${tag}</li>`;
-          }).join("")}</ul>
-        </div>
-
-        <div class="cp__block">
-          <h4 class="subhead">Head-to-head</h4>
-          <table class="h2h-mini"><tbody>${h2hRows}</tbody></table>
-        </div>
-        <div class="cp__block">
-          <h4 class="subhead">Club record transfer</h4>
-          ${rt ? `<div class="rt"><span class="rt__fee">$${rt.bid}</span><b>${esc(rt.name)}</b><small>${new Date(rt.when).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</small></div>`
-               : `<p class="dim">No waiver fees paid yet.</p>`}
+        <div class="cp-col">
+          ${t.games.length ? `<section class="cp-card"><h4 class="cp-card__title">Season sparkline</h4>${sparklineSVG(t.games)}</section>` : ""}
+          ${derbyCard}
+          ${story ? `<section class="cp-card"><h4 class="cp-card__title">Season story</h4><ol class="cp-story">${story}</ol></section>` : ""}
+          ${t.nemesis || t.cupcake ? `<div class="nc">
+            ${t.nemesis ? `<div class="nc__item nc__item--nem"><small>Nemesis</small>${crest(state.byRoster[t.nemesis.id])}<b>${clubById(t.nemesis.id)}</b><span>${rec(t.nemesis)}</span></div>` : ""}
+            ${t.cupcake ? `<div class="nc__item nc__item--cup"><small>Cupcake</small>${crest(state.byRoster[t.cupcake.id])}<b>${clubById(t.cupcake.id)}</b><span>${rec(t.cupcake)}</span></div>` : ""}
+          </div>` : ""}
+          <section class="cp-card"><h4 class="cp-card__title">Head-to-head</h4><ul class="cp-h2h">${h2hChips}</ul></section>
         </div>
       </div>`;
     el.hidden = false;
     $(".cp__close", el).addEventListener("click", closeClub);
-    $$(".club-card").forEach((c) => c.setAttribute("aria-pressed", String(+c.dataset.open === id)));
+    $$(".tk").forEach((c) => c.setAttribute("aria-pressed", String(+c.dataset.open === id)));
     history.replaceState(null, "", `#club-${id}`);
     if (scroll) el.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
     loadPhotos([...t.starters, ...squad.filter((p) => !starters.has(p))], el);
   }
   function closeClub() {
     const el = $("#clubProfile");
-    const open = $('.club-card[aria-pressed="true"]');
+    const open = $('.tk[aria-pressed="true"]');
     el.hidden = true;
-    $$(".club-card").forEach((c) => c.setAttribute("aria-pressed", "false"));
+    $$(".tk").forEach((c) => c.setAttribute("aria-pressed", "false"));
     history.replaceState(null, "", location.pathname);
     open && open.focus();
   }
@@ -771,7 +851,7 @@
     const b = e.target.closest("[data-open]");
     if (!b) return;
     if (!$("#clubProfile")) { location.href = `clubs.html#club-${b.dataset.open}`; return; }
-    if (b.classList.contains("club-card") && b.getAttribute("aria-pressed") === "true") return closeClub();
+    if (b.classList.contains("tk") && b.getAttribute("aria-pressed") === "true") return closeClub();
     openClub(+b.dataset.open, true);
   });
   const ordinal = (n) => n + (["th", "st", "nd", "rd"][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] || "th");
@@ -1412,9 +1492,9 @@
         : `<p class="mu-card__none">Starting XIs for this gameweek aren't logged yet.</p>`;
       const derby = H.derby && derbyRival(H) === A ? H.derby : null;
       const story = Object.keys(state.players || {}).length ? storyFor(m.week, m.home) : null;
-      return `<article class="mu-card reveal${open ? " is-open" : ""}${derby ? " is-derby" : ""}">
+      return `<article class="mu-card reveal${open ? " is-open" : ""}${derby ? ` is-derby derby--${esc(derby.slug)}` : ""}">
         <h2 class="visually-hidden">${esc(H.name)} v ${esc(A.name)}${derby ? `, ${esc(derby.name)}` : ""}</h2>
-        ${derby ? `<p class="mu-derby">Derby day <b>${esc(derby.name)}</b>${derby.tag ? `<small>${esc(derby.tag)}</small>` : ""}</p>` : ""}
+        ${derby ? `<p class="mu-derby dt dt--${esc(derby.slug)}">Derby day <b>${esc(derby.name)}</b>${derby.tag ? `<small>${esc(derby.tag)}</small>` : ""}</p>` : ""}
         <button type="button" class="mu-card__head" aria-expanded="${open}" aria-controls="mu-body-${gi}" data-key="${key}">
           ${side(H, m.homePts, m.homePts > m.awayPts, hs, "home")}
           <span class="mu-card__mid"><span class="mu-card__ft">FT</span><span class="mu-card__chev" aria-hidden="true"></span></span>
@@ -1874,8 +1954,8 @@
   }
   function storyCard(s, lead) {
     const id = `gw${s.week}-${s.match.home}-${s.match.away}`;
-    return `<article class="gz-story${lead ? " gz-story--lead" : ""}${s.derby ? " is-derby" : ""}" id="${id}">
-      <p class="gz-story__tag"><span>${GZ_TAGS[s.type] || "Result"}</span>${s.derby ? `<em>${esc(s.derby.name)}</em>` : ""}</p>
+    return `<article class="gz-story${lead ? " gz-story--lead" : ""}${s.derby ? ` is-derby derby--${esc(s.derby.slug)}` : ""}" id="${id}">
+      <p class="gz-story__tag"><span>${GZ_TAGS[s.type] || "Result"}</span>${s.derby ? `<em class="dt dt--${esc(s.derby.slug)}">${esc(s.derby.name)}</em>` : ""}</p>
       <h3 class="gz-story__head">${esc(s.headline)}</h3>
       <p class="gz-story__score">${crest(s.W)}<b>${club(s.W)}</b><span class="gz-count" data-to="${s.ws}">${num(s.ws, 2)}</span><i>–</i><span class="gz-count" data-to="${s.ls}">${num(s.ls, 2)}</span><b>${club(s.L)}</b>${crest(s.L)}</p>
       <p class="gz-story__body">${esc(s.report)}</p>
@@ -1935,7 +2015,7 @@
     if (!data.length) { el.closest("section").hidden = true; return; }
     const wk = data[data.length - 1];
     el.innerHTML = wk.stories.slice(0, 3).map((s, i) => `
-      <a class="hn-item${i === 0 ? " hn-item--lead" : ""}${s.derby ? " is-derby" : ""}" href="gazette.html#gw${s.week}-${s.match.home}-${s.match.away}">
+      <a class="hn-item${i === 0 ? " hn-item--lead" : ""}${s.derby ? ` is-derby derby--${esc(s.derby.slug)}` : ""}" href="gazette.html#gw${s.week}-${s.match.home}-${s.match.away}">
         <span class="hn-item__tag">GW${s.week} · ${GZ_TAGS[s.type] || "Result"}</span>
         <b class="hn-item__head">${esc(s.headline)}</b>
         <span class="hn-item__score">${esc(s.W.name)} ${num(s.ws, 2)}–${num(s.ls, 2)} ${esc(s.L.name)}</span>
@@ -2928,12 +3008,12 @@
       entries.forEach((e) => {
         if (!e.isIntersecting) return;
         const siblings = [...e.target.parentElement.children];
-        e.target.style.transitionDelay = e.target.matches(".club-card, .derby") ? `${Math.min(siblings.indexOf(e.target), 10) * 50}ms` : "";
+        e.target.style.transitionDelay = e.target.matches(".tk, .derby") ? `${Math.min(siblings.indexOf(e.target), 10) * 50}ms` : "";
         e.target.classList.add("is-in");
         io.unobserve(e.target);
       });
     }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
-    $$(".reveal:not(.is-in), .club-card:not(.is-in)").forEach((el) => io.observe(el));
+    $$(".reveal:not(.is-in), .tk:not(.is-in)").forEach((el) => io.observe(el));
   }
 
   // mobile menu
@@ -2968,7 +3048,7 @@
     try {
       const [league, users, rosters, sportState, matchRows, cupRows, emblems, lineupRows] = await Promise.all([
         get(`/league/${LEAGUE_ID}`), get(`/league/${LEAGUE_ID}/users`), get(`/league/${LEAGUE_ID}/rosters`), get(`/state/${SPORT}`).catch(() => ({})),
-        getCSV("data/matchups.csv"), getCSV("data/cup.csv"), loadEmblems(), $("#muList") || $("#gzRoot") || $("#homeNews") ? getCSV("data/lineups.csv") : [],
+        getCSV("data/matchups.csv"), getCSV("data/cup.csv"), loadEmblems(), $("#muList") || $("#gzRoot") || $("#homeNews") || $("#clubGrid") || $("#derbies") ? getCSV("data/lineups.csv") : [],
       ]);
       state.lineups = lineupRows;
       state.league = league;
@@ -3029,6 +3109,8 @@
       renderFeed();
       renderTicker();
       renderRecords();
+      renderClubs();   // again, now star men (season points) are known
+      if ($("#derbies")) loadPhotos($$("#derbies [data-photo]").map((e) => e.dataset.photo), $("#derbies"));
       renderMarket();
       renderHomeSnap();
       observeReveals();

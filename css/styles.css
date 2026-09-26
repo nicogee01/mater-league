@@ -1611,6 +1611,151 @@ button { cursor: pointer; touch-action: manipulation; }
 .pr-done li::before { content: counter(done); font-family: var(--f-display); font-size: 22px; width: 28px; text-align: center; }
 .pr-done .crest { width: 30px; height: 30px; }
 
+/* ================= CLUBS: matchday tickets ================= */
+.club-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s5) var(--s4); }
+.tk {
+  all: unset; box-sizing: border-box; cursor: pointer; position: relative;
+  display: grid; grid-template-columns: 112px minmax(0, 1fr) 88px; min-height: 184px;
+  border-radius: 16px; background: var(--surface); color: var(--text);
+  box-shadow: 0 1px 0 rgba(11, 31, 58, 0.14), 0 14px 26px -18px rgba(11, 31, 58, 0.5);
+  opacity: 0; transform: translateY(18px) rotate(-0.6deg);
+  transition: opacity 500ms var(--ease-out), transform 420ms var(--ease-spring), box-shadow var(--t-med);
+}
+.tk.is-in { opacity: 1; transform: none; }
+/* ticket notches where the stub tears off */
+.tk::before, .tk::after { content: ""; position: absolute; right: 77px; width: 22px; height: 22px; border-radius: 50%; background: var(--bg); z-index: 2; }
+.tk::before { top: -11px; }
+.tk::after { bottom: -11px; }
+.tk:hover { transform: translateY(-4px) rotate(-0.8deg); box-shadow: 0 1px 0 rgba(11, 31, 58, 0.14), 0 22px 34px -18px rgba(11, 31, 58, 0.6); }
+.tk:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.tk[aria-pressed="true"] { outline: 3px solid var(--accent); outline-offset: 4px; transform: translateY(-2px); }
+.tk__kit {
+  display: grid; place-items: center; border-radius: 16px 0 0 16px; overflow: hidden; position: relative;
+  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0 9px, transparent 9px 18px), linear-gradient(160deg, var(--c1), var(--c2));
+}
+.tk__kit::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.25) 50%, transparent 70%); transform: translateX(-120%); transition: transform 700ms var(--ease-out); }
+.tk:hover .tk__kit::after { transform: translateX(120%); }
+.tk__kit .crest { width: 78px; height: 78px; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 10px 20px rgba(0, 0, 0, 0.35); }
+.tk__main { display: grid; align-content: start; gap: 3px; padding: 14px 16px 12px; min-width: 0; }
+.tk__ribbon { justify-self: start; padding: 3px 10px; border-radius: 4px; font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+.tk__name { font-family: var(--f-display); font-weight: 400; font-size: 27px; line-height: 1; text-transform: uppercase; overflow-wrap: anywhere; margin-top: 2px; }
+.tk__mgr { font-size: 13px; color: var(--faint); }
+.tk__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; margin-top: 8px; }
+.tk__stat b { display: block; font-family: var(--f-display); font-weight: 400; font-size: 24px; line-height: 1; font-variant-numeric: tabular-nums; }
+.tk__stat small { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.tk__form i { width: 19px; height: 19px; font-size: 10px; }
+.tk__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); min-width: 0; }
+.tk__star { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; }
+.tk__star > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk__star small { display: block; font-family: var(--f-label); font-weight: 700; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
+.tk__photo, .dh__photo { width: 32px; height: 32px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--surface-2) center 6% / 150% auto no-repeat; font-family: var(--f-display); font-size: 11px; color: var(--muted); }
+.tk__photo.has-photo, .dh__photo.has-photo { background-color: #fff; }
+.tk__photo.has-photo span, .dh__photo.has-photo span { display: none; }
+.tk__spark { width: 110px; height: 32px; flex: none; overflow: visible; }
+.tk__spark polyline { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; opacity: 0.75; }
+.tk__spark circle { fill: var(--accent); }
+.tk__stub {
+  display: grid; place-content: center; justify-items: center; gap: 2px; position: relative;
+  border-radius: 0 16px 16px 0; background: var(--ink); color: #fbf7ee; border-left: 2px dashed rgba(251, 247, 238, 0.5);
+}
+.tk__stub small { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #a9b4c6; }
+.tk__stub b { font-family: var(--f-display); font-weight: 400; font-size: 46px; line-height: 1; }
+.tk__barcode { width: 52px; height: 22px; margin-top: 6px; opacity: 0.75; background: repeating-linear-gradient(90deg, #fbf7ee 0 2px, transparent 2px 3px, #fbf7ee 3px 4px, transparent 4px 7px, #fbf7ee 7px 10px, transparent 10px 12px); }
+.tk[data-pos="1"] .tk__stub { background: linear-gradient(170deg, #c9a24a, #8a6a24); }
+.tk[data-pos="1"] .tk__stub small { color: #0b1f3a; }
+.tk[data-pos="8"] .tk__stub { background: linear-gradient(170deg, #c8102e, #7a0a1c); }
+
+/* ================= CLUB PROFILE (compact) ================= */
+.cp-strip { display: flex; flex-wrap: wrap; gap: 8px; padding: var(--s4) var(--s6); background: var(--bg-2); border-bottom: 1px solid var(--line); }
+.cp-chip { display: grid; gap: 2px; padding: 8px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); min-width: 92px; }
+.cp-chip b { font-family: var(--f-display); font-weight: 400; font-size: 24px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.cp-chip small { font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+.cp-more { flex-basis: 100%; }
+.cp-more summary { cursor: pointer; width: max-content; font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); padding: 4px 0; }
+.cp-more__grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.cp-main { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: var(--s5); padding: var(--s5) var(--s6) var(--s6); align-items: start; }
+.cp-col { display: grid; gap: var(--s4); align-content: start; min-width: 0; }
+.cp-card { padding: var(--s4); border: 1px solid var(--line); border-radius: 16px; background: var(--surface); min-width: 0; }
+.cp-card__title { margin: 0 0 var(--s2); font-family: var(--f-label); font-weight: 700; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.cp-card .spark__key { margin-bottom: 0; }
+.cp-story { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.cp-story a { display: grid; grid-template-columns: 24px 42px minmax(0, 1fr); gap: 8px; align-items: center; padding: 6px 6px; border-radius: 8px; text-decoration: none; color: var(--text); font-weight: 600; font-size: 14px; line-height: 1.25; }
+.cp-story a:hover { background: var(--shade); }
+.cp-story__res { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; }
+.cp-story__res.W { background: var(--pos); color: var(--on-pos); }
+.cp-story__res.L { background: var(--neg); color: #fff; }
+.cp-story__res.D { background: var(--faint); color: var(--surface); }
+.cp-story__wk { font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.1em; color: var(--faint); }
+.cp-h2h { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.cp-h2h__item { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 10px; background: var(--bg-2); border-left: 3px solid var(--line-2); }
+.cp-h2h__item .crest { width: 26px; height: 26px; }
+.cp-h2h__name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-h2h__item b { font-variant-numeric: tabular-nums; font-size: 14px; }
+.cp-h2h__item.up { border-left-color: var(--pos); }
+.cp-h2h__item.down { border-left-color: var(--neg); }
+.cp-h2h__item.is-derby { box-shadow: inset 0 0 0 2px var(--d1, #b08a3e); }
+.cp-derby__last { font-size: 13px; opacity: 0.9; }
+.squad { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: var(--s3) var(--s4); }
+.squad summary { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); cursor: pointer; list-style: none; }
+.squad summary::-webkit-details-marker { display: none; }
+.squad summary h4 { margin: 0; }
+.squad summary span { font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.squad[open] summary span { font-size: 0; }
+.squad[open] summary span::after { content: "Hide"; font-size: 13px; }
+.squad ul { margin-top: var(--s3); }
+
+/* ================= DERBY HISTORY ================= */
+.derby__open { justify-self: start; align-self: start; }
+.dh { display: grid; gap: 8px; }
+.dh__title { margin: 8px 0 0; font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+.dh__none { margin: 0; color: var(--muted); font-size: 14px; }
+.dh__list, .dh__legends { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.dh__game { display: grid; grid-template-columns: 44px auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--bg-2); }
+.dh__wk { font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.1em; color: var(--faint); }
+.dh__score { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.dh__score .crest { width: 24px; height: 24px; }
+.dh__score b { font-weight: 500; color: var(--faint); }
+.dh__score b.is-win { font-weight: 800; color: var(--text); }
+.dh__score i { font-style: normal; color: var(--faint); }
+.dh__motm { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; }
+.dh__motm small { display: block; font-family: var(--f-label); font-weight: 700; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
+.dh__legends li { display: grid; grid-template-columns: 18px 32px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.dh__rank { font-family: var(--f-display); color: var(--faint); }
+.dh__who { min-width: 0; }
+.dh__who b { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dh__who small { font-size: 12px; color: var(--faint); }
+.dh__pts { font-family: var(--f-display); font-size: 20px; font-variant-numeric: tabular-nums; }
+
+/* ================= DERBY COLOURWAYS =================
+   Each rivalry dresses in its own colours. .dt = a themed surface (banner, badge, card);
+   .derby--<slug> just carries the palette for borders and stripes. Slugs come from data/league.js. */
+.dt--clifton, .derby--clifton { --d1: #1d5c3a; --d2: #c9a227; }
+.dt--brothers, .derby--brothers { --d1: #9b1024; --d2: #1a0b0e; }
+.dt--upstate, .derby--upstate { --d1: #0e3b5c; --d2: #9fd3f0; }
+.dt--i95, .derby--i95 { --d1: #ffd100; --d2: #0073cf; }
+.dt.dt--clifton, .dt.dt--brothers, .dt.dt--upstate, .dt.dt--i95 {
+  --text: #fbf7ee; --muted: #efe8d6; --faint: #ddd4bf; color: #fbf7ee; position: relative; overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); border-color: transparent;
+}
+/* The Clifton Derby: family heritage, bottle green with gold pinstripe */
+.dt.dt--clifton { --accent: #f0d27a; background: repeating-linear-gradient(135deg, rgba(240, 210, 122, 0.16) 0 2px, transparent 2px 13px), linear-gradient(120deg, #0f3a24 0%, #1d5c3a 55%, #2d7d52 100%); }
+/* The Bloodline Clásico: same blood, crimson bleeding out of black */
+.dt.dt--brothers { --accent: #ff9aa8; background: radial-gradient(120% 110% at 100% 0%, rgba(214, 36, 60, 0.6), transparent 62%), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 18px), linear-gradient(115deg, #0d0709 0%, #2a070d 45%, #7a0c1c 100%); }
+/* The Snow Belt Derby: lake-effect snow over a glacier-blue night */
+.dt.dt--upstate { --accent: #bfe8ff; background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1.2px, transparent 1.9px) 0 0 / 26px 26px, radial-gradient(circle, rgba(255, 255, 255, 0.55) 0 1px, transparent 1.5px) 13px 9px / 19px 19px, linear-gradient(165deg, #081c2e 0%, #0e3b5c 55%, #3f7fa6 100%); animation: snowfall 16s linear infinite; }
+@keyframes snowfall { to { background-position: 0 260px, 13px 199px, 0 0; } }
+/* El Clásico de las Américas: La Tri's yellow-blue-red meets La H's blue-white-blue */
+.dt.dt--i95 { --accent: #ffd100; background: linear-gradient(90deg, rgba(6, 14, 32, 0.78), rgba(6, 14, 32, 0.55) 50%, rgba(6, 14, 32, 0.78)), linear-gradient(180deg, #ffd100 0 50%, #034ea2 50% 75%, #ed1c24 75%) left / 50% 100% no-repeat, linear-gradient(180deg, #0073cf 0 33.3%, #f4f7fb 33.3% 66.6%, #0073cf 66.6%) right / 50% 100% no-repeat; }
+/* where the palette shows up */
+.derby[class*="derby--"] { --ca: var(--d1); --cb: var(--d2); }
+.derby[class*="derby--"] .derby__head { margin: calc(-1 * var(--s5)) calc(-1 * var(--s5)) 0; padding: calc(var(--s5) + 8px) var(--s5) var(--s4); }
+.derby__head.dt .derby__tag { background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.35); }
+.mu-card.is-derby[class*="derby--"] { border-color: var(--d1); box-shadow: 0 0 0 4px color-mix(in srgb, var(--d1) 20%, transparent), 0 14px 30px -16px color-mix(in srgb, var(--d1) 70%, transparent); }
+.gz-story.is-derby[class*="derby--"] { border-color: var(--d1); border-top-color: var(--d1); }
+.hn-item.is-derby[class*="derby--"] { box-shadow: inset 0 0 0 2px var(--d1); }
+.cp-derby.dt { border-left: 0; }
+.badge--derby.dt { border-color: rgba(255, 255, 255, 0.5); }
+
 /* ================= RESPONSIVE ================= */
 @media (max-width: 1180px) {
   .nav__links, .nav__cta { display: none; }
@@ -1621,6 +1766,10 @@ button { cursor: pointer; touch-action: manipulation; }
   .hide-md { display: none; }
 }
 @media (max-width: 860px) {
+  .club-grid { grid-template-columns: 1fr; }
+  .cp-main { grid-template-columns: 1fr; padding: var(--s4); }
+  .cp-col--pitch { order: 2; }
+  .cp-strip { padding: var(--s3) var(--s4); }
   .gz-front { grid-template-columns: 1fr; }
   .hn { grid-template-columns: 1fr; }
   .hero__scoreboard { position: relative; right: auto; bottom: auto; width: 100%; max-width: 420px; margin-top: var(--s6); grid-row: 3; }
@@ -1666,6 +1815,21 @@ button { cursor: pointer; touch-action: manipulation; }
   .cp__kpis { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
+  .tk { grid-template-columns: 84px minmax(0, 1fr) 66px; min-height: 168px; }
+  .tk::before, .tk::after { right: 55px; }
+  .tk__kit .crest { width: 58px; height: 58px; }
+  .tk__main { padding: 12px 12px 10px; }
+  .tk__name { font-size: 22px; }
+  .tk__stub b { font-size: 34px; }
+  .tk__spark { display: none; }
+  .cp__banner { flex-wrap: wrap; gap: var(--s3); padding: var(--s4); }
+  .cp__banner .crest--xl { width: 76px; height: 76px; }
+  .cp__id { flex-basis: 100%; order: 3; }
+  .cp__banner h3 { font-size: 34px; }
+  .cp-chip { min-width: 0; flex: 1 1 calc(33% - 8px); padding: 8px 10px; }
+  .cp-chip b { font-size: 20px; }
+  .dh__game { grid-template-columns: 40px minmax(0, 1fr); }
+  .dh__motm { grid-column: 1 / -1; }
   .gz-story, .gz-story--lead { padding: var(--s4); }
   .gz-pitch { min-height: 480px; }
   .hn-item { padding: var(--s4); }
@@ -1751,6 +1915,8 @@ button { cursor: pointer; touch-action: manipulation; }
 
 /* ================= REDUCED MOTION ================= */
 @media (prefers-reduced-motion: reduce) {
+  .dt.dt--upstate { animation: none; }
+  .tk { transform: none !important; }
   .mu-derby::after { animation: none; display: none; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .hero__title .line > span { transform: none; }
