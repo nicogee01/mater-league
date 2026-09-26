@@ -1533,7 +1533,7 @@
       const side = (t, pts, win, sq, align) => {
         const pj = projTotal(sq.xi);
         return `<div class="mu-side mu-side--${align}${win ? " is-win" : ""}">
-          ${crest(t)}<span class="mu-side__name">${club(t)}<small>${sq.xi.length ? shape(sq.xi) : "&nbsp;"}</small></span>
+          ${crest(t)}<span class="mu-side__name">${club(t)}<small>${align === "home" ? "Home" : "Away"}${sq.xi.length ? ` · ${shape(sq.xi)}` : ""}</small></span>
           <span class="mu-side__score"><b>${num(pts, 2)}</b>${pj != null ? `<small>proj ${num(pj, 2)}</small>` : ""}</span>
         </div>`;
       };

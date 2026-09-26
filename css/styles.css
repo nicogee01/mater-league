@@ -1816,7 +1816,7 @@ section.wk { margin-top: var(--s8); }
    An even shade keeps the derby name readable over it. */
 .dt.dt--brothers { --accent: #ffb347; background: #1f140a; }
 .dt.dt--brothers::before {
-  background: linear-gradient(rgba(20, 12, 4, 0.5), rgba(20, 12, 4, 0.5)), url("../media/derby-sutphin.jpg") center 33% / cover no-repeat;
+  background: linear-gradient(rgba(20, 12, 4, 0.5), rgba(20, 12, 4, 0.5)), url("../media/derby-sutphin.jpg") center 30% / cover no-repeat;
 }
 .dt.dt--brothers::after { content: none; }
 
@@ -1849,7 +1849,7 @@ section.wk { margin-top: var(--s8); }
 /* where the palette shows up */
 .derby[class*="derby--"] { --ca: var(--d1); --cb: var(--d2); }
 .derby[class*="derby--"] .derby__head { margin: calc(-1 * var(--s5)) calc(-1 * var(--s5)) 0; padding: calc(var(--s5) + 8px) var(--s5) var(--s4); }
-.derby__head.dt { align-content: end; }
+.derby__head.dt { align-content: end; min-height: 190px; }
 .derby__head.dt .derby__tag { align-self: start; background: rgba(8, 12, 20, 0.62); border: 0; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25); }
 .derby__head.dt--brothers .derby__tag { background: #996633; color: #fff4e0; }
 .mu-card.is-derby[class*="derby--"] { border-color: var(--d1); box-shadow: 0 0 0 4px color-mix(in srgb, var(--d1) 20%, transparent), 0 14px 30px -16px color-mix(in srgb, var(--d1) 70%, transparent); }

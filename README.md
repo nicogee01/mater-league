@@ -64,6 +64,11 @@ Quarterfinals,1,19,nicog01,BottomCap,,
 
 Past champions (Victory Road) are in `data/league.js` under `honours`.
 
+**Home and away:** Sleeper doesn't track venues, so after adding a week run
+`node scripts/balance-home-away.mjs`. It decides who's home (keeping every club's home/away
+count as even as possible, coin-flip on ties, the same answer every run) and shuffles each
+week's card order. Earlier weeks never change.
+
 **Check before publishing:** `node scripts/check-matchups.mjs` confirms every
 result agrees with Sleeper's week-by-week W/L record for both teams, and (once
 all scored weeks are in) that each club's season points for/against match Sleeper.
@@ -107,6 +112,7 @@ data/lineups.csv      starting XIs + rebuilt benches per gameweek
 scripts/check-matchups.mjs  verifies matchups.csv against Sleeper (Node 18+)
 scripts/build-lineups.mjs   fills points/projections/benches into lineups.csv
 scripts/snapshot-lineups.mjs  records starting XIs from Sleeper after each gameweek
+scripts/balance-home-away.mjs  fair home/away + shuffled card order in matchups.csv
 media/                hero videos + posters (originals/ is git-ignored)
 ```
 
