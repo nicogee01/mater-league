@@ -1804,20 +1804,16 @@ button { cursor: pointer; touch-action: manipulation; }
 .dt.dt--brothers::before, .dt.dt--upstate::before, .dt.dt--i95::before { z-index: -3; }
 .dt.dt--brothers::after, .dt.dt--upstate::after, .dt.dt--i95::after { z-index: -1; left: 0; width: auto; transform: none; }
 
-/* El Sutphin Clásico: the Sutphin Blvd station sign, and every few seconds a J train rushes past */
-.dt.dt--brothers { --accent: #ffb347; }
+/* El Sutphin Clásico: the Sutphin Blvd station sign, still. The photo sits on the right and fades
+   softly into J-line brown, so the derby name reads on the dark side with no hard edge. */
+.dt.dt--brothers { --accent: #ffb347; background: #1f140a; }
 .dt.dt--brothers::before {
-  background: linear-gradient(90deg, rgba(24, 14, 6, 0.92) 0%, rgba(24, 14, 6, 0.7) 38%, rgba(24, 14, 6, 0.15) 70%, rgba(24, 14, 6, 0.3) 100%),
-    url("../media/derby-sutphin.jpg") right 46% / auto 205% no-repeat, #3a2a18;
-  animation: rumble 9s linear infinite;
+  left: auto; right: 0; width: min(80%, 500px);
+  background: url("../media/derby-sutphin.jpg") center 46% / cover no-repeat;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 45%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 45%);
 }
-.dt.dt--brothers::after {
-  opacity: 0; background-size: 284px 100%;
-  background-image: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.62) 0 70px, rgba(0, 0, 0, 0.28) 70px 84px, rgba(255, 214, 150, 0.24) 84px 128px, rgba(0, 0, 0, 0.28) 128px 142px);
-  animation: train-pass 9s linear infinite;
-}
-@keyframes train-pass { 0%, 60% { opacity: 0; background-position: 0 0; } 63% { opacity: 1; } 84% { opacity: 1; background-position: 1500px 0; } 88%, 100% { opacity: 0; background-position: 1700px 0; } }
-@keyframes rumble { 0%, 61%, 87%, 100% { transform: none; } 64%, 70%, 76%, 82% { transform: translate(1px, -1px); } 67%, 73%, 79%, 85% { transform: translate(-1px, 1px); } }
+.dt.dt--brothers::after { content: none; }
 
 /* The Snow Belt Derby: the lake-effect snow clip (JS drops a looping video in the big banners) */
 .dt.dt--upstate { --accent: #bfe8ff; }
@@ -2014,8 +2010,7 @@ button { cursor: pointer; touch-action: manipulation; }
 
 /* ================= REDUCED MOTION ================= */
 @media (prefers-reduced-motion: reduce) {
-  .dt.dt--brothers::before, .dt.dt--brothers::after, .dt.dt--upstate::after, .dt.dt--i95::before, .dt.dt--i95::after { animation: none; }
-  .dt.dt--brothers::after { opacity: 0; }
+  .dt.dt--upstate::after, .dt.dt--i95::before, .dt.dt--i95::after { animation: none; }
   .dt__video { display: none; }
   .pr-emblem--top, .pr-emblem--bottom { animation: none; }
   .tk.is-ripping, .tk.is-ripping .tk__stub, .club-profile.cp-enter, .club-profile.cp-enter .cp-strip, .club-profile.cp-enter .cp-col { animation: none !important; }
