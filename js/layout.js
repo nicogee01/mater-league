@@ -10,6 +10,7 @@
     { id: "gazette", href: "gazette.html", label: "Gazette", long: "The Gazette" },
     { id: "clubs", href: "clubs.html", label: "Clubs" },
     { id: "h2h", href: "h2h.html", label: "H2H", long: "Head-to-Head" },
+    { id: "draft", href: "draft.html", label: "Draft", long: "Draft board" },
     { id: "transfers", href: "transfers.html", label: "Transfers" },
     { id: "records", href: "records.html", label: "Records", long: "Hall of Records" },
     { id: "power", href: "power.html", label: "Power Rankings" },

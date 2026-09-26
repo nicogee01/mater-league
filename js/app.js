@@ -2193,6 +2193,129 @@
     if (ib) saveImage(ib.dataset.img, ib);
   });
 
+  // ---------- DRAFT BOARD ----------
+  // Every pick from Sleeper's draft, with how it's paying off: "M1 → M5" = drafted as the 1st
+  // midfielder, now the 5th-best midfielder by season points. Ranks use the drafted position.
+  const DRAFT_POS = { GK: "GK", D: "DEF", M: "MID", F: "FWD" };
+  const DRAFT_POS_LONG = { GK: "goalkeeper", D: "defender", M: "midfielder", F: "forward" };
+  const draft = { data: null, team: null, pos: "" };
+  async function loadDraft() {
+    const d = (await get(`/league/${LEAGUE_ID}/drafts`))[0];
+    if (!d) return null;
+    const [full, picks] = await Promise.all([get(`/draft/${d.draft_id}`), get(`/draft/${d.draft_id}/picks`)]);
+    return { full, picks: picks.sort((a, b) => a.pick_no - b.pick_no) };
+  }
+  function buildDraft(raw) {
+    const pts = state.seasonPts || {};
+    const teams = raw.full.settings.teams;
+    const owner = {};
+    state.teams.forEach((t) => t.players.forEach((pid) => (owner[pid] = t.rosterId)));
+    // season rank within each position, across every player with points
+    const rankOf = {};
+    // a player counts at every position Sleeper lists him at (Saka is F and M), plus the one he was drafted at
+    const draftedAt = {};
+    raw.picks.forEach((p) => ((draftedAt[p.metadata.position] ||= new Set()).add(p.player_id)));
+    for (const pos of Object.keys(DRAFT_POS)) {
+      Object.keys(pts).filter((pid) => { const pl = state.players[pid] || {}; return (pl.ps || []).includes(pos) || pl.p === pos || (draftedAt[pos] && draftedAt[pos].has(pid)); })
+        .sort((a, b) => pts[b] - pts[a]).forEach((pid, i) => (rankOf[pid + "|" + pos] = i + 1));
+    }
+    const seen = {};
+    const picks = raw.picks.map((p) => {
+      const pos = p.metadata.position;
+      const draftRank = (seen[pos] = (seen[pos] || 0) + 1);
+      const seasonRank = rankOf[p.player_id + "|" + pos] || null;
+      const now = owner[p.player_id] || null;
+      return {
+        pid: p.player_id, round: p.round, no: p.pick_no, slot: p.draft_slot, roster: p.roster_id, pos,
+        name: `${p.metadata.first_name || ""} ${p.metadata.last_name || ""}`.trim(), last: p.metadata.last_name || p.metadata.first_name || "",
+        club: p.metadata.team_abbr || "", team: p.metadata.team || "",
+        label: `${p.round}.${String(((p.pick_no - 1) % teams) + 1).padStart(2, "0")}`,
+        draftRank, seasonRank, delta: seasonRank ? draftRank - seasonRank : null, pts: pts[p.player_id] ?? 0, now,
+      };
+    });
+    const slots = Array.from({ length: teams }, (_, i) => raw.full.slot_to_roster_id[i + 1]);
+    return { picks, slots, rounds: raw.full.settings.rounds, teams };
+  }
+  const deltaTxt = (x) => (x.delta == null ? "" : x.delta > 0 ? `▲${x.delta}` : x.delta < 0 ? `▼${-x.delta}` : "=");
+  function renderDraft() {
+    const board = $("#draftBoard");
+    if (!board || !draft.data) return;
+    const { picks, slots, rounds, teams } = draft.data;
+    const T = (id) => state.byRoster[id];
+    // summary: steals, busts (from the first six rounds, where it hurts), and each club's haul
+    const ranked = picks.filter((x) => x.delta != null);
+    const steals = [...ranked].sort((a, b) => b.delta - a.delta || b.pts - a.pts).slice(0, 3);
+    const busts = ranked.filter((x) => x.round <= 6).sort((a, b) => a.delta - b.delta || a.pts - b.pts).slice(0, 3);
+    const haul = slots.map((id) => ({ id, pts: picks.filter((x) => x.roster === id).reduce((a, x) => a + x.pts, 0), kept: picks.filter((x) => x.roster === id && x.now === id).length }))
+      .sort((a, b) => b.pts - a.pts);
+    const mini = (x, cls) => `<li class="db-mini ${cls}" data-pid="${esc(x.pid)}"><span class="db-mini__photo" data-photo="${esc(x.pid)}"><span>${esc(initials(x.name))}</span></span>
+      <span class="db-mini__who"><b>${esc(x.name)}</b><small>${x.label} · ${club(T(x.roster))}</small></span>
+      <span class="db-mini__rank"><b>${DRAFT_POS[x.pos][0]}${x.draftRank} → ${DRAFT_POS[x.pos][0]}${x.seasonRank}</b><small>${num(x.pts, 0)} pts</small></span></li>`;
+    $("#draftSummary").innerHTML = `
+      <section class="db-card db-card--up"><h2 class="db-card__title">Steals</h2><ol>${steals.map((x) => mini(x, "up")).join("")}</ol></section>
+      <section class="db-card db-card--down"><h2 class="db-card__title">Busts so far <small>rounds 1–6</small></h2><ol>${busts.map((x) => mini(x, "down")).join("")}</ol></section>
+      <section class="db-card"><h2 class="db-card__title">Draft haul <small>points from each club's picks</small></h2>
+        <ol class="db-haul">${haul.map((h, i) => `<li><span class="db-haul__n">${i + 1}</span>${crest(T(h.id))}<b>${club(T(h.id))}</b><span>${num(h.pts, 0)}<small>${h.kept}/${rounds} kept</small></span></li>`).join("")}</ol></section>`;
+    // board: one column per draft slot, one row per round (snake: even rounds run right to left)
+    const head = `<div class="db-corner">Round</div>${slots.map((id, i) => `<button type="button" class="db-team${draft.team === id ? " is-on" : ""}" data-team="${id}" aria-pressed="${draft.team === id}"><span class="db-team__slot">${i + 1}</span>${crest(T(id))}<b>${club(T(id))}</b></button>`).join("")}`;
+    let body = "";
+    for (let r = 1; r <= rounds; r++) {
+      body += `<div class="db-round"><b>${r}</b><span aria-hidden="true">${r % 2 ? "→" : "←"}</span></div>`;
+      for (let s = 1; s <= teams; s++) {
+        const x = picks.find((p) => p.round === r && p.slot === s);
+        if (!x) { body += `<div class="db-pick is-empty"></div>`; continue; }
+        const gone = x.now !== x.roster;
+        const cls = x.delta == null ? "" : x.delta > 0 ? "up" : x.delta < 0 ? "down" : "flat";
+        const dim = (draft.team && x.roster !== draft.team) || (draft.pos && x.pos !== draft.pos);
+        const hl = draft.team && x.roster === draft.team;
+        body += `<button type="button" class="db-pick pos-${x.pos}${gone ? " is-gone" : ""}${dim ? " is-dim" : ""}${hl ? " is-hl" : ""}" data-pid="${esc(x.pid)}" data-team="${x.roster}" data-pos="${x.pos}">
+          <span class="db-pick__top"><span class="db-pick__no">${x.label}</span><span class="db-pick__pos">${DRAFT_POS[x.pos]}</span></span>
+          <span class="db-pick__who"><span class="db-pick__photo" data-photo="${esc(x.pid)}"><span>${esc(initials(x.name))}</span></span><span class="db-pick__name">${esc(x.last)}<small>${clubLogo(x.team)}${esc(x.club)}</small></span></span>
+          <span class="db-pick__rank ${cls}">${x.seasonRank ? `${DRAFT_POS[x.pos][0]}${x.draftRank} → ${DRAFT_POS[x.pos][0]}${x.seasonRank} <i>${deltaTxt(x)}</i>` : `${DRAFT_POS[x.pos][0]}${x.draftRank} · no points yet`}</span>
+          ${gone ? `<span class="db-pick__gone">${x.now ? `Now at ${esc(T(x.now).name)}` : "Dropped"}</span>` : ""}
+        </button>`;
+      }
+    }
+    board.style.setProperty("--teams", teams);
+    board.innerHTML = head + body;
+    board.dataset.team = draft.team || "";
+    board.dataset.pos = draft.pos || "";
+    loadPhotos([...new Set($$("[data-photo]", document).map((e) => e.dataset.photo))], document.querySelector("main"));
+  }
+  function draftTip(el) {
+    const x = draft.data.picks.find((p) => p.pid === el.dataset.pid);
+    if (!x) return "";
+    const L = DRAFT_POS_LONG[x.pos], owner = state.byRoster[x.roster];
+    return `<b>${esc(x.name)} · ${x.label}</b><span>Drafted by ${club(owner)} as the ${ordinal(x.draftRank)} ${L}</span>
+      <span>${x.seasonRank ? `Now the ${ordinal(x.seasonRank)}-best ${L}: <strong>${num(x.pts)}</strong> pts` : "No points yet this season"}</span>
+      <span>${x.now === x.roster ? `Still at ${club(owner)}` : x.now ? `Now at ${club(state.byRoster[x.now])}` : "Dropped: free agent"}</span>`;
+  }
+  async function initDraft() {
+    if (!$("#draftBoard")) return;
+    try {
+      const raw = await loadDraft();
+      if (!raw) { $("#draftBoard").innerHTML = `<p class="pending-note">No draft found for this league.</p>`; return; }
+      draft.data = buildDraft(raw);
+      renderDraft();
+      bindTip($("#draftBoard"), ".db-pick[data-pid]", draftTip);
+      bindTip($("#draftSummary"), ".db-mini", draftTip);
+    } catch (err) {
+      $("#draftBoard").innerHTML = `<p class="pending-note">Couldn't load the draft from Sleeper.</p>`;
+    }
+  }
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest(".db-team");
+    if (t) { draft.team = draft.team === +t.dataset.team ? null : +t.dataset.team; renderDraft(); return; }
+    const pb = e.target.closest("#draftPos .chip");
+    if (pb) {
+      draft.pos = pb.dataset.pos;
+      $$("#draftPos .chip").forEach((c) => { const on = c === pb; c.classList.toggle("is-active", on); c.setAttribute("aria-pressed", String(on)); });
+      renderDraft(); return;
+    }
+    const pk = e.target.closest(".db-pick[data-pid], .db-mini");
+    if (pk && draft.data) { const x = draft.data.picks.find((p) => p.pid === pk.dataset.pid); hideTip(); openPlayer(pk.dataset.pid, x && x.name); }
+  });
+
   // ---------- ANALYTICS ----------
   const tip = $("#tooltip");
   function showTip(html, x, y) {
@@ -3145,7 +3268,7 @@
       const season = league.season || sportState.season;
       const [players, statsWeeks, ...txnLegs] = await Promise.all([
         loadPlayers().catch(() => ({})),
-        Promise.all(Array.from({ length: $("#clubGrid") || $("#hubGroups") ? scored : 0 }, (_, i) => get(`/stats/${SPORT}/regular/${season}/${i + 1}`).catch(() => ({})))),
+        Promise.all(Array.from({ length: $("#clubGrid") || $("#hubGroups") || $("#draftBoard") ? scored : 0 }, (_, i) => get(`/stats/${SPORT}/regular/${season}/${i + 1}`).catch(() => ({})))),
         ...Array.from({ length: legs }, (_, i) => get(`/league/${LEAGUE_ID}/transactions/${i + 1}`).catch(() => [])),
       ]);
       state.players = players;
@@ -3166,6 +3289,7 @@
       renderTicker();
       renderRecords();
       renderClubs();   // again, now star men (season points) are known
+      initDraft();
       if ($("#derbies")) loadPhotos($$("#derbies [data-photo]").map((e) => e.dataset.photo), $("#derbies"));
       renderMarket();
       renderHomeSnap();
