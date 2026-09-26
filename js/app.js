@@ -2255,9 +2255,9 @@
       <span class="db-mini__who"><b>${esc(x.name)}</b><small>${x.label} · ${club(T(x.roster))}</small></span>
       <span class="db-mini__rank"><b>${DRAFT_POS[x.pos][0]}${x.draftRank} → ${DRAFT_POS[x.pos][0]}${x.seasonRank}</b><small>${num(x.pts, 0)} pts</small></span></li>`;
     $("#draftSummary").innerHTML = `
-      <section class="db-card db-card--up"><h2 class="db-card__title">Steals</h2><ol>${steals.map((x) => mini(x, "up")).join("")}</ol></section>
-      <section class="db-card db-card--down"><h2 class="db-card__title">Busts so far <small>rounds 1–6, regular starters only</small></h2><ol>${busts.map((x) => mini(x, "down")).join("")}</ol></section>
-      <section class="db-card"><h2 class="db-card__title">Draft haul <small>points from each club's picks</small></h2>
+      <section class="db-card db-card--up db-sum__steals"><h2 class="db-card__title">Steals</h2><ol>${steals.map((x) => mini(x, "up")).join("")}</ol></section>
+      <section class="db-card db-card--down db-sum__busts"><h2 class="db-card__title">Busts so far <small>rounds 1–6, regular starters only</small></h2><ol>${busts.map((x) => mini(x, "down")).join("")}</ol></section>
+      <section class="db-card db-sum__haul"><h2 class="db-card__title">Draft haul <small>points from each club's picks</small></h2>
         <ol class="db-haul">${haul.map((h, i) => `<li><span class="db-haul__n">${i + 1}</span>${crest(T(h.id))}<b>${club(T(h.id))}</b><span>${num(h.pts, 0)}<small>${h.kept}/${rounds} kept</small></span></li>`).join("")}</ol></section>`;
     // board: one column per draft slot, one row per round (snake: even rounds run right to left)
     const head = `<div class="db-corner">Round</div>${slots.map((id, i) => `<button type="button" class="db-team${draft.team === id ? " is-on" : ""}" data-team="${id}" aria-pressed="${draft.team === id}"><span class="db-team__slot">${i + 1}</span>${crest(T(id))}<b>${club(T(id))}</b></button>`).join("")}`;

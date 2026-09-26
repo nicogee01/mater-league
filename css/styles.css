@@ -1864,7 +1864,12 @@ section.wk { margin-top: var(--s8); }
 .badge--derby.dt { border-color: rgba(255, 255, 255, 0.5); }
 
 /* ================= DRAFT BOARD ================= */
-.db-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); margin-bottom: var(--s6); }
+/* steals and busts stack on the left, the haul runs down the right: both columns end level */
+.db-sum { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "steals haul" "busts haul"; gap: var(--s4); margin-bottom: var(--s6); }
+.db-sum__steals { grid-area: steals; }
+.db-sum__busts { grid-area: busts; }
+.db-sum__haul { grid-area: haul; display: grid; grid-template-rows: auto 1fr; }
+.db-sum__haul .db-haul { align-content: space-between; }
 .db-card { padding: var(--s4) var(--s5); background: var(--surface); border: 1px solid var(--line); border-radius: 18px; border-top: 4px solid var(--ink); min-width: 0; }
 .db-card--up { border-top-color: #2e8b57; }
 .db-card--down { border-top-color: var(--accent); }
@@ -1958,7 +1963,7 @@ section.wk { margin-top: var(--s8); }
   .hide-md { display: none; }
 }
 @media (max-width: 860px) {
-  .db-sum { grid-template-columns: 1fr; }
+  .db-sum { grid-template-columns: 1fr; grid-template-areas: "steals" "busts" "haul"; }
   .club-grid { grid-template-columns: 1fr; }
   .cp-main { grid-template-columns: 1fr; padding: var(--s4); }
   .cp-col--pitch { order: 2; }
