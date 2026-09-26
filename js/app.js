@@ -324,7 +324,7 @@
     const row = (t) => `<li class="sb__row"><span class="sb__pos">${t.pos}</span><span class="sb__name">${club(t)}</span><strong>${t.w}-${t.l}${t.d ? "-" + t.d : ""}</strong></li>`;
     $("#sbTop").innerHTML = T.slice(0, 3).map(row).join("");
     $("#sbBottom").innerHTML = T.slice(-2).map(row).join("");
-    $("#heroEyebrow").textContent = `The Mater League · Matchweek ${state.week}`;
+    $("#heroEyebrow").textContent = `The Mater League · Gameweek ${state.week}`;
   }
   function streakLeader() {
     const val = (t) => (t.streak.endsWith("W") ? parseInt(t.streak, 10) : 0);
@@ -2454,7 +2454,7 @@
     const el = $("#rankChart");
     if (!el) return;
     const n = state.teams.length, me = focusTeam();
-    if (!weeks.length) { el.innerHTML = `<p class="pending-note">No matchweeks played yet.</p>`; return; }
+    if (!weeks.length) { el.innerHTML = `<p class="pending-note">No gameweeks played yet.</p>`; return; }
     const W = chartWidth(el, 720), H = W < 520 ? 280 : 340, L = 34, R = 20, Tp = 16, B = 32;
     const x = (i) => L + (weeks.length === 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (weeks.length - 1));
     const y = (r) => Tp + ((r - 1) * (H - Tp - B)) / (n - 1);
