@@ -117,7 +117,7 @@ button { cursor: pointer; touch-action: manipulation; }
   box-shadow: 0 1px 0 var(--line), 0 3px 0 -1px var(--ink);
 }
 .nav__inner {
-  max-width: var(--maxw); margin: 0 auto; height: var(--nav-h);
+  max-width: 1440px; margin: 0 auto; height: var(--nav-h);
   display: flex; align-items: center; gap: var(--s6); padding: 0 var(--s5);
 }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
@@ -1957,7 +1957,8 @@ section.wk { margin-top: var(--s8); }
 .db-pick.is-hl.is-gone { opacity: 0.7; }
 
 /* ================= RESPONSIVE ================= */
-@media (max-width: 1180px) {
+/* 13 tabs need ~1350px across; below that the bar switches to the menu button */
+@media (max-width: 1380px) {
   .nav__links, .nav__cta { display: none; }
   .nav__toggle { display: block; }
 }
