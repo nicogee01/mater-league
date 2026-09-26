@@ -9,7 +9,7 @@ Videos and images used by the site.
 | `hero-stadium.mp4` / `.jpg` | Hero rotation: stadium from the street (12 s, 1920×1080) |
 | `hero-aerial.mp4` / `.jpg` | Hero rotation on phones: drone over a packed stadium (16 s, 720×1280) |
 | `derby-snow.mp4` / `.jpg` | Snow Belt Derby banners (12 s loop, 1280×720 crop of the original) |
-| `derby-sutphin.jpg` | El Sutphin Clásico banners (Sutphin Blvd station sign) |
+| `derby-sutphin-wide.jpg` | El Sutphin Clásico banners (Sutphin Blvd station wall, widened with its own tiles) |
 | `derby-flags-hn-ec.jpg` / `derby-flags-ec-hn.jpg` | El Clásico de las Américas banners (Honduras│Ecuador, and swapped for when GlenM22 is on the left) |
 | `mcqueen-cup.png` | The McQueen Cup trophy (background removed): cup final stage + Victory Road |
 | `league-trophy.png` | The Mater League trophy (background removed): Victory Road |
