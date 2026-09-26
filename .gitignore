@@ -6,3 +6,7 @@ private/
 
 # screen recordings of Sleeper matchups (source for data/lineups.csv)
 data/Matchups Vids/
+
+# Artlist preview copies (watermarked, not licensed for publishing). Replace with licensed downloads, then remove these lines.
+media/stadium.mp4
+media/fans-celebrating.mp4
