@@ -20,7 +20,7 @@ window.MATER_LEAGUE = {
     },
     {
       "slug": "brothers",
-      "name": "The Bloodline Clásico",
+      "name": "El Sutphin Clásico",
       "tag": "Same blood, no mercy",
       "managers": ["nicog01", "BottomCap"],
       "story": "Brothers by blood, rivals by choice. Raised in the same house, now fighting over the same bragging rights, and the loser hears about it at every family dinner."

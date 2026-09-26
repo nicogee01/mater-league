@@ -1797,7 +1797,7 @@ button { cursor: pointer; touch-action: manipulation; }
 }
 /* The Clifton Derby: family heritage, bottle green with gold pinstripe */
 .dt.dt--clifton { --accent: #f0d27a; background: repeating-linear-gradient(135deg, rgba(240, 210, 122, 0.16) 0 2px, transparent 2px 13px), linear-gradient(120deg, #0f3a24 0%, #1d5c3a 55%, #2d7d52 100%); }
-/* The Bloodline Clásico: same blood, crimson bleeding out of black */
+/* El Sutphin Clásico: brothers from the J train (placeholder colours until the J-train background image arrives) */
 .dt.dt--brothers { --accent: #ff9aa8; background: radial-gradient(120% 110% at 100% 0%, rgba(214, 36, 60, 0.6), transparent 62%), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 18px), linear-gradient(115deg, #0d0709 0%, #2a070d 45%, #7a0c1c 100%); }
 /* The Snow Belt Derby: lake-effect snow over a glacier-blue night */
 .dt.dt--upstate { --accent: #bfe8ff; background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1.2px, transparent 1.9px) 0 0 / 26px 26px, radial-gradient(circle, rgba(255, 255, 255, 0.55) 0 1px, transparent 1.5px) 13px 9px / 19px 19px, linear-gradient(165deg, #081c2e 0%, #0e3b5c 55%, #3f7fa6 100%); animation: snowfall 16s linear infinite; }
