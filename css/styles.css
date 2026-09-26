@@ -154,8 +154,13 @@ button { cursor: pointer; touch-action: manipulation; }
 .nav__toggle[aria-expanded="true"] span:first-child { transform: translateY(4px) rotate(45deg); }
 .nav__toggle[aria-expanded="true"] span:last-child { transform: translateY(-4px) rotate(-45deg); }
 .mobile-menu[hidden] { display: none; }
-.mobile-menu { display: flex; flex-direction: column; padding: var(--s2) var(--s5) var(--s5); background: rgba(var(--paper-rgb), 0.98); }
-.mobile-menu a { padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 20px; color: var(--text); }
+/* the menu lives in the fixed nav, so cap it at the screen height and let it scroll on its own */
+.mobile-menu {
+  display: flex; flex-direction: column; padding: var(--s2) var(--s5) var(--s5); background: rgba(var(--paper-rgb), 0.98);
+  max-height: calc(100vh - var(--nav-h)); max-height: calc(100dvh - var(--nav-h)); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+}
+.mobile-menu a { flex: none; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 19px; color: var(--text); }
+html.menu-open, html.menu-open body { overflow: hidden; }
 
 .nav__progress { position: absolute; left: 0; right: 0; bottom: -12px; height: 14px; pointer-events: none; opacity: 0; transition: opacity var(--t-med); }
 .nav.is-solid .nav__progress { opacity: 1; }

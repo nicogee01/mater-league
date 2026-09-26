@@ -3081,6 +3081,7 @@
     // the home nav is see-through over the hero; go solid while the menu is open so it reads on paper
     const nav = $("#nav");
     nav.classList.toggle("is-open", open);
+    document.documentElement.classList.toggle("menu-open", open);   // page behind stays put while the menu scrolls
     nav.classList.toggle("is-solid", open || window.scrollY > 40 || nav.classList.contains("is-page"));
   });
   menu.addEventListener("click", (e) => { if (e.target.tagName === "A") toggle.click(); });
