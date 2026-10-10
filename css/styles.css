@@ -809,6 +809,7 @@ html.menu-open, html.menu-open body { overflow: hidden; }
 .gz-award__blurb { margin: 0; font-size: 13px; color: var(--muted); }
 
 .gz-totw { margin-top: var(--s8); }
+#gzRoot > .gz-totw:first-child { margin-top: 0; }
 .gz-totw__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s2) var(--s4); margin-bottom: var(--s3); }
 .gz-totw__head .subhead { margin: 0; }
 .gz-totw__head p { margin: 0; color: var(--muted); }

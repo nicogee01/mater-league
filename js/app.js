@@ -2069,7 +2069,7 @@
     const who = (a) => (a.who.rosterId ? `${crest(a.who)}<b>${club(a.who)}</b>` : `<span class="gz-award__photo" data-photo="${esc(a.who.pid)}" data-player="${esc(a.who.pid)}" data-name="${esc(a.who.name)}"><span>${esc(initials(a.who.name))}</span></span><b>${plink(a.who.pid, a.who.name)}</b><small>${club(state.byRoster[a.who.id])}</small>`);
     // the Missed XI needs every player's stats for the week (waiver wire included): fetch once, then redraw
     if (wk.sq && !wk.missed && gz.stats) wk.missed = missedEleven(wk, gz.stats);
-    if (wk.sq && !gz.stats && Object.keys(state.players || {}).length && !gz.statsLoading) {
+    if (document.body.dataset.page === "awards" && wk.sq && !gz.stats && Object.keys(state.players || {}).length && !gz.statsLoading) {
       gz.statsLoading = true;
       loadWeeklyStats().then((s) => { gz.stats = s; renderGazette(); }).catch(() => {});
     }
@@ -2081,11 +2081,14 @@
     const xiNote = missedMode
       ? (t ? `Best eleven nobody started: players left on a bench plus everyone on the waiver wire, in whichever formation scores most. ${eleven(t).filter((p) => !p.id).length} of them were free agents.${gap > 0 ? ` It would have outscored the Team of the Week by ${num(gap, 2)}.` : ""}` : "")
       : "Best eleven from the players managers actually started that week, in whichever formation scores most.";
-    root.innerHTML = `
+    // gazette.html: the paper (headlines + reports). awards.html: the two XIs + the weekly awards.
+    const awardsPage = document.body.dataset.page === "awards";
+    const front = `
       <div class="gz-front">
         ${storyCard(lead, true)}
         <div class="gz-side">${rest.map((s) => storyCard(s, false)).join("")}</div>
-      </div>
+      </div>`;
+    const awards = `
       <section class="gz-awards" aria-labelledby="gzAwardsTitle">
         <h2 class="subhead" id="gzAwardsTitle">Gameweek ${wk.week} awards</h2>
         <div class="gz-award-grid">${wk.awards.map((a) => `
@@ -2095,7 +2098,8 @@
             <p class="gz-award__stat">${esc(a.stat)}</p>
             <p class="gz-award__blurb">${esc(a.blurb)}</p>
           </div>`).join("")}</div>
-      </section>
+      </section>`;
+    const xis = `
       ${wk.sq ? `<section class="gz-totw" aria-labelledby="gzTotwTitle">
         <div class="filters gz-xi-tabs" role="group" aria-label="Which eleven">
           <button type="button" class="chip${missedMode ? "" : " is-active"}" data-gzxi="totw" aria-pressed="${!missedMode}">Team of the Week</button>
@@ -2112,6 +2116,7 @@
         </div>
         <p class="chart-note">${esc(xiNote)}</p>` : `<p class="pending-note">Scouting the waiver wire…</p>`}
       </section>` : `<p class="pending-note">Team of the Week needs that gameweek's lineups.</p>`}`;
+    root.innerHTML = awardsPage ? xis + awards : front;
     if (Object.keys(state.players || {}).length) loadPhotos($$("[data-photo]", root).map((e) => e.dataset.photo), root);
     countUp(root);
   }

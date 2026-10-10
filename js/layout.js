@@ -8,6 +8,7 @@
     { id: "table", href: "table.html", label: "Table", long: "League table" },
     { id: "matchups", href: "matchups.html", label: "Matchups" },
     { id: "gazette", href: "gazette.html", label: "Gazette", long: "The Gazette" },
+    { id: "awards", href: "awards.html", label: "Awards", long: "Weekly Awards" },
     { id: "clubs", href: "clubs.html", label: "Clubs" },
     { id: "h2h", href: "h2h.html", label: "H2H", long: "Head-to-Head" },
     { id: "draft", href: "draft.html", label: "Draft", long: "Draft board" },
