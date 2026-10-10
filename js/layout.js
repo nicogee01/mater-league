@@ -57,6 +57,10 @@
     </div>
   </footer>
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  <dialog class="pd" id="playerDlg" aria-labelledby="playerDlgTitle">
+    <button type="button" class="pd__close" aria-label="Close">×</button>
+    <div id="playerDlgBody"></div>
+  </dialog>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
       <symbol id="ball" viewBox="0 0 40 40">

@@ -616,14 +616,14 @@
         return `<li class="dh__game">
           <span class="dh__wk">GW${g.m.week}</span>
           <span class="dh__score">${crest(H)}<b class="${g.winId === H.rosterId ? "is-win" : ""}">${num(g.m.homePts, 2)}</b><i>–</i><b class="${g.winId === A.rosterId ? "is-win" : ""}">${num(g.m.awayPts, 2)}</b>${crest(A)}</span>
-          <span class="dh__motm">${g.motm ? `<span class="dh__photo" data-photo="${esc(g.motm.pid)}" aria-hidden="true"><span>${esc(initials(g.motm.name))}</span></span><span><small>Man of the match</small><b>${esc(g.motm.name)}</b> ${gp(g.motm.pts)} for ${club(state.byRoster[g.winId])}</span>` : `<span><small>Man of the match</small>${g.winId ? "Lineups not logged" : "Honours even"}</span>`}</span>
+          <span class="dh__motm">${g.motm ? `<span class="dh__photo" data-photo="${esc(g.motm.pid)}" aria-hidden="true"><span>${esc(initials(g.motm.name))}</span></span><span><small>Man of the match</small><b>${plink(g.motm.pid, g.motm.name)}</b> ${gp(g.motm.pts)} for ${club(state.byRoster[g.winId])}</span>` : `<span><small>Man of the match</small>${g.winId ? "Lineups not logged" : "Honours even"}</span>`}</span>
         </li>`;
         };
         // only the three most recent meetings, so the card never gets long
         return `<ol class="dh__list">${[...games].reverse().slice(0, 3).map(row).join("")}</ol>`;
       })()}
       ${legends.length ? `<h4 class="dh__title">Derby legends</h4>
-      <ol class="dh__legends">${legends.map((p, i) => `<li><span class="dh__rank">${i + 1}</span><span class="dh__photo" data-photo="${esc(p.pid)}" aria-hidden="true"><span>${esc(initials(p.name))}</span></span><span class="dh__who"><b>${esc(p.name)}</b><small>${club(state.byRoster[p.id])} · ${p.apps} ${p.apps === 1 ? "derby" : "derbies"}${p.motm ? ` · ${"★".repeat(p.motm)}` : ""}</small></span><span class="dh__pts">${gp(Math.round(p.pts * 100) / 100)}</span></li>`).join("")}</ol>` : ""}
+      <ol class="dh__legends">${legends.map((p, i) => `<li><span class="dh__rank">${i + 1}</span><span class="dh__photo" data-photo="${esc(p.pid)}" aria-hidden="true"><span>${esc(initials(p.name))}</span></span><span class="dh__who"><b>${plink(p.pid, p.name)}</b><small>${club(state.byRoster[p.id])} · ${p.apps} ${p.apps === 1 ? "derby" : "derbies"}${p.motm ? ` · ${"★".repeat(p.motm)}` : ""}</small></span><span class="dh__pts">${gp(Math.round(p.pts * 100) / 100)}</span></li>`).join("")}</ol>` : ""}
     </div>`;
   }
 
@@ -662,7 +662,7 @@
             <span class="form tk__form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span>
           </span>
           <span class="tk__foot">
-            ${star ? `<span class="tk__star"><span class="tk__photo" data-photo="${star.pid}" aria-hidden="true"><span>${esc(initials(star.p.n || ""))}</span></span><span><small>Star man</small><b>${esc(star.p.l || star.p.n || "")}</b> ${num(star.pts, 0)} pts</span></span>` : `<span class="tk__star"></span>`}
+            ${star ? `<span class="tk__star"><span class="tk__photo" data-photo="${star.pid}" aria-hidden="true"><span>${esc(initials(star.p.n || ""))}</span></span><span><small>Star man</small><b>${plink(star.pid, star.p.n || "", star.p.l || star.p.n || "")}</b> ${num(star.pts, 0)} pts</span></span>` : `<span class="tk__star"></span>`}
             ${ticketSpark(t)}
           </span>
         </span>
@@ -679,7 +679,7 @@
     const top = bids.sort((a, b) => b.settings.waiver_bid - a.settings.waiver_bid)[0];
     if (!top) return null;
     const pid = Object.keys(top.adds || {})[0];
-    return { name: state.players[pid] ? state.players[pid].n : "Unknown", bid: top.settings.waiver_bid, when: top.status_updated || top.created };
+    return { pid, name: state.players[pid] ? state.players[pid].n : "Unknown", bid: top.settings.waiver_bid, when: top.status_updated || top.created };
   }
   function sparklineSVG(games) {
     const W = 520, H = 140, P = 22;
@@ -730,7 +730,7 @@
     }).join(" · ");
     let delay = 0;
     const row = (arr) => `<div class="pitch__row">${arr.map((p) => `
-      <div class="pl" style="animation-delay:${(delay++) * 45}ms">
+      <div class="pl" style="animation-delay:${(delay++) * 45}ms" data-player="${esc(p.id)}" data-name="${esc(p.n)}" role="button" tabindex="0" aria-label="${esc(p.n)}: open his season">
         <span class="pl__photo" data-photo="${p.id}"><span>${esc(initials(p.n))}</span></span>
         ${pj(p.id) ? `<span class="pl__proj">${pj(p.id)}</span>` : ""}
         <span class="pl__name">${esc(p.l)}</span><span class="pl__club">${clubLogo(p.t)}${esc(p.c)}</span>
@@ -833,13 +833,13 @@
                 : p.i ? `<span class="tag inj">${esc(p.i)}</span>`
                 : starters.has(pid) ? `<span class="tag xi">XI</span>` : `<span class="tag">Bench</span>`;
               const sp = state.seasonPts[pid];
-              return `<li><span class="posb ${esc(p.p)}">${esc(p.p || "–")}</span>
+              return `<li data-player="${esc(pid)}" data-name="${esc(p.n)}" role="button" tabindex="0"><span class="posb ${esc(p.p)}">${esc(p.p || "–")}</span>
                 <span class="sq__photo" data-photo="${pid}" aria-hidden="true"></span>
                 <span class="nm">${esc(p.n)}<small>${clubLogo(p.t)}${esc(p.c)}${sp != null ? ` · ${num(sp)} pts` : ""}${pj(pid) ? ` · ${pj(pid)}` : ""}</small></span>${tag}</li>`;
             }).join("")}</ul>
           </details>
           <section class="cp-card cp-card--rt"><h4 class="cp-card__title">Club record transfer</h4>
-            ${rt ? `<div class="rt"><span class="rt__fee">$${rt.bid}</span><b>${esc(rt.name)}</b><small>${new Date(rt.when).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</small></div>`
+            ${rt ? `<div class="rt"><span class="rt__fee">$${rt.bid}</span><b>${plink(rt.pid, rt.name)}</b><small>${new Date(rt.when).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</small></div>`
                  : `<p class="dim">No waiver fees paid yet.</p>`}
           </section>
         </div>
@@ -915,7 +915,7 @@
   const IN = `<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1l5 6H8v4H4V7H1z"/></svg>`;
   const OUT = `<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 11L1 5h3V1h4v4h3z"/></svg>`;
   function txnSummary(tx) {
-    const nm = (pid) => (state.players[pid] ? state.players[pid].n : `Player ${pid}`);
+    const nm = (pid) => ({ pid, n: state.players[pid] ? state.players[pid].n : `Player ${pid}` });
     const adds = tx.adds || {}, drops = tx.drops || {};
     const teams = tx.roster_ids.map((id) => state.byRoster[id]).filter(Boolean);
     const main = teams[0];
@@ -929,12 +929,12 @@
     else {
       const ins = perTeam[0] ? perTeam[0].ins : [];
       head = ins.length
-        ? `${club(main)} ${tx.type === "waiver" ? "win the race for" : "snap up"} ${esc(ins.join(", "))}`
-        : `${club(main)} release ${esc((perTeam[0] ? perTeam[0].outs : []).join(", "))}`;
+        ? `${club(main)} ${tx.type === "waiver" ? "win the race for" : "snap up"} ${ins.map((x) => plink(x.pid, x.n)).join(", ")}`
+        : `${club(main)} release ${(perTeam[0] ? perTeam[0].outs : []).map((x) => plink(x.pid, x.n)).join(", ")}`;
     }
     const moves = perTeam.map(({ t, ins, outs }) => [
-      ...ins.map((n) => `<span class="in">${IN}<b>${esc(n)}</b>${tx.type === "trade" ? ` → ${club(t)}` : " in"}</span>`),
-      ...(tx.type === "trade" ? [] : outs.map((n) => `<span class="out">${OUT}<b>${esc(n)}</b> out</span>`)),
+      ...ins.map((x) => `<span class="in">${IN}<b>${plink(x.pid, x.n)}</b>${tx.type === "trade" ? ` → ${club(t)}` : " in"}</span>`),
+      ...(tx.type === "trade" ? [] : outs.map((x) => `<span class="out">${OUT}<b>${plink(x.pid, x.n)}</b> out</span>`)),
     ].join("")).join("");
     return { head, moves, main };
   }
@@ -1090,7 +1090,7 @@
     const top = (f) => [...T].sort((a, b) => f(b) - f(a))[0];
     const cards = [];
     // who: a team object, or a list of team objects for ties
-    const add = (tone, icon, title, who, val, blurb) => who && cards.push({ tone, icon, title, who: [].concat(who), val, blurb });
+    const add = (tone, icon, title, who, val, blurb, mentions) => who && cards.push({ tone, icon, title, who: [].concat(who), val, blurb, mentions });
 
     // --- live from Sleeper ---
     const boot = top((t) => t.pf);
@@ -1123,8 +1123,8 @@
     const bids = state.txns.filter((t) => t.type === "waiver" && t.settings && t.settings.waiver_bid);
     const recordBid = [...bids].sort((a, b) => b.settings.waiver_bid - a.settings.waiver_bid)[0];
     if (recordBid) {
-      const p = state.players[Object.keys(recordBid.adds || {})[0]];
-      add("gold", "pen", "Record Signing", state.byRoster[recordBid.roster_ids[0]], "$" + recordBid.settings.waiver_bid, `${p ? p.n : "A mystery man"}, the league's most expensive signing.`);
+      const rpid = Object.keys(recordBid.adds || {})[0], p = state.players[rpid];
+      add("gold", "pen", "Record Signing", state.byRoster[recordBid.roster_ids[0]], "$" + recordBid.settings.waiver_bid, `${p ? p.n : "A mystery man"}, the league's most expensive signing.`, p ? [[rpid, p.n]] : []);
     }
     const counts = {};
     state.txns.forEach((t) => t.roster_ids.forEach((id) => (counts[id] = (counts[id] || 0) + 1)));
@@ -1240,7 +1240,7 @@
     $("#spotVal").innerHTML = flaps(c.val);
     $("#spotVal").setAttribute("aria-label", c.val);
     $("#spotWho").innerHTML = who(c).slice(0, 3).map((t) => crest(t, "lg")).join("") + `<b>${who(c).map(club).join(" & ")}</b>`;
-    $("#spotBlurb").textContent = c.blurb;
+    $("#spotBlurb").innerHTML = linkNames(c.blurb, c.mentions);
     $("#spotCount").textContent = `${recState.spot + 1} / ${recState.cards.length}`;
     $("#spotIcon").innerHTML = ICONS[c.icon] || "";
     spot.setAttribute("aria-live", manual ? "polite" : "off");
@@ -1476,6 +1476,23 @@
     $("#victoryRoad").innerHTML = col("Mater League Champions", H.league, "Season in progress", LEAGUE_IMG) + col("McQueen Cup Champions", H.cup, "Bracket in progress", CUP_IMG);
   }
 
+  // ---------- PLAYER LINKS ----------
+  // Any player name anywhere on the site is a plink: tap it for his panel (recent gameweeks + stats).
+  const plink = (pid, name, text = name) => (pid
+    ? `<span class="plink" role="button" tabindex="0" data-player="${esc(pid)}" data-name="${esc(name)}">${esc(text)}</span>`
+    : esc(text));
+  // capture phase, so a player inside a bigger clickable (a club ticket, a matchup card) opens the player, not the parent
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-player]");
+    if (!el || !$("#playerDlg")) return;
+    e.preventDefault(); e.stopPropagation();
+    hideTip();
+    openPlayer(el.dataset.player, el.dataset.name || el.textContent.trim());
+  }, true);
+  document.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("[data-player][role='button']")) { e.preventDefault(); e.target.click(); }
+  });
+
   // ---------- MATCHUPS ----------
   // Fixtures come from matchups.csv. lineups.csv holds, per week, the starting XIs (read off Sleeper's
   // matchup screens) plus bench rows (slot BN) that scripts/build-lineups.mjs rebuilds from the draft
@@ -1538,7 +1555,7 @@
         </div>`;
       };
       const body = all.length ? `
-          <p class="mu-card__motm"><span>Top scorer</span> ${esc(star.name)} <b>${num(star.pts)}</b> for ${club(hs.xi.includes(star) ? H : A)}</p>
+          <p class="mu-card__motm"><span>Top scorer</span> ${plink(star.pid, star.name)} <b>${num(star.pts)}</b> for ${club(hs.xi.includes(star) ? H : A)}</p>
           <div class="mu-sheets">
             <section class="mu-sheet" aria-label="${esc(H.name)} team sheet">${renderSheet(hs, star)}</section>
             <section class="mu-sheet" aria-label="${esc(A.name)} team sheet">${renderSheet(as, star)}</section>
@@ -1909,7 +1926,8 @@
             : `${Wt.name} were projected ${num(wproj, 2)}, ${Lt.name} ${num(lproj, 2)}.`);
         }
         if (swap && swap.gain >= 5) lines.push(`${Lt.name} had ${swap.bench.name} (${gp(swap.bench.pts)}) on the bench while ${swap.starter.name} started and scored ${gp(swap.starter.pts)}${swap.gain > margin ? ": that swap alone would have won it" : ""}.`);
-        const s = { week, match: m, H, A, W: Wt, L: Lt, ws, ls, margin, draw, type, weight, headline, derby, star, starClub, report: possessive(lines.join(" ")), hasXI };
+        const mentions = [star, swap && swap.bench, swap && swap.starter].filter(Boolean).map((p) => [p.pid, p.name]);
+        const s = { week, match: m, H, A, W: Wt, L: Lt, ws, ls, margin, draw, type, weight, headline, derby, star, starClub, report: possessive(lines.join(" ")), mentions, hasXI };
         return s;
       });
       seasonHigh = Math.max(seasonHigh, weekHigh);
@@ -2007,13 +2025,19 @@
     if (Object.keys(state.players || {}).length) gz.data = d;
     return d;
   }
+  // turn the players a report mentions into tappable names
+  function linkNames(text, mentions = []) {
+    let html = esc(text);
+    for (const [pid, name] of mentions) html = html.split(esc(name)).join(plink(pid, name));
+    return html;
+  }
   function storyCard(s, lead) {
     const id = `gw${s.week}-${s.match.home}-${s.match.away}`;
     return `<article class="gz-story${lead ? " gz-story--lead" : ""}${s.derby ? ` is-derby derby--${esc(s.derby.slug)}` : ""}" id="${id}">
       <p class="gz-story__tag"><span>${GZ_TAGS[s.type] || "Result"}</span>${s.derby ? `<em class="dt dt--${esc(s.derby.slug)}">${esc(s.derby.name)}</em>` : ""}</p>
       <h3 class="gz-story__head">${esc(s.headline)}</h3>
       <p class="gz-story__score">${crest(s.W)}<b>${club(s.W)}</b><span class="gz-count" data-to="${s.ws}">${num(s.ws, 2)}</span><i>–</i><span class="gz-count" data-to="${s.ls}">${num(s.ls, 2)}</span><b>${club(s.L)}</b>${crest(s.L)}</p>
-      <p class="gz-story__body">${esc(s.report)}</p>
+      <p class="gz-story__body">${linkNames(s.report, s.mentions)}</p>
       <div class="gz-share">
         <button type="button" class="gz-btn" data-share="${id}">Share to chat</button>
         <button type="button" class="gz-btn gz-btn--ghost" data-img="${id}">Save image</button>
@@ -2030,9 +2054,9 @@
     const wk = data.find((d) => d.week === gz.week) || data[data.length - 1];
     $("#gzWeeks").innerHTML = data.map((d) => `<button type="button" class="chip${d.week === wk.week ? " is-active" : ""}" data-gzweek="${d.week}" aria-pressed="${d.week === wk.week}">GW${d.week}</button>`).join("");
     const [lead, ...rest] = wk.stories;
-    const who = (a) => (a.who.rosterId ? `${crest(a.who)}<b>${club(a.who)}</b>` : `<span class="gz-award__photo" data-photo="${esc(a.who.pid)}"><span>${esc(initials(a.who.name))}</span></span><b>${esc(a.who.name)}</b><small>${club(state.byRoster[a.who.id])}</small>`);
+    const who = (a) => (a.who.rosterId ? `${crest(a.who)}<b>${club(a.who)}</b>` : `<span class="gz-award__photo" data-photo="${esc(a.who.pid)}" data-player="${esc(a.who.pid)}" data-name="${esc(a.who.name)}"><span>${esc(initials(a.who.name))}</span></span><b>${plink(a.who.pid, a.who.name)}</b><small>${club(state.byRoster[a.who.id])}</small>`);
     const t = wk.totw;
-    const pl = (p) => `<div class="pl"><span class="pl__photo" data-photo="${esc(p.pid)}"><span>${esc(initials(p.name))}</span></span><span class="pl__proj">${gp(p.pts)}</span><span class="pl__name">${esc(surname(p.pid, p.name))}</span><span class="pl__club">${esc(state.byRoster[p.id].name)}${p.slot === "BN" ? " · bench" : ""}</span></div>`;
+    const pl = (p) => `<div class="pl" data-player="${esc(p.pid)}" data-name="${esc(p.name)}" role="button" tabindex="0"><span class="pl__photo" data-photo="${esc(p.pid)}"><span>${esc(initials(p.name))}</span></span><span class="pl__proj">${gp(p.pts)}</span><span class="pl__name">${esc(surname(p.pid, p.name))}</span><span class="pl__club">${esc(state.byRoster[p.id].name)}${p.slot === "BN" ? " · bench" : ""}</span></div>`;
     root.innerHTML = `
       <div class="gz-front">
         ${storyCard(lead, true)}
@@ -2822,7 +2846,7 @@
       .sort((a, b) => (m.good === -1 ? a.v - b.v : b.v - a.v))
       .slice(0, 10);
     el.innerHTML = list.map((x, i) => `
-      <li class="lead-row${owner[x.pid] === (state.byRoster[hub.team] || state.teams[0]) ? " is-mine" : ""}">
+      <li class="lead-row${owner[x.pid] === (state.byRoster[hub.team] || state.teams[0]) ? " is-mine" : ""}" data-player="${esc(x.pid)}" data-name="${esc(x.p.n)}" role="button" tabindex="0">
         <span class="lead-row__rank">${i + 1}</span>
         <span class="lead-row__photo" data-photo="${x.pid}" aria-hidden="true"><span>${esc(initials(x.p.n))}</span></span>
         <span class="lead-row__name">${esc(x.p.n)}<small>${clubLogo(x.p.t)}${esc(x.p.c)} · ${esc(x.p.p)} · ${owner[x.pid] ? `${crest(owner[x.pid])}${club(owner[x.pid])}` : `<span class="fa-tag">Free agent</span>`}</small></span>
