@@ -8,6 +8,10 @@
   icon-512 / icon-192: Android + desktop Chrome ("Install app"), from manifest.webmanifest
   apple-touch-icon (180): iPhone/iPad Safari "Add to Home Screen"
   The ball sits inside the middle 80%, so Android's round/squircle masks never clip it.
+
+  Since October 2026 the app icons are Mater (media/mater.png, flipped to face right) in front of
+  this ball, composited by hand, so by default this only rewrites icons/icon.svg (the browser-tab
+  icon). Pass --pngs to go back to the plain-ball PNGs.
 */
 import { writeFile, mkdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -66,6 +70,7 @@ const browsers = [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/usr/bin/google-chrome", "/usr/bin/chromium",
 ];
+if (!process.argv.includes("--pngs")) { console.log("icons/icon.svg"); process.exit(0); }
 const exe = browsers.find((b) => existsSync(b));
 if (!exe) { console.log("icons/icon.svg written; no Chrome found to render PNGs."); process.exit(0); }
 const tmp = join(tmpdir(), `mater-icons-${process.pid}`);
