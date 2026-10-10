@@ -2331,8 +2331,9 @@
       draft.data = buildDraft(raw);
       renderDraft();
       bindDraftScroll();
-      bindTip($("#draftBoard"), ".db-pick[data-pid]", draftTip);
-      bindTip($("#draftSummary"), ".db-mini", draftTip);
+      // on phones a tap opens the player panel, so swiping the board shouldn't flash tooltips
+      bindTip($("#draftBoard"), ".db-pick[data-pid]", draftTip, { touch: false });
+      bindTip($("#draftSummary"), ".db-mini", draftTip, { touch: false });
     } catch (err) {
       $("#draftBoard").innerHTML = `<p class="pending-note">Couldn't load the draft from Sleeper.</p>`;
     }
@@ -2366,11 +2367,15 @@
   }
   const hideTip = () => { tip.hidden = true; };
   // hover and keyboard focus both show the same tooltip
-  function bindTip(root, sel, htmlFor) {
-    root.addEventListener("pointermove", (e) => { const t = e.target.closest(sel); t ? showTip(htmlFor(t), e.clientX, e.clientY) : hideTip(); });
-    root.addEventListener("pointerdown", (e) => { const t = e.target.closest(sel); if (t) showTip(htmlFor(t), e.clientX, e.clientY); });
+  // opts.touch === false: no tooltips from fingers (for places where a tap already opens something bigger)
+  function bindTip(root, sel, htmlFor, opts = {}) {
+    const noTouch = opts.touch === false;
+    let touched = false;
+    const skip = (e) => noTouch && (e.pointerType === "touch" || e.pointerType === "pen");
+    root.addEventListener("pointermove", (e) => { if (skip(e)) return; const t = e.target.closest(sel); t ? showTip(htmlFor(t), e.clientX, e.clientY) : hideTip(); });
+    root.addEventListener("pointerdown", (e) => { touched = e.pointerType !== "mouse"; if (skip(e)) { hideTip(); return; } const t = e.target.closest(sel); if (t) showTip(htmlFor(t), e.clientX, e.clientY); });
     root.addEventListener("pointerleave", hideTip);
-    root.addEventListener("focusin", (e) => { const t = e.target.closest(sel); if (!t) return; const r = t.getBoundingClientRect(); showTip(htmlFor(t), r.left + r.width / 2, r.top); });
+    root.addEventListener("focusin", (e) => { if (noTouch && touched) return; const t = e.target.closest(sel); if (!t) return; const r = t.getBoundingClientRect(); showTip(htmlFor(t), r.left + r.width / 2, r.top); });
     root.addEventListener("focusout", hideTip);
   }
 
