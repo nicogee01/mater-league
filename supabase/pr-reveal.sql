@@ -3,7 +3,8 @@
 -- Run in the Supabase SQL Editor after power-rankings.sql. Safe to re-run
 -- (e.g. if the Premier League moves a deadline: regenerate and paste again).
 --
--- Round N = rankings after gameweek N.
+-- Round N = rankings after gameweek N. Rounds run every five gameweeks:
+--   N = 5, 10, 15, 20, 25, 30, 35 (ballots for any other week are refused).
 --   * Results are revealed when every club has voted, OR one day before the
 --     gameweek N+1 deadline, whichever comes first (as long as anyone voted).
 --   * Which clubs voted is never shown, only how many ballots are in.
@@ -124,8 +125,8 @@ declare
 begin
   if not (auth ->> 'ok')::boolean then return auth; end if;
   me := auth ->> 'manager';
-  if p_week is null or p_week < 1 or p_week > 60 then
-    return jsonb_build_object('ok', false, 'error', 'Unknown round.');
+  if p_week is null or p_week not in (5, 10, 15, 20, 25, 30, 35) then
+    return jsonb_build_object('ok', false, 'error', 'Power rankings only happen after Gameweeks 5, 10, 15, 20, 25, 30 and 35.');
   end if;
   if (public.pr_round_state(p_week) ->> 'closed')::boolean then
     return jsonb_build_object('ok', false, 'error', 'Voting for this round has closed.');

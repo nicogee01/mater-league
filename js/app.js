@@ -2928,6 +2928,10 @@
   const SUPABASE_URL = "https://jhnjoxqhxspmrwzrnycy.supabase.co";
   const SUPABASE_KEY = "sb_publishable_4ByLBCAe8R6uaOUnWwEjhg_9QaRUPJS";
   const PR_STORE = "mater-pr-voter";
+  // rankings happen every five gameweeks, after Gameweeks 5, 10, ... 35 (league decision, October 2026)
+  const PR_ROUNDS = [5, 10, 15, 20, 25, 30, 35];
+  const prRoundAtOrBefore = (wk) => [...PR_ROUNDS].reverse().find((r) => r <= wk) || null;
+  const prNextRound = (wk) => PR_ROUNDS.find((r) => r > wk) || null;
   async function rpc(fn, args = {}) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
       method: "POST",
@@ -3030,14 +3034,18 @@
     try {
       const [cur, prev, rounds] = await Promise.all([
         rpc("get_results", { p_week: pr.week }),
-        pr.week > 1 ? rpc("get_results", { p_week: pr.week - 1 }) : null,
+        prRoundAtOrBefore(pr.week - 1) ? rpc("get_results", { p_week: prRoundAtOrBefore(pr.week - 1) }) : null,
         rpc("get_rounds"),
       ]);
       pr.results = cur; pr.prev = prev; pr.rounds = rounds;
-      const closed = cur && cur.closed;
+      // the ballot is only open in a round's own window: Gameweek N scored, rankings not yet revealed
+      const closed = (cur && cur.closed) || pr.scored < PR_ROUNDS[0];
+      const next = prNextRound(pr.scored);
       $("#ballot").hidden = closed;
       $("#ballotClosed").hidden = !closed;
-      if (closed) $("#ballotClosed").innerHTML = `<b>Voting for Gameweek ${pr.week} has closed.</b> The Gameweek ${pr.week + 1} ballot opens once Sleeper has scored Gameweek ${pr.week + 1}.`;
+      if (closed) $("#ballotClosed").innerHTML = pr.scored < PR_ROUNDS[0]
+        ? `<b>The first power rankings come after Gameweek ${PR_ROUNDS[0]}.</b> The ballot opens once Sleeper has scored it.`
+        : `<b>Voting for Gameweek ${pr.week} has closed.</b> ${next ? `Power rankings happen every five gameweeks: the next ballot opens once Sleeper has scored Gameweek ${next}.` : "That was the last round of the season."}`;
     } catch (e) {
       console.error(e);
       pr.results = null;
@@ -3234,7 +3242,8 @@
 
   function initPower() {
     if (!$("#prResults")) return;
-    pr.week = (state.league.settings && state.league.settings.last_scored_leg) || Math.max(1, state.week - 1);
+    pr.scored = (state.league.settings && state.league.settings.last_scored_leg) || Math.max(1, state.week - 1);
+    pr.week = prRoundAtOrBefore(pr.scored) || PR_ROUNDS[0];
     pr.viewing = pr.week;
     $$(".js-pr-week").forEach((e) => (e.textContent = pr.week));
     $$(".js-pr-next").forEach((e) => (e.textContent = pr.week + 1));
