@@ -815,6 +815,7 @@ html.menu-open, html.menu-open body { overflow: hidden; }
 .gz-totw__head p b { font-family: var(--f-display); font-weight: 400; font-size: 24px; color: var(--accent); }
 .gz-pitch { max-width: 760px; min-height: 560px; }
 .gz-pitch .pl__proj { background: #e6c47a; color: #0b1f3a; }
+.gz-xi-tabs { margin-bottom: var(--s4); }
 
 /* home: latest from the Gazette */
 .home-news { padding-bottom: 0; }

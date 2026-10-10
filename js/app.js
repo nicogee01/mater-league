@@ -1932,7 +1932,8 @@
       });
       seasonHigh = Math.max(seasonHigh, weekHigh);
       stories.sort((a, b) => b.weight - a.weight);
-      all.push({ week, stories, awards: hasXI ? buildAwards(week, games, sq, pick) : buildScoreAwards(week, games, pick), totw: hasXI ? teamOfTheWeek(sq) : null });
+      all.push({ week, stories, awards: hasXI ? buildAwards(week, games, sq, pick) : buildScoreAwards(week, games, pick), sq: hasXI ? sq : null,
+        totw: hasXI ? bestEleven(Object.values(sq).flatMap((s) => s.xi)) : null });
     }
     return all;
   }
@@ -1995,8 +1996,9 @@
   }
 
   // best XI from everyone rostered that week (starters and bench), in the best-scoring legal shape
-  function teamOfTheWeek(sq) {
-    const pool = Object.values(sq).flatMap((s) => [...s.xi, ...s.bench]).filter((p) => p.min > 0);
+  // the highest-scoring legal eleven (1 GK + any G_FORMATIONS shape) from a pool of players who played
+  function bestEleven(players) {
+    const pool = players.filter((p) => p.min > 0);
     const byPos = (slot) => pool.filter((p) => posOf(p) === slot).sort((a, b) => b.pts - a.pts);
     const gk = byPos("GK")[0];
     let best = null;
@@ -2011,9 +2013,19 @@
     }
     return best;
   }
+  // The Missed XI: best eleven nobody started that week: benched players plus everyone on the
+  // waiver wire. Waiver players' points come from Sleeper's weekly stats, scored with league settings.
+  function missedEleven(wk, statsWeeks) {
+    const lines = ((statsWeeks || []).find((x) => x.week === wk.week) || {}).stats || {};
+    const owned = new Set(Object.values(wk.sq).flatMap((s) => [...s.xi, ...s.bench]).map((p) => p.pid));
+    const free = Object.entries(lines)
+      .filter(([pid, l]) => !owned.has(pid) && l && l.min > 0 && state.players[pid] && state.players[pid].p !== "DEF")
+      .map(([pid, l]) => ({ pid, name: state.players[pid].n, slot: null, pts: scorePts(l), min: l.min, id: null }));
+    return bestEleven([...Object.values(wk.sq).flatMap((s) => s.bench), ...free]);
+  }
 
   // ---- rendering ----
-  const gz = { data: null, week: null };
+  const gz = { data: null, week: null, xi: "totw", stats: null };
   const GZ_TAGS = { derby: "Derby day", thriller: "Nail-biter", starLoss: "Losing effort", rout: "Blowout", upset: "Upset", star: "Star turn", benchRegret: "Bench regret",
     seasonHigh: "Season high", shootout: "Shootout", snoozer: "Grind", streak: "On a run", skid: "Crisis", firstWin: "First win", win: "Result", draw: "Draw" };
   const SITE_URL = "https://nicogee01.github.io/mater-league/";
@@ -2055,8 +2067,20 @@
     $("#gzWeeks").innerHTML = data.map((d) => `<button type="button" class="chip${d.week === wk.week ? " is-active" : ""}" data-gzweek="${d.week}" aria-pressed="${d.week === wk.week}">GW${d.week}</button>`).join("");
     const [lead, ...rest] = wk.stories;
     const who = (a) => (a.who.rosterId ? `${crest(a.who)}<b>${club(a.who)}</b>` : `<span class="gz-award__photo" data-photo="${esc(a.who.pid)}" data-player="${esc(a.who.pid)}" data-name="${esc(a.who.name)}"><span>${esc(initials(a.who.name))}</span></span><b>${plink(a.who.pid, a.who.name)}</b><small>${club(state.byRoster[a.who.id])}</small>`);
-    const t = wk.totw;
-    const pl = (p) => `<div class="pl" data-player="${esc(p.pid)}" data-name="${esc(p.name)}" role="button" tabindex="0"><span class="pl__photo" data-photo="${esc(p.pid)}"><span>${esc(initials(p.name))}</span></span><span class="pl__proj">${gp(p.pts)}</span><span class="pl__name">${esc(surname(p.pid, p.name))}</span><span class="pl__club">${esc(state.byRoster[p.id].name)}${p.slot === "BN" ? " · bench" : ""}</span></div>`;
+    // the Missed XI needs every player's stats for the week (waiver wire included): fetch once, then redraw
+    if (wk.sq && !wk.missed && gz.stats) wk.missed = missedEleven(wk, gz.stats);
+    if (wk.sq && !gz.stats && Object.keys(state.players || {}).length && !gz.statsLoading) {
+      gz.statsLoading = true;
+      loadWeeklyStats().then((s) => { gz.stats = s; renderGazette(); }).catch(() => {});
+    }
+    const missedMode = gz.xi === "missed";
+    const t = missedMode ? wk.missed : wk.totw;
+    const pl = (p) => `<div class="pl" data-player="${esc(p.pid)}" data-name="${esc(p.name)}" role="button" tabindex="0"><span class="pl__photo" data-photo="${esc(p.pid)}"><span>${esc(initials(p.name))}</span></span><span class="pl__proj">${gp(p.pts)}</span><span class="pl__name">${esc(surname(p.pid, p.name))}</span><span class="pl__club">${p.id ? `${esc(state.byRoster[p.id].name)}${p.slot === "BN" ? " · bench" : ""}` : "Free agent"}</span></div>`;
+    const eleven = (x) => [x.gk, ...x.lines.DEF, ...x.lines.MID, ...x.lines.FWD].filter(Boolean);
+    const gap = wk.missed && wk.totw ? wk.missed.total - wk.totw.total : null;
+    const xiNote = missedMode
+      ? (t ? `Best eleven nobody started: players left on a bench plus everyone on the waiver wire, in whichever formation scores most. ${eleven(t).filter((p) => !p.id).length} of them were free agents.${gap > 0 ? ` It would have outscored the Team of the Week by ${num(gap, 2)}.` : ""}` : "")
+      : "Best eleven from the players managers actually started that week, in whichever formation scores most.";
     root.innerHTML = `
       <div class="gz-front">
         ${storyCard(lead, true)}
@@ -2072,17 +2096,21 @@
             <p class="gz-award__blurb">${esc(a.blurb)}</p>
           </div>`).join("")}</div>
       </section>
-      ${t ? `<section class="gz-totw" aria-labelledby="gzTotwTitle">
-        <div class="gz-totw__head"><h2 class="subhead" id="gzTotwTitle">Team of the Week</h2><p><b>${t.f}</b> · ${num(t.total, 2)} pts</p>
-          <button type="button" class="gz-btn gz-btn--ghost" data-img="totw">Save image</button></div>
-        <div class="pitch gz-pitch" role="img" aria-label="Team of the week in a ${t.f}: ${esc([t.gk, ...t.lines.DEF, ...t.lines.MID, ...t.lines.FWD].filter(Boolean).map((p) => p.name).join(", "))}">
+      ${wk.sq ? `<section class="gz-totw" aria-labelledby="gzTotwTitle">
+        <div class="filters gz-xi-tabs" role="group" aria-label="Which eleven">
+          <button type="button" class="chip${missedMode ? "" : " is-active"}" data-gzxi="totw" aria-pressed="${!missedMode}">Team of the Week</button>
+          <button type="button" class="chip${missedMode ? " is-active" : ""}" data-gzxi="missed" aria-pressed="${missedMode}">Missed XI</button>
+        </div>
+        ${t ? `<div class="gz-totw__head"><h2 class="subhead" id="gzTotwTitle">${missedMode ? "Missed XI" : "Team of the Week"}</h2><p><b>${t.f}</b> · ${num(t.total, 2)} pts</p>
+          <button type="button" class="gz-btn gz-btn--ghost" data-img="${missedMode ? "missed" : "totw"}">Save image</button></div>
+        <div class="pitch gz-pitch${missedMode ? " gz-pitch--missed" : ""}" role="img" aria-label="${missedMode ? "Missed eleven" : "Team of the week"} in a ${t.f}: ${esc(eleven(t).map((p) => p.name).join(", "))}">
           <span class="box"></span><span class="box box--six"></span>
           <div class="pitch__row">${t.gk ? pl(t.gk) : ""}</div>
           <div class="pitch__row">${t.lines.DEF.map(pl).join("")}</div>
           <div class="pitch__row">${t.lines.MID.map(pl).join("")}</div>
           <div class="pitch__row">${t.lines.FWD.map(pl).join("")}</div>
         </div>
-        <p class="chart-note">Best eleven from every player on a roster that week, starters and bench, in whichever formation scores most. "Bench" means his manager left him out.</p>
+        <p class="chart-note">${esc(xiNote)}</p>` : `<p class="pending-note">Scouting the waiver wire…</p>`}
       </section>` : `<p class="pending-note">Team of the Week needs that gameweek's lineups.</p>`}`;
     if (Object.keys(state.players || {}).length) loadPhotos($$("[data-photo]", root).map((e) => e.dataset.photo), root);
     countUp(root);
@@ -2156,10 +2184,10 @@
     x.fillStyle = "#c8102e"; x.fillRect(0, 0, W, 14);
     x.fillStyle = "#e6c47a"; x.font = "700 34px 'Barlow Condensed', sans-serif"; x.textBaseline = "top";
     x.fillText("THE MATER LEAGUE GAZETTE", 72, 72);
-    if (id === "totw") {
-      const wk = gazetteData().find((d) => d.week === gz.week), t = wk && wk.totw;
+    if (id === "totw" || id === "missed") {
+      const wk = gazetteData().find((d) => d.week === gz.week), t = wk && wk[id];
       if (!t) return;
-      x.fillStyle = "#fbf7ee"; x.font = "96px Anton, Impact, sans-serif"; x.fillText(`TEAM OF GW${wk.week}`, 72, 130);
+      x.fillStyle = "#fbf7ee"; x.font = "96px Anton, Impact, sans-serif"; x.fillText(id === "missed" ? `MISSED XI · GW${wk.week}` : `TEAM OF GW${wk.week}`, 72, 130);
       x.font = "600 34px Barlow, sans-serif"; x.fillStyle = "#d5dbe6"; x.fillText(`${t.f} · ${num(t.total, 2)} points`, 72, 250);
       const rows = [t.lines.FWD, t.lines.MID, t.lines.DEF, [t.gk].filter(Boolean)];
       x.fillStyle = "#0f6c36"; x.fillRect(72, 320, W - 144, 680);
@@ -2211,6 +2239,8 @@
   document.addEventListener("click", (e) => {
     const w = e.target.closest("[data-gzweek]");
     if (w) { gz.week = +w.dataset.gzweek; history.replaceState(null, "", `#gw${gz.week}`); renderGazette(); return; }
+    const xb = e.target.closest("[data-gzxi]");
+    if (xb) { gz.xi = xb.dataset.gzxi; renderGazette(); return; }
     const sb = e.target.closest("[data-share]");
     if (sb) { shareStory(sb.dataset.share, sb); return; }
     const ib = e.target.closest("[data-img]");
