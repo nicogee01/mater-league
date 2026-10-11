@@ -1865,6 +1865,13 @@ section.wk { margin-top: var(--s8); }
 .cp-derby.dt { border-left: 0; }
 .badge--derby.dt { border-color: rgba(255, 255, 255, 0.5); }
 
+/* ================= LIVE GAMEWEEK ================= */
+.mu-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #e0263c; display: inline-block; margin-left: 2px; animation: live-pulse 1.6s ease-in-out infinite; }
+.mu-card__ft.is-live { background: #e0263c; color: #fff; }
+.mu-card__ft.is-live::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 5px; vertical-align: middle; animation: live-pulse 1.6s ease-in-out infinite; }
+@keyframes live-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .mu-live-dot, .mu-card__ft.is-live::before { animation: none; } }
+
 /* ================= PLAYER LINKS ================= */
 .plink { cursor: pointer; text-decoration: underline dotted; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); text-underline-offset: 3px; }
 .plink:hover, .plink:focus-visible { text-decoration: underline; text-decoration-color: currentColor; outline: none; }

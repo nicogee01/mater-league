@@ -1500,6 +1500,38 @@
   const SLOT_ORDER = ["GK", "DEF", "MID", "FWD"];
   const SLOT_NAME = { GK: "Goalkeeper", DEF: "Defence", MID: "Midfield", FWD: "Attack" };
   const mu = { week: null, open: new Set() };
+  // The gameweek in progress: pairings from data/fixtures.csv (Sleeper doesn't publish soccer matchups),
+  // each club's current XI from its Sleeper roster, points from Sleeper's live stats, refreshed every
+  // two minutes. Once that week's final scores are in matchups.csv the live view steps aside.
+  const live = { stats: null, proj: null, at: 0, loading: false, timer: null };
+  const liveWeek = () => {
+    const w = state.week;
+    return (state.fixtures || []).some((m) => m.week === w) && !state.results.some((m) => m.week === w) ? w : null;
+  };
+  function loadLive() {
+    const w = liveWeek();
+    if (!w || live.loading) return;
+    live.loading = true;
+    const season = state.league.season;
+    Promise.all([get(`/stats/${SPORT}/regular/${season}/${w}`).catch(() => null), get(`/projections/${SPORT}/regular/${season}/${w}`).catch(() => null)])
+      .then(([s, p]) => { if (s) live.stats = s; if (p) live.proj = p; live.at = Date.now(); })
+      .finally(() => { live.loading = false; if (mu.week === w) renderMatchups(); });
+    if (!live.timer) live.timer = setInterval(() => { if (mu.week === liveWeek() && !document.hidden) loadLive(); }, 120000);
+  }
+  const LINE_SLOT = { GK: "GK", D: "DEF", M: "MID", F: "FWD" };
+  function liveSquad(id, week) {
+    const t = state.byRoster[id];
+    const st = live.stats || {}, pj = live.proj || {};
+    const row = (pid, slot) => {
+      const line = st[pid];
+      return { pid, name: (state.players[pid] || {}).n || `Player ${pid}`, slot, pts: line ? scorePts(line) : 0, proj: pj[pid] ? scorePts(pj[pid]) : null, min: (line && line.min) || 0 };
+    };
+    const lines = lineUp(t, formationFor(t, week) && formationFor(t, week).f);
+    const xi = Object.entries(lines).flatMap(([ln, ps]) => ps.map((p) => row(p.id, LINE_SLOT[ln] || "MID")))
+      .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
+    const bench = t.players.filter((pid) => !t.starters.includes(pid)).map((pid) => row(pid, "BN")).sort((a, b) => b.pts - a.pts);
+    return { xi, bench };
+  }
   const optNum = (v) => (v === "" || v == null || isNaN(+v) ? null : +v);
   function squadFor(id, week) {
     const rows = (state.lineups || []).filter((r) => +r.week === week && rosterOf(r.manager) === id)
@@ -1535,15 +1567,25 @@
   function renderMatchups() {
     const list = $("#muList");
     if (!list) return;
-    const weeks = [...new Set(state.results.map((m) => m.week))].sort((a, b) => a - b);
+    const lw = liveWeek();
+    const weeks = [...new Set([...state.results.map((m) => m.week), ...(lw ? [lw] : [])])].sort((a, b) => a - b);
     if (!weeks.length) { list.innerHTML = `<p class="pending-note">No gameweeks logged yet.</p>`; return; }
     const withXI = new Set((state.lineups || []).map((r) => +r.week));
-    if (mu.week == null) mu.week = [...weeks].reverse().find((w) => withXI.has(w)) ?? weeks[weeks.length - 1];
-    $("#muWeeks").innerHTML = weeks.map((w) => `<button type="button" class="chip${w === mu.week ? " is-active" : ""}" data-week="${w}" aria-pressed="${w === mu.week}">GW${w}${withXI.has(w) ? `<i class="mu-dot" title="Lineups logged"></i>` : ""}</button>`).join("");
-    const games = state.results.filter((m) => m.week === mu.week);
+    if (mu.week == null) mu.week = lw ?? [...weeks].reverse().find((w) => withXI.has(w)) ?? weeks[weeks.length - 1];
+    $("#muWeeks").innerHTML = weeks.map((w) => `<button type="button" class="chip${w === mu.week ? " is-active" : ""}${w === lw ? " is-live" : ""}" data-week="${w}" aria-pressed="${w === mu.week}">GW${w}${w === lw ? `<i class="mu-live-dot" aria-hidden="true"></i><span class="visually-hidden"> (live)</span>` : withXI.has(w) ? `<i class="mu-dot" title="Lineups logged"></i>` : ""}</button>`).join("");
+    const isLive = mu.week === lw;
+    const ready = isLive && live.stats && Object.keys(state.players || {}).length;
+    if (isLive && !live.stats) loadLive();
+    if (isLive && !ready) { list.innerHTML = `<div class="skeleton" style="height:320px"></div>`; $("#muNote").textContent = ""; return; }
+    const games = isLive
+      ? state.fixtures.filter((m) => m.week === lw).map((m) => {
+          const hs = liveSquad(m.home, lw), as = liveSquad(m.away, lw), sum = (sq) => Math.round(sq.xi.reduce((a, p) => a + p.pts, 0) * 100) / 100;
+          return { ...m, homePts: sum(hs), awayPts: sum(as), hs, as, live: true };
+        })
+      : state.results.filter((m) => m.week === mu.week);
     list.innerHTML = games.map((m, gi) => {
       const H = state.byRoster[m.home], A = state.byRoster[m.away];
-      const hs = squadFor(m.home, m.week), as = squadFor(m.away, m.week);
+      const hs = m.live ? m.hs : squadFor(m.home, m.week), as = m.live ? m.as : squadFor(m.away, m.week);
       const all = [...hs.xi, ...as.xi];
       const star = all.length ? all.reduce((a, b) => (b.pts > a.pts ? b : a)) : null;
       const key = `${m.week}-${m.home}`, open = mu.open.has(key);
@@ -1568,15 +1610,17 @@
         ${derby ? `<p class="mu-derby ${dtClass(derby, H)}">Derby day <b>${esc(derby.name)}</b></p>` : ""}
         <button type="button" class="mu-card__head" aria-expanded="${open}" aria-controls="mu-body-${gi}" data-key="${key}">
           ${side(H, m.homePts, m.homePts > m.awayPts, hs, "home")}
-          <span class="mu-card__mid"><span class="mu-card__ft">FT</span><span class="mu-card__chev" aria-hidden="true"></span></span>
+          <span class="mu-card__mid"><span class="mu-card__ft${m.live ? " is-live" : ""}">${m.live ? "Live" : "FT"}</span><span class="mu-card__chev" aria-hidden="true"></span></span>
           ${side(A, m.awayPts, m.awayPts > m.homePts, as, "away")}
         </button>
-        ${story ? `<p class="mu-card__news"><a href="gazette.html#gw${m.week}-${m.home}-${m.away}"><span>${GZ_TAGS[story.type] || "Result"}</span>${esc(story.headline)}</a></p>` : ""}
+        ${story && !m.live ? `<p class="mu-card__news"><a href="gazette.html#gw${m.week}-${m.home}-${m.away}"><span>${GZ_TAGS[story.type] || "Result"}</span>${esc(story.headline)}</a></p>` : ""}
         <div class="mu-card__body" id="mu-body-${gi}"${open ? "" : " hidden"}>${body}</div>
       </article>`;
     }).join("");
     attachDerbyVideos(list);
-    $("#muNote").textContent = withXI.has(mu.week)
+    $("#muNote").textContent = isLive
+      ? `Live: each club's current XI from Sleeper, with points from Sleeper's live match stats (updated ${new Date(live.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}, refreshes every 2 minutes). Tap a fixture for both team sheets. Final scores replace these once the gameweek is logged.`
+      : withXI.has(mu.week)
       ? "Tap a fixture to open both team sheets, then tap any player for recent games. Starting XIs come from Sleeper's matchup screens and add up to each club's score; benches show only players on that roster at the end of the gameweek. Projections are Sleeper's."
       : "";
     observeReveals();
@@ -3338,9 +3382,10 @@
 
   async function boot() {
     try {
-      const [league, users, rosters, sportState, matchRows, cupRows, emblems, lineupRows] = await Promise.all([
+      const [league, users, rosters, sportState, matchRows, cupRows, emblems, lineupRows, fixtureRows] = await Promise.all([
         get(`/league/${LEAGUE_ID}`), get(`/league/${LEAGUE_ID}/users`), get(`/league/${LEAGUE_ID}/rosters`), get(`/state/${SPORT}`).catch(() => ({})),
         getCSV("data/matchups.csv"), getCSV("data/cup.csv"), loadEmblems(), $("#muList") || $("#gzRoot") || $("#homeNews") || $("#clubGrid") || $("#derbies") ? getCSV("data/lineups.csv") : [],
+        $("#muList") ? getCSV("data/fixtures.csv") : [],
       ]);
       state.lineups = lineupRows;
       state.league = league;
@@ -3355,6 +3400,7 @@
         if (bottom && bottom !== top) bottom.prTag = "bottom";
       }
       state.results = loadResults(matchRows);
+      state.fixtures = (fixtureRows || []).map((r) => ({ week: +r.week, home: rosterOf(r.home), away: rosterOf(r.away) })).filter((m) => m.week && m.home && m.away);
       state.cupRows = loadCupRows(cupRows);
       state.hasResults = state.results.length > 0;
       deriveFromResults();
