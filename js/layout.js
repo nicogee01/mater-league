@@ -49,6 +49,10 @@
       </a>
       <nav class="nav__links" aria-label="Primary">${desktopNav}</nav>
       <a class="nav__cta" href="https://sleeper.com/leagues/1390750210698780672" target="_blank" rel="noopener">Sleeper ${arrow}</a>
+      <button type="button" class="nav__theme" id="navTheme" aria-label="Switch to dark mode" aria-pressed="false">
+        <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>
+        <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+      </button>
       <button type="button" class="nav__refresh" id="navRefresh" aria-label="Refresh">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" /><path d="M20 4v5h-5" /></svg>
       </button>
@@ -110,6 +114,23 @@
   document.getElementById("navToggle").addEventListener("click", () => {
     document.querySelectorAll(".mm-group").forEach((d, i) => (d.open = i === 0));
   });
+  // light / dark: <head> applies the saved choice before first paint; this button flips and saves it
+  const themeBtn = document.getElementById("navTheme");
+  const paintTheme = () => {
+    const dark = document.documentElement.dataset.theme === "dark";
+    themeBtn.setAttribute("aria-pressed", String(dark));
+    themeBtn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", dark ? "#08111f" : "#1b0020");
+  };
+  themeBtn.addEventListener("click", () => {
+    const dark = document.documentElement.dataset.theme !== "dark";
+    if (dark) document.documentElement.dataset.theme = "dark"; else delete document.documentElement.dataset.theme;
+    try { localStorage.setItem("mater-theme", dark ? "dark" : "light"); } catch (_) {}
+    paintTheme();
+    window.dispatchEvent(new Event("mater-theme"));
+  });
+  paintTheme();
   document.getElementById("navRefresh").addEventListener("click", (e) => {
     e.currentTarget.classList.add("is-spinning");
     location.reload();
