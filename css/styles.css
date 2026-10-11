@@ -1981,6 +1981,7 @@ html.has-install-bar body { padding-bottom: 92px; }
 .mobile-menu__install { color: var(--accent) !important; font-weight: 700; }
 
 /* ================= LIVE GAMEWEEK ================= */
+.mu-side__pre { opacity: .7; }
 .mu-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #e0263c; display: inline-block; margin-left: 2px; animation: live-pulse 1.6s ease-in-out infinite; }
 .mu-card__ft.is-live { background: #e0263c; color: #fff; }
 .mu-card__ft.is-live::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 5px; vertical-align: middle; animation: live-pulse 1.6s ease-in-out infinite; }

@@ -1521,7 +1521,7 @@
   // The gameweek in progress: pairings from data/fixtures.csv (Sleeper doesn't publish soccer matchups),
   // each club's current XI from its Sleeper roster, points from Sleeper's live stats, refreshed every
   // two minutes. Once that week's final scores are in matchups.csv the live view steps aside.
-  const live = { stats: null, proj: null, at: 0, loading: false, timer: null };
+  const live = { stats: null, proj: null, games: null, at: 0, loading: false, timer: null };
   const liveWeek = () => {
     const w = state.week;
     return (state.fixtures || []).some((m) => m.week === w) && !state.results.some((m) => m.week === w) ? w : null;
@@ -1531,18 +1531,30 @@
     if (!w || live.loading) return;
     live.loading = true;
     const season = state.league.season;
-    Promise.all([get(`/stats/${SPORT}/regular/${season}/${w}`).catch(() => null), get(`/projections/${SPORT}/regular/${season}/${w}`).catch(() => null)])
-      .then(([s, p]) => { if (s) live.stats = s; if (p) live.proj = p; live.at = Date.now(); })
+    // Sleeper's Premier League schedule says which real matches are over, live or still to come
+    const sched = fetch(`https://api.sleeper.app/schedule/${SPORT}/regular/${season}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    Promise.all([get(`/stats/${SPORT}/regular/${season}/${w}`).catch(() => null), get(`/projections/${SPORT}/regular/${season}/${w}`).catch(() => null), sched])
+      .then(([s, p, g]) => { if (s) live.stats = s; if (p) live.proj = p; if (Array.isArray(g)) live.games = g.filter((x) => +x.week === w); live.at = Date.now(); })
       .finally(() => { live.loading = false; if (mu.week === w) renderMatchups(); });
     if (!live.timer) live.timer = setInterval(() => { if (mu.week === liveWeek() && !document.hidden) loadLive(); }, 120000);
   }
   const LINE_SLOT = { GK: "GK", D: "DEF", M: "MID", F: "FWD" };
+  const LIVE_STATUS = { done: "Full time", pre: "Yet to play", live: "Playing now", none: "No match this week", unknown: "" };
   function liveSquad(id, week) {
     const t = state.byRoster[id];
     const st = live.stats || {}, pj = live.proj || {};
+    // Live projection, the way Sleeper's app does it: match over = points scored; not kicked off = the
+    // pre-match projection; in progress = points so far plus the projection for the minutes left.
+    const matchStatus = (pid) => {
+      const team = (state.players[pid] || {}).t;
+      const g = (live.games || []).find((x) => x.home.team === team || x.away.team === team);
+      return !live.games ? "unknown" : !g ? "none" : g.status === "complete" ? "done" : g.status === "pre_game" ? "pre" : "live";
+    };
     const row = (pid, slot) => {
       const line = st[pid];
-      return { pid, name: (state.players[pid] || {}).n || `Player ${pid}`, slot, pts: line ? scorePts(line) : 0, proj: pj[pid] ? scorePts(pj[pid]) : null, min: (line && line.min) || 0 };
+      const pts = line ? scorePts(line) : 0, proj = pj[pid] ? scorePts(pj[pid]) : null, min = (line && line.min) || 0, status = matchStatus(pid);
+      const now = status === "pre" || status === "unknown" ? proj || 0 : status === "live" ? pts + (proj || 0) * Math.max(0, (90 - min) / 90) : pts;
+      return { pid, name: (state.players[pid] || {}).n || `Player ${pid}`, slot, pts, proj, min, status, now };
     };
     const lines = lineUp(t, formationFor(t, week) && formationFor(t, week).f);
     const xi = Object.entries(lines).flatMap(([ln, ps]) => ps.map((p) => row(p.id, LINE_SLOT[ln] || "MID")))
@@ -1565,7 +1577,7 @@
     <li class="mu-p${p === star ? " is-star" : ""}${p.pts <= 0 ? " is-blank" : ""}${extra}">
       <button type="button" class="mu-p__btn" data-pid="${esc(p.pid)}" aria-label="${esc(p.name)}: ${num(p.pts)} points. Open recent games">
         <span class="mu-p__photo" data-photo="${esc(p.pid)}" aria-hidden="true"><span>${esc(initials(p.name))}</span></span>
-        <span class="mu-p__name">${esc(p.name)}<small>${p.slot === "BN" ? (p.min ? `${p.min}′ played` : "Did not play") : esc(p.slot)}${p === star ? " · Top scorer" : ""}</small></span>
+        <span class="mu-p__name">${esc(p.name)}<small>${p.slot === "BN" && !p.status ? (p.min ? `${p.min}′ played` : "Did not play") : esc(p.slot === "BN" ? "Bench" : p.slot)}${p.status ? ` · ${LIVE_STATUS[p.status] || ""}` : ""}${p === star ? " · Top scorer" : ""}</small></span>
         <span class="mu-p__pts">${num(p.pts)}<small>${p.proj != null ? `proj ${num(p.proj)}` : "&nbsp;"}</small></span>
       </button>
     </li>`;
@@ -1609,9 +1621,12 @@
       const key = `${m.week}-${m.home}`, open = mu.open.has(key);
       const side = (t, pts, win, sq, align) => {
         const pj = projTotal(sq.xi);
+        const nowProj = sq.xi.length && sq.xi[0].now !== undefined ? sq.xi.reduce((a, p) => a + p.now, 0) : null;
         return `<div class="mu-side mu-side--${align}${win ? " is-win" : ""}">
           ${crest(t)}<span class="mu-side__name">${club(t)}<small>${align === "home" ? "Home" : "Away"}${sq.xi.length ? ` · ${shape(sq.xi)}` : ""}</small></span>
-          <span class="mu-side__score"><b>${num(pts, 2)}</b>${pj != null ? `<small>proj ${num(pj, 2)}</small>` : ""}</span>
+          <span class="mu-side__score"><b>${num(pts, 2)}</b>${nowProj != null
+            ? `<small>proj ${num(nowProj, 2)}</small>${pj != null ? `<small class="mu-side__pre">pre-match ${num(pj, 2)}</small>` : ""}`
+            : pj != null ? `<small>proj ${num(pj, 2)}</small>` : ""}</span>
         </div>`;
       };
       const body = all.length ? `
@@ -1637,7 +1652,7 @@
     }).join("");
     attachDerbyVideos(list);
     $("#muNote").textContent = isLive
-      ? `Live: each club's current XI from Sleeper, with points from Sleeper's live match stats (updated ${new Date(live.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}, refreshes every 2 minutes). Tap a fixture for both team sheets. Final scores replace these once the gameweek is logged.`
+      ? `Live: each club's current XI from Sleeper, with points from Sleeper's live match stats. Proj = points so far plus the projection for players yet to play (as in the Sleeper app); pre-match = the whole XI's projection before kick-off (updated ${new Date(live.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}, refreshes every 2 minutes). Tap a fixture for both team sheets. Final scores replace these once the gameweek is logged.`
       : withXI.has(mu.week)
       ? "Tap a fixture to open both team sheets, then tap any player for recent games. Starting XIs come from Sleeper's matchup screens and add up to each club's score; benches show only players on that roster at the end of the gameweek. Projections are Sleeper's."
       : "";
