@@ -44,6 +44,7 @@
     <nav class="mobile-menu" id="mobileMenu" aria-label="Mobile" hidden>
       <a href="index.html"${current === "home" ? ' aria-current="page"' : ""}>Home</a>
       ${PAGES.map((p) => link(p, true)).join("")}
+      <a href="#" class="mobile-menu__install" data-install-link hidden>Add to home screen</a>
     </nav>
   </header>`;
 
@@ -51,7 +52,7 @@
   <footer class="footer">
     <div class="footer__inner">
       <span class="brand__word">MATER<em>LEAGUE</em></span>
-      <nav class="footer__links" aria-label="Footer"><a href="index.html">Home</a>${PAGES.map((p) => `<a href="${p.href}">${p.long || p.label}</a>`).join("")}</nav>
+      <nav class="footer__links" aria-label="Footer"><a href="index.html">Home</a>${PAGES.map((p) => `<a href="${p.href}">${p.long || p.label}</a>`).join("")}<a href="#" data-install-link hidden>Get the app</a></nav>
       <p>Mater League, running since 2026. Created by Pep Guardiola's successor, Nico.</p>
       <p>Live data from the Sleeper API. Not affiliated with the Premier League or Sleeper.</p>
       <p class="footer__updated" id="updated" aria-live="polite"></p>
@@ -76,4 +77,72 @@
   document.body.insertAdjacentHTML("afterbegin", header);
   document.body.insertAdjacentHTML("beforeend", footer);
   window.MATER_PAGES = PAGES;
+})();
+
+// ---------- "Get the app": add the site to the home screen ----------
+// Android / desktop Chrome & Edge: one tap opens the browser's own install dialog (beforeinstallprompt).
+// iPhone / iPad: Apple doesn't let a page do that, so the button opens a 3-step picture guide instead.
+// Hidden once it's installed (running standalone) and for 14 days after someone closes the bar.
+(() => {
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isPhone = isIOS || /Android/.test(ua) || matchMedia("(pointer: coarse)").matches;
+  const installed = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const KEY = "mater-install-dismissed";
+  const dismissedRecently = () => { try { return Date.now() - (+localStorage.getItem(KEY) || 0) < 14 * 864e5; } catch (_) { return false; } };
+  let deferred = null;
+
+  const share = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4" /><path d="M6 11H5v10h14V11h-1" /></svg>`;
+  const plus = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M12 8v8M8 12h8" /></svg>`;
+  const dots = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>`;
+  const kebab = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="12" cy="19" r="1.8" /></svg>`;
+
+  document.body.insertAdjacentHTML("beforeend", `
+  <div class="install-bar" id="installBar" role="region" aria-label="Get the app" hidden>
+    <img src="icons/apple-touch-icon.png" alt="" width="44" height="44">
+    <p><b>Get the Mater League app</b><small>Free · one tap to your home screen</small></p>
+    <button type="button" class="install-bar__add" data-install>Add</button>
+    <button type="button" class="install-bar__x" aria-label="Not now">×</button>
+  </div>
+  <dialog class="install-sheet" id="installSheet" aria-labelledby="installTitle">
+    <button type="button" class="install-sheet__x" aria-label="Close">×</button>
+    <img src="icons/apple-touch-icon.png" alt="" width="64" height="64">
+    <h2 id="installTitle">Add it to your home screen</h2>
+    <ol class="install-steps">${isIOS ? `
+      <li><span class="install-steps__n">1</span><span>Tap the <b>Share</b> button <i class="install-ico">${share}</i><small>At the bottom of Safari. On newer iPhones, tap <i class="install-ico">${dots}</i> first, then Share.</small></span></li>
+      <li><span class="install-steps__n">2</span><span>Scroll down and tap <b>Add to Home Screen</b> <i class="install-ico">${plus}</i><small>Don't see it? Tap <b>More</b> or <b>Edit Actions</b> at the bottom of the list.</small></span></li>
+      <li><span class="install-steps__n">3</span><span>Tap <b>Add</b> in the top corner.<small>Mater shows up on your home screen. Done!</small></span></li>` : `
+      <li><span class="install-steps__n">1</span><span>Tap your browser's menu <i class="install-ico">${kebab}</i><small>Usually top right, next to the address bar.</small></span></li>
+      <li><span class="install-steps__n">2</span><span>Tap <b>Install app</b> or <b>Add to Home screen</b></span></li>
+      <li><span class="install-steps__n">3</span><span>Tap <b>Install</b> / <b>Add</b> to confirm.<small>Mater shows up on your home screen. Done!</small></span></li>`}
+    </ol>
+    <button type="button" class="install-sheet__ok">Got it</button>
+  </dialog>`);
+
+  const bar = document.getElementById("installBar"), sheet = document.getElementById("installSheet");
+  const links = () => document.querySelectorAll("[data-install-link]");
+  function refresh() {
+    const on = !installed();
+    links().forEach((a) => (a.hidden = !on || (!isPhone && !deferred)));
+    bar.hidden = !(on && isPhone && !dismissedRecently());
+    document.documentElement.classList.toggle("has-install-bar", !bar.hidden);
+  }
+  async function install() {
+    if (deferred) {
+      const d = deferred; deferred = null;
+      d.prompt();
+      try { if ((await d.userChoice).outcome === "accepted") bar.hidden = true; } catch (_) {}
+      refresh();
+      return;
+    }
+    if (typeof sheet.showModal === "function") sheet.showModal(); else sheet.setAttribute("open", "");
+  }
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; refresh(); });
+  window.addEventListener("appinstalled", () => { deferred = null; refresh(); });
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-install], [data-install-link]")) { e.preventDefault(); install(); return; }
+    if (e.target.closest(".install-bar__x")) { try { localStorage.setItem(KEY, String(Date.now())); } catch (_) {} refresh(); return; }
+    if (e.target === sheet || e.target.closest(".install-sheet__x, .install-sheet__ok")) sheet.close ? sheet.close() : sheet.removeAttribute("open");
+  });
+  refresh();
 })();

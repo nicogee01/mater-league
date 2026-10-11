@@ -1865,6 +1865,35 @@ section.wk { margin-top: var(--s8); }
 .cp-derby.dt { border-left: 0; }
 .badge--derby.dt { border-color: rgba(255, 255, 255, 0.5); }
 
+/* ================= GET THE APP ================= */
+.install-bar { position: fixed; z-index: 60; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px;
+  padding: 10px 10px 10px 12px; border-radius: 18px; background: #1b0020; color: #fbf7ee; box-shadow: 0 10px 30px rgba(0,0,0,.35); animation: install-in .45s cubic-bezier(.2,.8,.2,1) both; }
+.install-bar[hidden] { display: none; }
+.install-bar img { border-radius: 11px; flex: none; }
+.install-bar p { margin: 0; flex: 1; min-width: 0; line-height: 1.2; }
+.install-bar p b { display: block; font-size: 15px; }
+.install-bar p small { color: #cbbfd0; font-size: 12.5px; }
+.install-bar__add { flex: none; min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: #00ff85; color: #1b0020; font: 700 16px/1 var(--f-label, sans-serif); letter-spacing: .04em; cursor: pointer; }
+.install-bar__x { flex: none; width: 36px; height: 44px; border: 0; background: none; color: #cbbfd0; font-size: 24px; cursor: pointer; }
+html.has-install-bar body { padding-bottom: 92px; }
+@keyframes install-in { from { transform: translateY(120%); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .install-bar { animation: none; } }
+.install-sheet { width: min(420px, calc(100vw - 32px)); border: 0; border-radius: 22px; padding: 28px 22px 22px; background: var(--bg, #fbf7ee); color: var(--text, #1b0020); text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+.install-sheet::backdrop { background: rgba(15,0,20,.6); }
+.install-sheet img { border-radius: 15px; }
+.install-sheet h2 { font-family: var(--f-display, sans-serif); font-weight: 400; font-size: 28px; line-height: 1.05; margin: 12px 0 18px; text-transform: uppercase; }
+.install-sheet__x { position: absolute; top: 10px; right: 12px; width: 40px; height: 40px; border: 0; background: none; font-size: 26px; color: var(--muted, #666); cursor: pointer; }
+.install-steps { list-style: none; margin: 0 0 20px; padding: 0; text-align: left; display: grid; gap: 14px; }
+.install-steps li { display: flex; gap: 12px; align-items: flex-start; font-size: 17px; line-height: 1.35; }
+.install-steps li > span:last-child { flex: 1; }
+.install-steps small { display: block; font-size: 13.5px; color: var(--muted, #666); margin-top: 2px; }
+.install-steps__n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #1b0020; color: #00ff85; display: grid; place-items: center; font-weight: 700; }
+.install-ico { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: rgba(0,122,255,.12); vertical-align: middle; margin: 0 2px; }
+.install-ico svg { width: 18px; height: 18px; fill: none; stroke: #007aff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.install-ico circle { fill: #007aff; stroke: none; }
+.install-sheet__ok { width: 100%; min-height: 48px; border: 0; border-radius: 999px; background: #1b0020; color: #fbf7ee; font: 700 16px var(--f-label, sans-serif); letter-spacing: .04em; cursor: pointer; }
+.mobile-menu__install { color: var(--accent) !important; font-weight: 700; }
+
 /* ================= LIVE GAMEWEEK ================= */
 .mu-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #e0263c; display: inline-block; margin-left: 2px; animation: live-pulse 1.6s ease-in-out infinite; }
 .mu-card__ft.is-live { background: #e0263c; color: #fff; }
