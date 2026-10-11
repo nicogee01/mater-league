@@ -98,19 +98,29 @@
   }
   const sleeperHeadshot = (pid) => `https://sleepercdn.com/content/clubsoccer/players/${pid}.jpg`;
   const clubLogo = (teamId) => (teamId ? `<img class="club-logo" src="https://sleepercdn.com/images/team_logos/clubsoccer/${esc(teamId)}.png" alt="" width="16" height="16" loading="lazy" onerror="this.remove()">` : "");
-  const loadImage = (url) => new Promise((res) => { const img = new Image(); img.onload = () => res(true); img.onerror = () => res(false); img.src = url; });
+  const loadImage = (url) => new Promise((res) => { const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = url; });
+  // Sleeper has two kinds of headshot: 350px half-body shots (face small at the top, zoomed in by the CSS)
+  // and 300px close-ups (face fills the frame, must not be zoomed). Wikipedia fallbacks are any shape.
+  const photoKind = (img) => (img.naturalWidth !== img.naturalHeight ? "is-portrait" : img.naturalWidth < 340 ? "is-closeup" : "");
   // Sleeper's headshot first; fall back to Wikipedia (a few lookups at a time) for the handful Sleeper lacks
   async function loadPhotos(pids, root) {
     const queue = [...pids];
-    const paint = (pid, url) => $$(`[data-photo="${pid}"]`, root).forEach((el) => { el.style.backgroundImage = `url("${url}")`; el.classList.add("has-photo"); });
+    const paint = (pid, url, img) => $$(`[data-photo="${pid}"]`, root).forEach((el) => {
+      el.style.backgroundImage = `url("${url}")`;
+      el.classList.add("has-photo");
+      const kind = photoKind(img);
+      if (kind) el.classList.add(kind);
+    });
     const worker = async () => {
       while (queue.length) {
         const pid = queue.shift();
         const p = state.players[pid];
         if (!p || !root.isConnected) continue;
-        if (await loadImage(sleeperHeadshot(pid))) { paint(pid, sleeperHeadshot(pid)); continue; }
+        const img = await loadImage(sleeperHeadshot(pid));
+        if (img) { paint(pid, sleeperHeadshot(pid), img); continue; }
         const url = await playerPhoto(p.n);
-        if (url && root.isConnected && (await loadImage(url))) paint(pid, url);
+        const alt = url && root.isConnected ? await loadImage(url) : null;
+        if (alt) paint(pid, url, alt);
       }
     };
     await Promise.all([worker(), worker(), worker(), worker()]);

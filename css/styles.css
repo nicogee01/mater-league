@@ -1865,6 +1865,12 @@ section.wk { margin-top: var(--s8); }
 .cp-derby.dt { border-left: 0; }
 .badge--derby.dt { border-color: rgba(255, 255, 255, 0.5); }
 
+/* ================= PLAYER PHOTOS ================= */
+/* every photo circle zooms Sleeper's half-body shots (150%, face near the top); close-ups and
+   Wikipedia portraits fill the circle instead, so the face isn't cropped */
+[data-photo].has-photo.is-closeup { background-size: 104% auto; background-position: center 38%; }
+[data-photo].has-photo.is-portrait { background-size: cover; background-position: center 18%; }
+
 /* ================= GET THE APP ================= */
 .install-bar { position: fixed; z-index: 60; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px;
   padding: 10px 10px 10px 12px; border-radius: 18px; background: #1b0020; color: #fbf7ee; box-shadow: 0 10px 30px rgba(0,0,0,.35); animation: install-in .45s cubic-bezier(.2,.8,.2,1) both; }
