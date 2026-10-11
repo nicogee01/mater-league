@@ -99,16 +99,24 @@
   const sleeperHeadshot = (pid) => `https://sleepercdn.com/content/clubsoccer/players/${pid}.jpg`;
   const clubLogo = (teamId) => (teamId ? `<img class="club-logo" src="https://sleepercdn.com/images/team_logos/clubsoccer/${esc(teamId)}.png" alt="" width="16" height="16" loading="lazy" onerror="this.remove()">` : "");
   const loadImage = (url) => new Promise((res) => { const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = url; });
-  // Sleeper has two kinds of headshot: 350px half-body shots (face small at the top, zoomed in by the CSS)
-  // and 300px close-ups (face fills the frame, must not be zoomed). Wikipedia fallbacks are any shape.
-  const photoKind = (img) => (img.naturalWidth !== img.naturalHeight ? "is-portrait" : img.naturalWidth < 340 ? "is-closeup" : "");
+  // Sleeper headshots come in several framings. 350x350 and tall 220x280 are half-body shots (face small at
+  // the top: the CSS default zooms in on it). Other squares (300, 360, the odd big one) are face close-ups and
+  // wide ones (400x268, 300x201) are head-and-shoulders; neither may be zoomed like the half-body shots.
+  // Wikipedia fallbacks can be any photo, so they just fill the circle from the top.
+  const photoKind = (img, sleeper = true) => {
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!sleeper) return "is-portrait";
+    if (w > h * 1.2) return "is-wide";
+    if (Math.abs(w - h) <= w * 0.12 && w !== 350) return "is-closeup";
+    return "";
+  };
   // Sleeper's headshot first; fall back to Wikipedia (a few lookups at a time) for the handful Sleeper lacks
   async function loadPhotos(pids, root) {
     const queue = [...pids];
     const paint = (pid, url, img) => $$(`[data-photo="${pid}"]`, root).forEach((el) => {
       el.style.backgroundImage = `url("${url}")`;
       el.classList.add("has-photo");
-      const kind = photoKind(img);
+      const kind = photoKind(img, url.includes("sleepercdn.com"));
       if (kind) el.classList.add(kind);
     });
     const worker = async () => {

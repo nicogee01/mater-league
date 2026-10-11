@@ -1866,9 +1866,10 @@ section.wk { margin-top: var(--s8); }
 .badge--derby.dt { border-color: rgba(255, 255, 255, 0.5); }
 
 /* ================= PLAYER PHOTOS ================= */
-/* every photo circle zooms Sleeper's half-body shots (150%, face near the top); close-ups and
-   Wikipedia portraits fill the circle instead, so the face isn't cropped */
+/* every photo circle zooms Sleeper's half-body shots (150%, face near the top). Close-ups fill the
+   circle, wide head-and-shoulders shots are zoomed on the face, Wikipedia photos fill from the top */
 [data-photo].has-photo.is-closeup { background-size: 104% auto; background-position: center 38%; }
+[data-photo].has-photo.is-wide { background-size: auto 125%; background-position: center 20%; }
 [data-photo].has-photo.is-portrait { background-size: cover; background-position: center 18%; }
 
 /* ================= GET THE APP ================= */
