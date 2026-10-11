@@ -136,6 +136,8 @@ button { cursor: pointer; touch-action: manipulation; }
 .nav__group.is-open .nav__chev, .nav__group:hover .nav__chev { transform: rotate(180deg); }
 .nav__menu { position: absolute; top: 100%; left: -14px; min-width: 210px; padding: 8px; margin-top: 6px; display: none; flex-direction: column;
   background: rgba(var(--paper-rgb), 0.98); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 14px 34px rgba(0,0,0,.18); }
+/* the panel is always light, even when the bar above it is see-through over the home video */
+.nav__menu { --text: #0b1f3a; --muted: #3c4a60; --line: rgba(11, 31, 58, 0.14); --accent: #c8102e; --shade: rgba(11, 31, 58, 0.05); }
 .nav__menu::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }   /* bridge the gap so hover doesn't drop */
 .nav__group:hover .nav__menu, .nav__group.is-open .nav__menu { display: flex; }
 .nav__links .nav__menu a { padding: 10px 12px; border-radius: 8px; color: var(--text); }
