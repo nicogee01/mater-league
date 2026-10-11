@@ -4,24 +4,40 @@
    Each page sets <body data-page="..."> to mark its tab active.
    ========================================================= */
 (function () {
+  // grouped: the nav puts a thin divider between groups, the phone menu gives each group a heading
   const PAGES = [
-    { id: "table", href: "table.html", label: "Table", long: "League table" },
-    { id: "matchups", href: "matchups.html", label: "Matchups" },
-    { id: "gazette", href: "gazette.html", label: "Gazette", long: "The Gazette" },
-    { id: "awards", href: "awards.html", label: "Awards", long: "Weekly Awards" },
-    { id: "clubs", href: "clubs.html", label: "Clubs" },
-    { id: "h2h", href: "h2h.html", label: "H2H", long: "Head-to-Head" },
-    { id: "draft", href: "draft.html", label: "Draft", long: "Draft board" },
-    { id: "transfers", href: "transfers.html", label: "Transfers" },
-    { id: "records", href: "records.html", label: "Records", long: "Hall of Records" },
-    { id: "power", href: "power.html", label: "Power Rankings" },
-    { id: "cup", href: "cup.html", label: "McQueen Cup", long: "The McQueen Cup" },
-    { id: "victory-road", href: "victory-road.html", label: "Victory Road" },
-    { id: "analytics", href: "analytics.html", label: "Analytics" },
+    { id: "matchups", href: "matchups.html", label: "Matchups", group: "This week" },
+    { id: "table", href: "table.html", label: "Table", long: "League table", group: "This week" },
+    { id: "gazette", href: "gazette.html", label: "Gazette", long: "The Gazette", group: "This week" },
+    { id: "awards", href: "awards.html", label: "Awards", long: "Weekly Awards", group: "This week" },
+    { id: "cup", href: "cup.html", label: "McQueen Cup", long: "The McQueen Cup", group: "Competitions" },
+    { id: "victory-road", href: "victory-road.html", label: "Victory Road", group: "Competitions" },
+    { id: "power", href: "power.html", label: "Power Rankings", group: "Competitions" },
+    { id: "clubs", href: "clubs.html", label: "Clubs", group: "Clubs & players" },
+    { id: "h2h", href: "h2h.html", label: "H2H", long: "Head-to-Head", group: "Clubs & players" },
+    { id: "transfers", href: "transfers.html", label: "Transfers", group: "Clubs & players" },
+    { id: "draft", href: "draft.html", label: "Draft", long: "Draft board", group: "Clubs & players" },
+    { id: "analytics", href: "analytics.html", label: "Analytics", group: "Stats" },
+    { id: "records", href: "records.html", label: "Records", long: "Hall of Records", group: "Stats" },
   ];
   const current = document.body.dataset.page || "home";
   const link = (p, long) => `<a href="${p.href}"${p.id === current ? ' class="is-active" aria-current="page"' : ""}>${long ? p.long || p.label : p.label}</a>`;
   const arrow = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11L11 5M6 5h5v5" /></svg>`;
+  // Desktop: the first group ("This week") sits in the bar, every other group is a dropdown.
+  // Phone menu: each group is collapsible; only "This week" is open whenever the menu opens.
+  const GROUPS = [...new Set(PAGES.map((p) => p.group))].map((g) => ({ name: g, pages: PAGES.filter((p) => p.group === g) }));
+  const holdsCurrent = (g) => g.pages.some((p) => p.id === current);
+  const chev = `<svg class="nav__chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" /></svg>`;
+  const desktopNav = GROUPS.map((g, i) => (i === 0
+    ? g.pages.map((p) => link(p)).join("")
+    : `<div class="nav__group">
+        <button type="button" class="nav__drop${holdsCurrent(g) ? " is-active" : ""}" aria-expanded="false" aria-controls="navMenu${i}">${g.name}${chev}</button>
+        <div class="nav__menu" id="navMenu${i}">${g.pages.map((p) => link(p, true)).join("")}</div>
+      </div>`)).join("");
+  const mobileNav = GROUPS.map((g, i) => `<details class="mm-group"${i === 0 ? " open" : ""}>
+        <summary>${g.name}${chev}</summary>
+        ${g.pages.map((p) => link(p, true)).join("")}
+      </details>`).join("");
 
   const header = `
   <a class="skip-link" href="#main">Skip to content</a>
@@ -31,7 +47,7 @@
         <svg class="brand__ball" viewBox="0 0 40 40" aria-hidden="true"><use href="#ball" /></svg>
         <span class="brand__word">MATER<em>LEAGUE</em></span>
       </a>
-      <nav class="nav__links" aria-label="Primary">${PAGES.map((p) => link(p)).join("")}</nav>
+      <nav class="nav__links" aria-label="Primary">${desktopNav}</nav>
       <a class="nav__cta" href="https://sleeper.com/leagues/1390750210698780672" target="_blank" rel="noopener">Sleeper ${arrow}</a>
       <button type="button" class="nav__refresh" id="navRefresh" aria-label="Refresh">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" /><path d="M20 4v5h-5" /></svg>
@@ -46,7 +62,7 @@
     </div>
     <nav class="mobile-menu" id="mobileMenu" aria-label="Mobile" hidden>
       <a href="index.html"${current === "home" ? ' aria-current="page"' : ""}>Home</a>
-      ${PAGES.map((p) => link(p, true)).join("")}
+      ${mobileNav}
       <a href="#" class="mobile-menu__install" data-install-link hidden>Add to home screen</a>
     </nav>
   </header>`;
@@ -81,6 +97,19 @@
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   document.documentElement.classList.toggle("is-standalone", standalone);
   document.body.insertAdjacentHTML("afterbegin", header);
+  // dropdowns: hover opens them on a mouse (CSS); a click/tap or keyboard toggles them, and a click
+  // anywhere else or Escape closes them
+  const drops = [...document.querySelectorAll(".nav__group")];
+  const setOpen = (grp, open) => { grp.classList.toggle("is-open", open); grp.querySelector(".nav__drop").setAttribute("aria-expanded", String(open)); };
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".nav__drop");
+    drops.forEach((g) => setOpen(g, btn ? g === btn.parentElement && !g.classList.contains("is-open") : false));
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") drops.forEach((g) => setOpen(g, false)); });
+  drops.forEach((g) => g.addEventListener("focusout", (e) => { if (!g.contains(e.relatedTarget)) setOpen(g, false); }));
+  document.getElementById("navToggle").addEventListener("click", () => {
+    document.querySelectorAll(".mm-group").forEach((d, i) => (d.open = i === 0));
+  });
   document.getElementById("navRefresh").addEventListener("click", (e) => {
     e.currentTarget.classList.add("is-spinning");
     location.reload();

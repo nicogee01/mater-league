@@ -125,7 +125,32 @@ button { cursor: pointer; touch-action: manipulation; }
 .brand__word { font-family: var(--f-display); font-size: 26px; letter-spacing: 0.02em; line-height: 1; font-style: italic; }
 .brand__word em { font-style: italic; color: var(--accent); margin-left: 4px; }
 
-.nav__links { display: flex; gap: var(--s4); margin: 0 auto; }
+.nav__links { display: flex; align-items: center; gap: 13px; margin: 0 auto; }
+/* dropdown groups (desktop) */
+.nav__group { position: relative; }
+.nav__drop { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; cursor: pointer; white-space: nowrap;
+  font-family: var(--f-label); font-weight: 600; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 10px 2px; }
+.nav__drop:hover, .nav__drop.is-active, .nav__group.is-open .nav__drop { color: var(--text); }
+.nav__drop.is-active { box-shadow: inset 0 -2px 0 var(--accent); }
+.nav__chev { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--t-fast); }
+.nav__group.is-open .nav__chev, .nav__group:hover .nav__chev { transform: rotate(180deg); }
+.nav__menu { position: absolute; top: 100%; left: -14px; min-width: 210px; padding: 8px; margin-top: 6px; display: none; flex-direction: column;
+  background: rgba(var(--paper-rgb), 0.98); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 14px 34px rgba(0,0,0,.18); }
+.nav__menu::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }   /* bridge the gap so hover doesn't drop */
+.nav__group:hover .nav__menu, .nav__group.is-open .nav__menu { display: flex; }
+.nav__links .nav__menu a { padding: 10px 12px; border-radius: 8px; color: var(--text); }
+.nav__links .nav__menu a::after { display: none; }
+.nav__links .nav__menu a:hover, .nav__links .nav__menu a:focus-visible { background: var(--shade, rgba(0,0,0,.05)); }
+.nav__links .nav__menu a.is-active { color: var(--accent); }
+/* collapsible groups (phone menu) */
+.mm-group { border-bottom: 1px solid var(--line); }
+.mm-group summary { list-style: none; display: flex; align-items: center; justify-content: space-between; padding: 16px 0 12px; cursor: pointer;
+  font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+.mm-group summary::-webkit-details-marker { display: none; }
+.mm-group summary .nav__chev { width: 16px; height: 16px; }
+.mm-group[open] summary .nav__chev { transform: rotate(180deg); }
+.mm-group a { display: block; }
+.mm-group a:last-child { border-bottom: 0; }
 .nav__links a, .mobile-menu a {
   position: relative; text-decoration: none; white-space: nowrap;
   font-family: var(--f-label); font-weight: 600; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase;
@@ -1882,6 +1907,7 @@ section.wk { margin-top: var(--s8); }
 .install-bar { position: fixed; z-index: 60; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px;
   padding: 10px 10px 10px 12px; border-radius: 18px; background: #1b0020; color: #fbf7ee; box-shadow: 0 10px 30px rgba(0,0,0,.35); animation: install-in .45s cubic-bezier(.2,.8,.2,1) both; }
 .install-bar[hidden] { display: none; }
+html.menu-open .install-bar { display: none; }
 .install-bar img { border-radius: 11px; flex: none; }
 .install-bar p { margin: 0; flex: 1; min-width: 0; line-height: 1.2; }
 .install-bar p b { display: block; font-size: 15px; }
@@ -2017,7 +2043,7 @@ html.has-install-bar body { padding-bottom: 92px; }
 
 /* ================= RESPONSIVE ================= */
 /* 13 tabs need ~1350px across; below that the bar switches to the menu button */
-@media (max-width: 1380px) {
+@media (max-width: 1080px) {
   .nav__links, .nav__cta { display: none; }
   .nav__toggle { display: block; }
 }
