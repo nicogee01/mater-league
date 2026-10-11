@@ -147,6 +147,12 @@ button { cursor: pointer; touch-action: manipulation; }
 .nav__cta svg, .cta svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; transition: transform var(--t-med) var(--ease-out); }
 .nav__cta:hover svg, .cta:hover svg { transform: translate(3px, -3px); }
 
+.nav__refresh { display: none; width: 44px; height: 44px; place-items: center; background: none; border: 0; color: var(--text); cursor: pointer; }
+.nav__refresh svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.nav__refresh.is-spinning svg { animation: refresh-spin .7s linear infinite; }
+@keyframes refresh-spin { to { transform: rotate(360deg); } }
+html.is-standalone .nav__refresh { display: grid; margin-left: auto; }
+html.is-standalone .nav__refresh + .nav__toggle { margin-left: 0; }
 .nav__toggle { display: none; width: 44px; height: 44px; background: none; border: 0; position: relative; margin-left: auto; }
 .nav__toggle span { position: absolute; left: 11px; right: 11px; height: 2px; background: var(--text); transition: transform var(--t-med) var(--ease-out); }
 .nav__toggle span:first-child { top: 17px; }

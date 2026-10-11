@@ -33,6 +33,9 @@
       </a>
       <nav class="nav__links" aria-label="Primary">${PAGES.map((p) => link(p)).join("")}</nav>
       <a class="nav__cta" href="https://sleeper.com/leagues/1390750210698780672" target="_blank" rel="noopener">Sleeper ${arrow}</a>
+      <button type="button" class="nav__refresh" id="navRefresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" /><path d="M20 4v5h-5" /></svg>
+      </button>
       <button class="nav__toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
         <span></span><span></span>
       </button>
@@ -74,7 +77,14 @@
     </defs>
   </svg>`;
 
+  // installed home-screen app: no address bar, so the nav gets its own refresh button
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  document.documentElement.classList.toggle("is-standalone", standalone);
   document.body.insertAdjacentHTML("afterbegin", header);
+  document.getElementById("navRefresh").addEventListener("click", (e) => {
+    e.currentTarget.classList.add("is-spinning");
+    location.reload();
+  });
   document.body.insertAdjacentHTML("beforeend", footer);
   window.MATER_PAGES = PAGES;
 })();
