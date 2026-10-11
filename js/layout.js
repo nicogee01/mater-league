@@ -82,11 +82,12 @@
 // ---------- "Get the app": add the site to the home screen ----------
 // Android / desktop Chrome & Edge: one tap opens the browser's own install dialog (beforeinstallprompt).
 // iPhone / iPad: Apple doesn't let a page do that, so the button opens a 3-step picture guide instead.
-// Hidden once it's installed (running standalone) and for 14 days after someone closes the bar.
+// Phones and tablets only, never on desktop. Hidden inside the installed app (standalone),
+// and the bar stays away for 14 days after someone closes it.
 (() => {
   const ua = navigator.userAgent;
   const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const isPhone = isIOS || /Android/.test(ua) || matchMedia("(pointer: coarse)").matches;
+  const isPhone = isIOS || /Android|Mobile/.test(ua);   // phones and tablets only: never on a desktop or laptop
   const installed = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const KEY = "mater-install-dismissed";
   const dismissedRecently = () => { try { return Date.now() - (+localStorage.getItem(KEY) || 0) < 14 * 864e5; } catch (_) { return false; } };
@@ -123,7 +124,7 @@
   const links = () => document.querySelectorAll("[data-install-link]");
   function refresh() {
     const on = !installed();
-    links().forEach((a) => (a.hidden = !on || (!isPhone && !deferred)));
+    links().forEach((a) => (a.hidden = !(on && isPhone)));
     bar.hidden = !(on && isPhone && !dismissedRecently());
     document.documentElement.classList.toggle("has-install-bar", !bar.hidden);
   }
