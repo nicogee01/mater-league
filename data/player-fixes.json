@@ -1,0 +1,14 @@
+{
+  "_comment": "Corrections to Sleeper's player list. Sleeper's id 1031 is labelled 'Nottingham Forest' (a team defence) but carries James Trafford's (Leeds GK) stats.",
+  "1031": {
+    "full_name": "James Trafford",
+    "first_name": "James",
+    "last_name": "Trafford",
+    "position": "GK",
+    "fantasy_positions": [
+      "GK"
+    ],
+    "team_abbr": "LEE",
+    "team": "1226"
+  }
+}

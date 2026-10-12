@@ -35,10 +35,21 @@
   }
 
   // Players file is ~2 MB; keep a trimmed copy for 12h so repeat visits are instant.
+  // data/player-fixes.json: corrections to Sleeper's player list (e.g. a keeper filed as a team defence)
+  async function playerFixes(p) {
+    try {
+      const fx = await fetch("data/player-fixes.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : {}));
+      for (const [id, x] of Object.entries(fx)) {
+        if (id.startsWith("_")) continue;
+        p[id] = { ...(p[id] || {}), n: x.full_name, l: x.last_name, c: x.team_abbr, p: x.fantasy_positions[0], ps: x.fantasy_positions, t: x.team, i: (p[id] && p[id].i) || "" };
+      }
+    } catch (_) {}
+    return p;
+  }
   async function loadPlayers() {
     try {
       const cached = JSON.parse(localStorage.getItem(PLAYER_CACHE_KEY) || "null");
-      if (cached && Date.now() - cached.t < PLAYER_CACHE_TTL) return cached.p;
+      if (cached && Date.now() - cached.t < PLAYER_CACHE_TTL) return playerFixes(cached.p);
     } catch (_) {}
     const raw = await get(`/players/${SPORT}`);
     const p = {};
@@ -54,7 +65,7 @@
       };
     }
     try { localStorage.setItem(PLAYER_CACHE_KEY, JSON.stringify({ t: Date.now(), p })); } catch (_) {}
-    return p;
+    return playerFixes(p);
   }
 
   // Season points + per-90 projection for every player, from weekly Sleeper stats and league scoring.

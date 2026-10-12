@@ -18,6 +18,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+const applyFixes = async (players) => { try { const fx = JSON.parse(await (await import("node:fs/promises")).readFile(new URL("../data/player-fixes.json", import.meta.url), "utf8")); for (const [id, x] of Object.entries(fx)) if (!id.startsWith("_")) players[id] = { ...(players[id] || {}), ...x, player_id: id }; } catch (_) {} return players; };
 
 const LEAGUE_ID = "1390750210698780672";
 const SPORT = "clubsoccer:epl";
@@ -63,7 +64,7 @@ function lineUp(roster, slotNames, formation, players) {
 async function main() {
   const [league, users, rosters, players, events] = await Promise.all([
     get(`${API}/league/${LEAGUE_ID}`), get(`${API}/league/${LEAGUE_ID}/users`), get(`${API}/league/${LEAGUE_ID}/rosters`),
-    get(`${API}/players/${SPORT}`), get(`${FPL}/bootstrap-static/`).then((b) => b.events),
+    get(`${API}/players/${SPORT}`).then(applyFixes), get(`${FPL}/bootstrap-static/`).then((b) => b.events),
   ]);
   const slotNames = league.roster_positions.filter((s) => s !== "BN" && s !== "IR");
   const nameOf = (id) => { const p = players[id]; return p ? (p.full_name || [p.first_name, p.last_name].filter(Boolean).join(" ")).replace(/,/g, "").trim() : id; };
