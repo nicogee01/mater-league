@@ -341,27 +341,13 @@
     const ball = svg ? await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null);
       i.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace(/<rect[^>]*\/>/, "").replace(/<circle[^>]*opacity="\.28"\/>/, "")); }) : null;
 
+    // each section is drawn on a transparent card-sized canvas: just its kicker, title and content
     const slide = (n, total, kicker, title) => {
       const c = document.createElement("canvas"); c.width = W; c.height = H;
       const x = c.getContext("2d");
-      const g = x.createLinearGradient(0, 0, W * 0.4, H); g.addColorStop(0, "#2b0036"); g.addColorStop(1, "#0d0a2b");
-      x.fillStyle = g; x.fillRect(0, 0, W, H);
-      // pitch lines + ball watermark
-      x.strokeStyle = "rgba(255,255,255,0.05)"; x.lineWidth = 4;
-      x.beginPath(); x.arc(W / 2, H + 60, 300, Math.PI, 2 * Math.PI); x.stroke();
-      x.strokeRect(-4, H - 120, W + 8, 200);
-      if (ball) { x.globalAlpha = 0.07; x.drawImage(ball, W - 520, -150, 720, 720); x.globalAlpha = 1; }
-      // header block: green tab with the league + gameweek, then the slide title
-      x.fillStyle = RC.green; x.beginPath(); x.moveTo(0, 0); x.lineTo(W, 0); x.lineTo(W, 12); x.lineTo(0, 12); x.fill();
-      if (ball) x.drawImage(ball, 56, 52, 64, 64);
-      text(x, "THE MATER LEAGUE", 134, 82, "700 28px 'Barlow Condensed'", RC.cream);
-      text(x, `GAMEWEEK ${week}`, 134, 112, "700 26px 'Barlow Condensed'", RC.green);
-      text(x, `${n}/${total}`, W - 60, 92, "700 28px 'Barlow Condensed'", "rgba(251,247,238,0.55)", "right");
       text(x, kicker.toUpperCase(), 60, 196, "700 30px 'Barlow Condensed'", RC.pink);
       const ts = shrink(x, title.toUpperCase(), W - 120, 112, 70, "Anton, Impact, sans-serif", "400");
       text(x, title.toUpperCase(), 56, 300, ts, RC.cream);
-      // footer
-      text(x, "nicogee01.github.io/mater-league", W / 2, H - 40, "600 24px Barlow", "rgba(251,247,238,0.5)", "center");
       return { c, x };
     };
     function text(x, s, px, py, font, color, align = "left") { x.font = font; x.fillStyle = color; x.textAlign = align; x.textBaseline = "alphabetic"; x.fillText(s, px, py); }
@@ -516,35 +502,62 @@
       }
       out.push(c);
     }
+    out.ball = ball;
     return out;
+  }
+  // stitch the four sections into one long page: one header, the sections top to bottom, one footer
+  async function recapImage(week) {
+    const secs = await recapSlides(week);
+    if (!secs.length) return null;
+    const { W, H } = RC, CROP = 150, SEC = H - 70 - CROP, TOP = 190, FOOT = 110;
+    const c = document.createElement("canvas"); c.width = W; c.height = TOP + secs.length * SEC + FOOT;
+    const x = c.getContext("2d"), ball = secs.ball;
+    const g = x.createLinearGradient(0, 0, W * 0.5, c.height); g.addColorStop(0, "#2b0036"); g.addColorStop(0.5, "#170b33"); g.addColorStop(1, "#0d0a2b");
+    x.fillStyle = g; x.fillRect(0, 0, W, c.height);
+    // a ball watermark beside each section (alternating sides), a divider between sections, faint pitch markings
+    secs.forEach((_, i) => {
+      if (ball) { x.globalAlpha = 0.06; x.drawImage(ball, i % 2 ? -240 : W - 480, TOP + i * SEC - 120, 720, 720); x.globalAlpha = 1; }
+      if (i) { x.fillStyle = "rgba(255,255,255,0.08)"; x.fillRect(60, TOP + i * SEC - 30, W - 120, 2); }
+    });
+    x.strokeStyle = "rgba(255,255,255,0.05)"; x.lineWidth = 4;
+    x.beginPath(); x.arc(W / 2, c.height + 40, 300, Math.PI, 2 * Math.PI); x.stroke();
+    // header
+    x.fillStyle = RC.green; x.fillRect(0, 0, W, 12);
+    if (ball) x.drawImage(ball, 56, 50, 92, 92);
+    const t = (str, px, py, font, color, align = "left") => { x.font = font; x.fillStyle = color; x.textAlign = align; x.fillText(str, px, py); };
+    t("THE MATER LEAGUE", 168, 92, "700 32px 'Barlow Condensed'", RC.cream);
+    t(`GAMEWEEK ${week} · WEEKLY RECAP`, 168, 130, "700 30px 'Barlow Condensed'", RC.green);
+    secs.forEach((sec, i) => x.drawImage(sec, 0, CROP, W, SEC, 0, TOP + i * SEC - 40, W, SEC));
+    // footer
+    x.fillStyle = "rgba(255,255,255,0.06)"; x.fillRect(0, c.height - FOOT + 20, W, FOOT - 20);
+    t("nicogee01.github.io/mater-league", W / 2, c.height - 38, "600 26px Barlow", "rgba(251,247,238,0.6)", "center");
+    return c;
   }
   async function shareRecap(week, btn) {
     const old = btn.textContent; btn.disabled = true; btn.textContent = "Building…";
     try {
-      const cards = recapPreview.week === week && recapPreview.cards ? recapPreview.cards : await recapSlides(week);
-      const blobs = await Promise.all(cards.map((c) => new Promise((r) => c.toBlob(r, "image/png"))));
-      const files = blobs.map((b, i) => new File([b], `mater-league-gw${week}-recap-${i + 1}.png`, { type: "image/png" }));
-      if (navigator.canShare && navigator.canShare({ files })) {
-        try { await navigator.share({ files, title: `Mater League · Gameweek ${week} recap` }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+      const c = recapPreview.week === week && recapPreview.canvas ? recapPreview.canvas : await recapImage(week);
+      if (!c) return;
+      const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+      const file = new File([blob], `mater-league-gw${week}-recap.png`, { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: `Mater League · Gameweek ${week} recap` }); return; } catch (e) { if (e && e.name === "AbortError") return; }
       }
-      for (const [i, b] of blobs.entries()) {
-        const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = files[i].name; a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-      }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     } finally { btn.disabled = false; btn.textContent = old; }
   }
-  // preview strip on the Awards page (re-drawn when the week changes)
-  const recapPreview = { week: null, cards: null };
+  // preview on the Awards page (re-drawn when the week changes)
+  const recapPreview = { week: null, canvas: null };
   async function paintRecapPreview(week) {
     const box = $("#recapPreview");
     if (!box || recapPreview.week === week) return;
-    recapPreview.week = week; recapPreview.cards = null;
-    const cards = await recapSlides(week);
-    if (recapPreview.week !== week || !$("#recapPreview")) return;
-    recapPreview.cards = cards;
-    $("#recapPreview").innerHTML = cards.map((c, i) => `<img src="${c.toDataURL("image/png")}" alt="Gameweek ${week} recap, card ${i + 1} of ${cards.length}" width="1080" height="1350">`).join("");
+    recapPreview.week = week; recapPreview.canvas = null;
+    const c = await recapImage(week);
+    if (!c || recapPreview.week !== week || !$("#recapPreview")) return;
+    recapPreview.canvas = c;
+    $("#recapPreview").innerHTML = `<img src="${c.toDataURL("image/png")}" alt="Gameweek ${week} recap" width="${c.width}" height="${c.height}">`;
   }
-
   // ---------- TACTICS (club profile) ----------
   // Formations come from Sleeper's per-week formation history (it matched every logged XI). For each
   // logged gameweek: the shape this club played, and the shape its opponent played, with the result.
@@ -2562,10 +2575,10 @@
     const recap = `<section class="recap" aria-labelledby="recapTitle">
         <div class="recap__text">
           <h2 class="subhead" id="recapTitle">Gameweek ${wk.week} recap</h2>
-          <p>Four cards for the group chat: results and podium, players of the week, the best players left on the bench, and the week in numbers. On a phone, Share sends all four straight to Sleeper.</p>
+          <p>One long image for the group chat: results and podium, players of the week, the best players left on the bench, and the week in numbers. On a phone, Share sends it straight to Sleeper.</p>
           <button type="button" class="pr-btn recap__btn" data-recap="${wk.week}">${navigator.canShare ? "Share recap" : "Download recap"}</button>
         </div>
-        <div id="recapPreview" class="recap__strip" aria-live="polite"><div class="skeleton recap__ph"></div><div class="skeleton recap__ph"></div><div class="skeleton recap__ph"></div><div class="skeleton recap__ph"></div></div>
+        <div id="recapPreview" class="recap__frame" aria-live="polite"><div class="skeleton recap__ph"></div></div>
       </section>`;
     root.innerHTML = awardsPage ? recap + podiumHTML(wk.week) + xis + awards + finishesHTML(wk.week) : front;
     if (awardsPage) { recapPreview.week = null; paintRecapPreview(wk.week); }

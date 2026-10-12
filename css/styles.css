@@ -1999,9 +1999,10 @@ html.has-install-bar body { padding-bottom: 92px; }
 .recap__text { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3) var(--s5); margin-bottom: var(--s4); }
 .recap__text .subhead { margin: 0; flex-basis: 100%; }
 .recap__text p { margin: 0; color: var(--muted); flex: 1 1 360px; max-width: 70ch; }
-.recap__strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: var(--s3); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
-.recap__strip img, .recap__ph { width: 100%; height: auto; aspect-ratio: 1080 / 1350; border-radius: 14px; scroll-snap-align: start; box-shadow: 0 8px 24px rgba(0,0,0,.25); background: #1b0a2b; }
-@media (max-width: 720px) { .recap__strip { grid-auto-columns: 72%; } }
+/* the long recap image, shown in a scrollable frame */
+.recap__frame { max-width: 440px; max-height: 720px; overflow-y: auto; margin: 0 auto; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); background: #1b0a2b; overscroll-behavior: contain; }
+.recap__frame img { display: block; width: 100%; height: auto; }
+.recap__ph { aspect-ratio: 1080 / 4700; width: 100%; }
 
 /* ================= AWARDS: PODIUM + FINISHES ================= */
 .podium { margin-bottom: var(--s7); }
