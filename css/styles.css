@@ -1948,7 +1948,21 @@ html[data-theme="dark"] .nav__menu { --text: #f1e8d4; --muted: #b8c1d0; --line: 
 .nav__theme .i-sun { display: none; }
 html[data-theme="dark"] .nav__theme .i-sun { display: block; }
 html[data-theme="dark"] .nav__theme .i-moon { display: none; }
-@media (max-width: 1080px) { .nav__theme { margin-left: auto; } .nav__theme ~ .nav__refresh, .nav__theme ~ .nav__toggle { margin-left: 0 !important; } }
+/* phones: the bar is brand + theme + (refresh) + menu. Nothing may shrink, or the menu button's lines vanish */
+.nav__theme, .nav__refresh, .nav__toggle { flex: none; }
+@media (max-width: 1080px) {
+  .nav__inner { gap: var(--s1); }
+  .brand { flex: 0 1 auto; min-width: 0; }
+  .nav__theme { margin-left: auto; }
+  .nav__theme ~ .nav__refresh, .nav__theme ~ .nav__toggle { margin-left: 0 !important; }
+}
+@media (max-width: 360px) {
+  .nav__inner { padding: 0 var(--s3); }
+  .brand { flex: none; gap: 6px; }
+  .brand__ball { width: 24px; height: 24px; }
+  .brand__word { font-size: 21px; }
+  .nav__theme, .nav__refresh { width: 36px; }
+}
 
 /* ================= GET THE APP ================= */
 .install-bar { position: fixed; z-index: 60; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px;
