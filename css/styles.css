@@ -2168,7 +2168,8 @@ html.has-install-bar body { padding-bottom: 92px; }
 .pdb thead .pdb-c-name { z-index: 3; background: var(--band); }
 .pdb .pdb-c-own { text-align: left; }
 .pdb .pdb-c-own .crest { width: 22px; height: 22px; margin-right: 6px; }
-.pdb .pdb-c-own span { font-size: 13px; }
+.pdb .pdb-c-own .pdb-own-name { font-size: 13px; }
+.pdb-last { display: none; }
 .pdb .pdb-c-pts { font-family: var(--f-display); font-size: 17px; background: var(--shade); }
 .pdb thead .pdb-c-pts { font-family: var(--f-label); font-size: 13px; background: #16335e; }
 
@@ -2186,8 +2187,16 @@ html.has-install-bar body { padding-bottom: 92px; }
 @media (max-width: 760px) {
   .pdb-controls { grid-template-columns: 1fr 1fr; }
   .pdb-search { grid-column: 1 / -1; }
-  .pdb .pdb-c-name { min-width: 160px; }
-  .pdb .pdb-c-own span { display: none; }
+  /* phones: surname only and a slimmer name column, crest only for the fantasy club, so more stats fit */
+  .pdb .pdb-c-name { min-width: 0; max-width: 132px; }
+  .pdb-player { gap: 8px; }
+  .pdb-photo { width: 28px; height: 28px; }
+  .pdb-full { display: none; }
+  .pdb-last { display: inline; }
+  .pdb-player b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 88px; }
+  .pdb .pdb-c-own .pdb-own-name { display: none; }
+  .pdb .pdb-c-own .crest { margin-right: 0; }
+  .pdb th, .pdb td { padding: 8px 7px; }
 }
 
 /* ================= TACTICS (club profile) ================= */

@@ -693,11 +693,11 @@
     const grp = (g) => PDB_COLS.filter(([, , , gs]) => gs.split(" ")[0] === g).map(([, l, t]) => [l, t]);
     const sections = [
       ["Basics", [["GP", "Games played"], ["GS", "Games started"], ["MIN", "Minutes (MIN/G per game)"],
-        ["PTS", "Fantasy points, this league's scoring"], ["GH PTS", "Ghost points: fantasy points without goals, assists and clean sheets, so what a player earns from everything else (tackles, key passes, saves, minutes, cards…)"]]],
+        ["PTS", "Fantasy points, this league's scoring"], ["GH PTS", "Ghost points: fantasy points without goals, assists and clean sheets"]]],
       ["Attack", grp("att")], ["Defence", grp("def")], ["Goalkeeping", grp("gk")], ["Discipline", grp("")],
     ];
     $(".pdb-guide__body").innerHTML = sections.map(([h, rows]) => `<section><h3>${h}</h3><dl>${rows.map(([l, t]) => `<div><dt>${esc(l)}</dt><dd>${esc(t)}</dd></div>`).join("")}</dl></section>`).join("")
-      + `<p>Per game divides each total by games played. Tap any header to sort; tap again to flip the order.</p>`;
+      + `<p>Per game divides each total by games played; per 90 divides by minutes played over 90. Tap any header to sort; tap again to flip the order.</p>`;
     document.addEventListener("click", (e) => {
       const g = e.target.closest("#pdbGroup [data-group]"), m = e.target.closest("#pdbMode [data-mode]"), s = e.target.closest("#playerDb [data-sort]");
       if (g) { pdb.group = g.dataset.group; $$("#pdbGroup .chip").forEach((c) => { const on = c === g; c.classList.toggle("is-active", on); c.setAttribute("aria-pressed", String(on)); }); renderPlayerDb(); }
@@ -709,14 +709,18 @@
   function renderPlayerDb() {
     const box = $("#playerDb");
     if (!box || !state.playerTotals) return;
-    const avg = pdb.mode === "avg";
+    const avg = pdb.mode === "avg", p90 = pdb.mode === "p90", rate = avg || p90;
+    const suf = avg ? "/G" : p90 ? "/90" : "";
     const cols = PDB_COLS.filter(([, , , g]) => pdb.group === "all" || g.split(" ").includes(pdb.group));
     const val = (r, k) => {
       if (k === "name") return r.p.n;
       if (k === "gp") return r.gp;
       if (k === "gs") return r.x.gs || 0;
       const v = r.x[k] || 0;
-      return avg && k !== "gp" && k !== "gs" ? (r.gp ? v / r.gp : 0) : v;
+      if (k === "min") return avg ? (r.gp ? v / r.gp : 0) : v;   // minutes: per game, or season total (per 90 of minutes is just 90)
+      if (avg) return r.gp ? v / r.gp : 0;
+      if (p90) return r.x.min ? (v / r.x.min) * 90 : 0;
+      return v;
     };
     let rows = pdbRows().filter((r) =>
       (!pdb.q || r.p.n.toLowerCase().includes(pdb.q)) &&
@@ -725,20 +729,20 @@
       (!pdb.owner || (pdb.owner === "fa" ? !r.owner : r.owner && String(r.owner.rosterId) === pdb.owner)) &&
       r.gp >= pdb.minGp);
     rows.sort((a, b) => (pdb.sort === "name" ? a.p.n.localeCompare(b.p.n) * pdb.dir : (val(a, pdb.sort) - val(b, pdb.sort)) * pdb.dir || b.x.fpts - a.x.fpts));
-    $("#pdbCount").textContent = `${rows.length} player${rows.length === 1 ? "" : "s"}${avg ? " · per game" : " · season totals"}`;
+    $("#pdbCount").textContent = `${rows.length} player${rows.length === 1 ? "" : "s"} · ${avg ? "per game" : p90 ? "per 90 minutes" : "season totals"}`;
     const shown = rows.slice(0, pdb.limit);
     $("#pdbMore").hidden = rows.length <= pdb.limit;
     const th = (k, label, title, cls = "") => `<th scope="col" class="${cls}${pdb.sort === k ? " is-sorted" : ""}" aria-sort="${pdb.sort === k ? (pdb.dir < 0 ? "descending" : "ascending") : "none"}"><button type="button" data-sort="${k}" title="${esc(title)}">${label}${pdb.sort === k ? (pdb.dir < 0 ? " ▾" : " ▴") : ""}</button></th>`;
-    const fmt = (v, dp) => (v === 0 ? `<span class="pdb-zero">·</span>` : avg ? num(v, dp || 2) : num(v, dp));
+    const fmt = (v, dp) => (v === 0 ? `<span class="pdb-zero">·</span>` : rate ? num(v, dp || 2) : num(v, dp));
     box.innerHTML = `<table class="pdb">
-      <thead><tr>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own">Fantasy club</th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", avg ? "PTS/G" : "PTS", "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", avg ? "GH PTS/G" : "GH PTS", "Ghost points: fantasy points without goals, assists and clean sheets", "pdb-c-ghost")}
+      <thead><tr>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own"><span class="pdb-full">Fantasy club</span><span class="pdb-last">Club</span></th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", "PTS" + suf, "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", "GH PTS" + suf, "Ghost points: fantasy points without goals, assists and clean sheets", "pdb-c-ghost")}
         ${cols.map(([k, l, t]) => th(k, l, t)).join("")}</tr></thead>
       <tbody>${shown.map((r) => `<tr>
         <th scope="row" class="pdb-c-name"><span class="pdb-player" data-player="${esc(r.pid)}" data-name="${esc(r.p.n)}" role="button" tabindex="0">
           <span class="pdb-photo" data-photo="${esc(r.pid)}" aria-hidden="true"><span>${esc(initials(r.p.n))}</span></span>
-          <span><b>${esc(r.p.n)}</b><small><span class="posb ${esc(r.p.p)}">${esc(r.p.p || "–")}</span>${clubLogo(r.p.t)}${esc(r.p.c || "")}</small></span></span></th>
-        <td class="pdb-c-own">${r.owner ? `${crest(r.owner)}<span>${club(r.owner)}</span>` : `<span class="fa-tag">Free agent</span>`}</td>
-        <td>${r.gp}</td><td>${r.x.gs || 0}</td><td>${avg ? (r.gp ? Math.round((r.x.min || 0) / r.gp) : 0) : r.x.min || 0}</td>
+          <span><b><span class="pdb-full">${esc(r.p.n)}</span><span class="pdb-last">${esc(surname(r.pid, r.p.n))}</span></b><small><span class="posb ${esc(r.p.p)}">${esc(r.p.p || "–")}</span>${clubLogo(r.p.t)}${esc(r.p.c || "")}</small></span></span></th>
+        <td class="pdb-c-own">${r.owner ? `${crest(r.owner)}<span class="pdb-own-name">${club(r.owner)}</span>` : `<span class="fa-tag"><span class="pdb-full">Free agent</span><span class="pdb-last">FA</span></span>`}</td>
+        <td>${r.gp}</td><td>${r.x.gs || 0}</td><td>${Math.round(val(r, "min"))}</td>
         <td class="pdb-c-pts">${num(val(r, "fpts"), avg ? 2 : 2)}</td>
         <td class="pdb-c-ghost">${num(val(r, "ghost"), 2)}</td>
         ${cols.map(([k, , , , dp]) => `<td>${fmt(val(r, k), dp)}</td>`).join("")}
