@@ -536,7 +536,7 @@
   async function shareRecap(week, btn) {
     const old = btn.textContent; btn.disabled = true; btn.textContent = "Building…";
     try {
-      const c = recapPreview.week === week && recapPreview.canvas ? recapPreview.canvas : await recapImage(week);
+      const c = await recapImage(week);
       if (!c) return;
       const blob = await new Promise((r) => c.toBlob(r, "image/png"));
       const file = new File([blob], `mater-league-gw${week}-recap.png`, { type: "image/png" });
@@ -2572,16 +2572,12 @@
         </div>
         <p class="chart-note">${esc(xiNote)}</p>` : `<p class="pending-note">${kind === "free" ? "Scouting the waiver wire…" : "Not enough players for a full eleven this week."}</p>`}
       </section>` : `<p class="pending-note">Team of the Week needs that gameweek's lineups.</p>`}`;
-    const recap = `<section class="recap" aria-labelledby="recapTitle">
-        <div class="recap__text">
-          <h2 class="subhead" id="recapTitle">Gameweek ${wk.week} recap</h2>
-          <p>One long image for the group chat: results and podium, players of the week, the best players left on the bench, and the week in numbers. On a phone, Share sends it straight to Sleeper.</p>
-          <button type="button" class="pr-btn recap__btn" data-recap="${wk.week}">${navigator.canShare ? "Share recap" : "Download recap"}</button>
-        </div>
-        <div id="recapPreview" class="recap__frame" aria-live="polite"><div class="skeleton recap__ph"></div></div>
-      </section>`;
-    root.innerHTML = awardsPage ? recap + podiumHTML(wk.week) + xis + awards + finishesHTML(wk.week) : front;
-    if (awardsPage) { recapPreview.week = null; paintRecapPreview(wk.week); }
+    // a quiet button at the very bottom: the recap image is built only when it's tapped
+    const recap = `<div class="recap-dl">
+        <button type="button" class="gz-btn gz-btn--ghost" data-recap="${wk.week}">Download GW${wk.week} recap</button>
+        <small>One long image of the week for the group chat.</small>
+      </div>`;
+    root.innerHTML = awardsPage ? podiumHTML(wk.week) + xis + awards + finishesHTML(wk.week) + recap : front;
     if (Object.keys(state.players || {}).length) loadPhotos($$("[data-photo]", root).map((e) => e.dataset.photo), root);
     countUp(root);
   }
