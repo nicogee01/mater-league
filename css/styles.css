@@ -2272,6 +2272,20 @@ html.has-install-bar body { padding-bottom: 92px; }
   .tc-roster { max-height: 300px; }
 }
 
+.tc-past { margin-bottom: var(--s4); padding: var(--s3) var(--s4); border-radius: 14px; background: rgba(230,196,122,.18); border: 1px solid var(--gold); font-size: 14px; }
+.tc-past small { display: block; margin-top: 4px; color: var(--muted); }
+.tc-history { margin-top: var(--s7); }
+.tc-history ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tc-history li { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: 10px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.tc-history li.is-on { border-color: var(--gold); box-shadow: inset 4px 0 0 var(--gold); }
+.tc-history__when { font-family: var(--f-display); font-size: 20px; line-height: 1; }
+.tc-history__when small { display: block; font-family: var(--f-body); font-size: 12px; color: var(--faint); margin-top: 2px; }
+.tc-history__deal { display: grid; gap: 4px; font-size: 14px; min-width: 0; }
+.tc-history__deal > span { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tc-history__deal .crest { width: 22px; height: 22px; }
+.tc-history__deal small { color: var(--faint); font-size: 12px; }
+@media (max-width: 560px) { .tc-history li { grid-template-columns: 1fr; } }
+
 /* ================= TACTICS (club profile) ================= */
 .tac__sub { margin: var(--s3) 0 var(--s2); font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
 .tac__sub:first-of-type { margin-top: 0; }

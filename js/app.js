@@ -774,7 +774,17 @@
   // (1 GK, 3+ D, 3+ M, 1+ F and the FM / MD / FMD flex spots, from data/model.json's expected
   // points for that week) and adds them up, before and after. A club that ends up short of
   // players fills the gap with the best free agent; one with too many drops its least useful man.
-  const tc = { a: null, b: null, ga: new Set(), gb: new Set() };
+  const tc = { a: null, b: null, ga: new Set(), gb: new Set(), past: null };
+  // a club's roster for the calculator: today's, or, when checking a past trade, put back to just before it
+  function tcRoster(k) {
+    const t = state.byRoster[tc[k]];
+    if (!t) return [];
+    if (!tc.past) return t.players;
+    const id = t.rosterId, got = Object.entries(tc.past.adds || {}).filter(([, r]) => r === id).map(([p]) => p);
+    const sent = Object.entries(tc.past.drops || {}).filter(([, r]) => r === id).map(([p]) => p);
+    return [...new Set(t.players.filter((p) => !got.includes(p)).concat(sent))];
+  }
+  const tradeTxns = () => (state.txns || []).filter((x) => x.type === "trade" && x.status === "complete" && x.roster_ids.length === 2);
   const TC_FORMS = [];
   for (let d = 3; d <= 5; d++) for (let m = 3; m <= 6; m++) for (let f = 1; f <= 3; f++) {
     const ed = d - 3, ef = f - 1;
@@ -839,10 +849,10 @@
     }
     return { pids: cur, dropped, added };
   }
-  function tcSide(team, give, get) {
-    const before = tcValue(team.players);
-    const raw = team.players.filter((p) => !give.has(p)).concat([...get]);
-    const bal = tcBalance(raw, team.players.length, new Set(get));
+  function tcSide(team, give, get, roster) {
+    const before = tcValue(roster);
+    const raw = roster.filter((p) => !give.has(p)).concat([...get]);
+    const bal = tcBalance(raw, roster.length, new Set(get));
     const after = tcValue(bal.pids);
     return { team, before, after, bal, delta: after.per - before.per, deltaTot: after.total - before.total };
   }
@@ -859,16 +869,28 @@
     tc.b = state.byRoster[+h.get("b")] ? +h.get("b") : null;
     tc.ga = new Set((h.get("ga") || "").split(",").filter(Boolean));
     tc.gb = new Set((h.get("gb") || "").split(",").filter(Boolean));
+    if (h.get("tx")) tc.past = tradeTxns().find((x) => x.transaction_id === h.get("tx")) || null;
     root.addEventListener("change", (e) => {
       const sel = e.target.closest("[data-tcteam]");
-      if (sel) { const k = sel.dataset.tcteam; tc[k] = +sel.value || null; tc["g" + k].clear(); renderTrade(); return; }
+      if (sel) { const k = sel.dataset.tcteam; tc[k] = +sel.value || null; tc["g" + k].clear(); tc.past = null; renderTrade(); return; }
       const cb = e.target.closest("[data-tcgive]");
       if (cb) { const set = tc["g" + cb.dataset.tcgive]; cb.checked ? set.add(cb.value) : set.delete(cb.value); renderTrade(); }
     });
     root.addEventListener("click", (e) => {
       const x = e.target.closest("[data-tcremove]");
       if (x) { tc["g" + x.dataset.side].delete(x.dataset.tcremove); renderTrade(); }
-      if (e.target.closest("#tcReset")) { tc.ga.clear(); tc.gb.clear(); renderTrade(); }
+      if (e.target.closest("#tcReset")) { tc.ga.clear(); tc.gb.clear(); tc.past = null; renderTrade(); }
+      const pt = e.target.closest("[data-pasttrade]");
+      if (pt) {
+        const x = tradeTxns().find((y) => y.transaction_id === pt.dataset.pasttrade);
+        if (!x) return;
+        const [a, b] = x.roster_ids;
+        tc.a = a; tc.b = b; tc.past = x;
+        tc.ga = new Set(Object.entries(x.drops || {}).filter(([, r]) => r === a).map(([p]) => p));
+        tc.gb = new Set(Object.entries(x.drops || {}).filter(([, r]) => r === b).map(([p]) => p));
+        renderTrade();
+        $("#tradeRoot").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
+      }
       const sh = e.target.closest("#tcShare");
       if (sh) { navigator.clipboard && navigator.clipboard.writeText(location.href).then(() => flash(sh, "Link copied"), () => {}); }
     });
@@ -885,7 +907,7 @@
     const opts = (k) => `<option value="">Choose a club</option>${T.map((t) => `<option value="${t.rosterId}"${tc[k] === t.rosterId ? " selected" : ""}${tc[k === "a" ? "b" : "a"] === t.rosterId ? " disabled" : ""}>${esc(t.name)}</option>`).join("")}`;
     const panel = (k) => {
       const t = state.byRoster[tc[k]], give = tc["g" + k];
-      const roster = t ? [...t.players].sort((a, b) => ros(b) - ros(a)) : [];
+      const roster = t ? [...tcRoster(k)].sort((a, b) => ros(b) - ros(a)) : [];
       return `<div class="tc-side">
         <label class="hub-field"><span>${k === "a" ? "Club A sends" : "Club B sends"}</span><select data-tcteam="${k}">${opts(k)}</select></label>
         ${t ? `<div class="tc-sends">${give.size ? [...give].map((pid) => `<span class="tc-chip"><span class="pdb-photo" data-photo="${esc(pid)}"><span>${esc(initials(P(pid).n))}</span></span>${esc(surname(pid, P(pid).n))}<button type="button" data-tcremove="${esc(pid)}" data-side="${k}" aria-label="Remove ${esc(P(pid).n)}">×</button></span>`).join("") : `<span class="dim">Tick the players ${esc(t.name)} sends</span>`}</div>
@@ -899,7 +921,7 @@
     let result = "";
     const A = state.byRoster[tc.a], B = state.byRoster[tc.b];
     if (A && B && (tc.ga.size || tc.gb.size)) {
-      const sa = tcSide(A, tc.ga, tc.gb), sb = tcSide(B, tc.gb, tc.ga);
+      const sa = tcSide(A, tc.ga, tc.gb, tcRoster("a")), sb = tcSide(B, tc.gb, tc.ga, tcRoster("b"));
       const verdict = (s) => (s.delta >= 0.4 ? ["win", "Wins"] : s.delta <= -0.4 ? ["loss", "Loses"] : ["even", "About even"]);
       const lineRow = (s) => ["GK", "DEF", "MID", "FWD"].map((k) => { const d = s.after.lines[k] - s.before.lines[k]; return `<li><span>${k}</span><b>${num(s.after.lines[k], 1)}</b><em class="${d > 0.05 ? "up" : d < -0.05 ? "down" : ""}">${d > 0.05 ? "+" : d < -0.05 ? "−" : "±"}${num(Math.abs(d), 1)}</em></li>`; }).join("");
       const moves = (s) => [
@@ -939,8 +961,23 @@
         </div></details>
       </section>`;
     } else if (A && B) result = `<p class="pending-note">Tick the players each club sends to see who wins.</p>`;
-    root.innerHTML = `<div class="tc-sides">${panel("a")}<div class="tc-swap" aria-hidden="true">⇄</div>${panel("b")}</div>${result}`;
-    const parts = [tc.a && `a=${tc.a}`, tc.b && `b=${tc.b}`, tc.ga.size && `ga=${[...tc.ga].join(",")}`, tc.gb.size && `gb=${[...tc.gb].join(",")}`].filter(Boolean);
+    const faabOf = (x) => (x.waiver_budget || []).map((w) => `$${w.amount} FAAB from ${esc(state.byRoster[w.sender] ? state.byRoster[w.sender].name : "?")}`).join(", ");
+    const pastBanner = tc.past ? `<div class="tc-past">
+        <b>Checking a past trade</b> · ${new Date(tc.past.status_updated || tc.past.created).toLocaleDateString(undefined, { month: "short", day: "numeric" })}, Gameweek ${tc.past.leg}${faabOf(tc.past) ? ` · ${faabOf(tc.past)} (not counted)` : ""}
+        <small>Both rosters are put back to just before the trade. Values are today's rest-of-season projections, so this asks "how does it look now?", not "was it fair at the time?".</small>
+      </div>` : "";
+    const past = tradeTxns();
+    const pastList = past.length ? `<section class="tc-history" aria-labelledby="tcHistTitle">
+        <h2 class="subhead" id="tcHistTitle">Past trades</h2>
+        <ol>${past.map((x) => { const [a, b] = x.roster_ids, side = (r) => Object.entries(x.drops || {}).filter(([, q]) => q === r).map(([p]) => esc(P(p).n)).join(", ") || "nothing";
+          return `<li class="${tc.past && tc.past.transaction_id === x.transaction_id ? "is-on" : ""}">
+            <span class="tc-history__when">GW${x.leg}<small>${new Date(x.status_updated || x.created).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</small></span>
+            <span class="tc-history__deal"><span>${crest(state.byRoster[a])}<b>${club(state.byRoster[a])}</b> send ${side(a)}</span><span>${crest(state.byRoster[b])}<b>${club(state.byRoster[b])}</b> send ${side(b)}</span>${faabOf(x) ? `<small>+ ${faabOf(x)}</small>` : ""}</span>
+            <button type="button" class="gz-btn gz-btn--ghost" data-pasttrade="${esc(x.transaction_id)}">Check it</button>
+          </li>`; }).join("")}</ol>
+      </section>` : "";
+    root.innerHTML = `${pastBanner}<div class="tc-sides">${panel("a")}<div class="tc-swap" aria-hidden="true">⇄</div>${panel("b")}</div>${result}${pastList}`;
+    const parts = [tc.a && `a=${tc.a}`, tc.b && `b=${tc.b}`, tc.ga.size && `ga=${[...tc.ga].join(",")}`, tc.gb.size && `gb=${[...tc.gb].join(",")}`, tc.past && `tx=${tc.past.transaction_id}`].filter(Boolean);
     history.replaceState(null, "", parts.length ? `#${parts.join("&")}` : location.pathname);
     loadPhotos([...new Set($$("[data-photo]", root).map((e) => e.dataset.photo))], root);
   }
