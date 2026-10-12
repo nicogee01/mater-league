@@ -727,7 +727,8 @@
       (!pdb.pos || playsIn(r.p, [{ GK: "GK", DEF: "D", MID: "M", FWD: "F" }[pdb.pos]])) &&
       (!pdb.club || r.p.c === pdb.club) &&
       (!pdb.owner || (pdb.owner === "fa" ? !r.owner : r.owner && String(r.owner.rosterId) === pdb.owner)) &&
-      r.gp >= pdb.minGp);
+      r.gp >= pdb.minGp &&
+      (!p90 || (r.x.min || 0) >= 90));   // per 90 only counts players with at least 90 minutes (tiny samples blow up per-90 numbers)
     rows.sort((a, b) => (pdb.sort === "name" ? a.p.n.localeCompare(b.p.n) * pdb.dir : (val(a, pdb.sort) - val(b, pdb.sort)) * pdb.dir || b.x.fpts - a.x.fpts));
     $("#pdbCount").textContent = `${rows.length} player${rows.length === 1 ? "" : "s"} · ${avg ? "per game" : p90 ? "per 90 minutes" : "season totals"}`;
     const shown = rows.slice(0, pdb.limit);
