@@ -731,8 +731,14 @@ html.menu-open, html.menu-open body { overflow: hidden; }
 .badge--fav .club-logo { width: 14px; height: 14px; }
 
 /* ================= MATCHUPS ================= */
-.mu-weeks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: var(--s5); }
-.mu-weeks .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
+.mu-weeks { display: flex; flex-wrap: nowrap; gap: 8px; margin-bottom: var(--s5); overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity; padding: 2px 2px 8px; scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+  /* fade the edges so it's clear the row keeps going */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent);
+          mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent); }
+.mu-weeks .chip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; scroll-snap-align: center; }
+.mu-weeks .chip:first-child { margin-left: 8px; }
+.mu-weeks .chip:last-child { margin-right: 24px; }
 .mu-dot { width: 7px; height: 7px; border-radius: 50%; background: #b08a3e; }
 .mu-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); align-items: start; }
 .mu-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; min-width: 0; box-shadow: 0 1px 0 rgba(11, 31, 58, 0.06); }

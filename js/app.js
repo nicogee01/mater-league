@@ -629,16 +629,17 @@
       const best = pool.reduce((a, b) => (+b.pts > +a.pts ? b : a));
       if (rosterOf(best.manager) !== t.rosterId) continue;
       won++;
-      const x = (tally[best.player_id] ||= { pid: best.player_id, name: best.player, n: 0, top: 0, weeks: [] });
-      x.n++; x.top = Math.max(x.top, +best.pts); x.weeks.push(g.week);
+      const x = (tally[best.player_id] ||= { pid: best.player_id, name: best.player, n: 0, top: 0, sum: 0, weeks: [] });
+      x.n++; x.top = Math.max(x.top, +best.pts); x.sum += +best.pts; x.weeks.push(g.week);
     }
     if (!logged) return "";
-    const list = Object.values(tally).sort((a, b) => b.n - a.n || b.top - a.top);
+    // top three only (a season is 38 weeks); ties go to whoever scored more across those matches
+    const list = Object.values(tally).sort((a, b) => b.n - a.n || b.sum - a.sum).slice(0, 3);
     return `<section class="cp-card motm"><h4 class="cp-card__title">Man of the Match</h4>
       <p class="sbc__sub">Top scorer on the winning side · <b>${won}</b> in ${logged} match${logged > 1 ? "es" : ""}</p>
       ${list.length ? `<ol class="motm__list">${list.map((x) => `<li data-player="${esc(x.pid)}" data-name="${esc(x.name)}" role="button" tabindex="0">
           <span class="motm__photo" data-photo="${esc(x.pid)}" aria-hidden="true"><span>${esc(initials(x.name))}</span></span>
-          <span class="motm__name"><b>${esc(x.name)}</b><small>GW${x.weeks.join(", GW")} · best ${gp(x.top)} pts</small></span>
+          <span class="motm__name"><b>${esc(x.name)}</b><small>${x.weeks.length > 4 ? `${x.weeks.length} games` : `GW${x.weeks.join(", GW")}`} · ${gp(Math.round(x.sum * 100) / 100)} pts in them</small></span>
           <span class="motm__n">${"★".repeat(Math.min(x.n, 5))}<b>×${x.n}</b></span>
         </li>`).join("")}</ol>` : `<p class="dim">No wins yet, so no Man of the Match awards.</p>`}
     </section>`;
@@ -1975,6 +1976,13 @@
     const bench = t.players.filter((pid) => !t.starters.includes(pid)).map((pid) => row(pid, "BN")).sort((a, b) => b.pts - a.pts);
     return { xi, bench };
   }
+  // the GW1..GW38 row scrolls sideways; after it's drawn, bring the selected week into view
+  function scrollWeekChip(sel) {
+    requestAnimationFrame(() => {
+      const row = $(sel), on = row && $(".chip.is-active", row);
+      if (on) row.scrollLeft = on.offsetLeft - row.clientWidth / 2 + on.offsetWidth / 2;
+    });
+  }
   const optNum = (v) => (v === "" || v == null || isNaN(+v) ? null : +v);
   function squadFor(id, week) {
     const rows = (state.lineups || []).filter((r) => +r.week === week && rosterOf(r.manager) === id)
@@ -2015,6 +2023,7 @@
     if (!weeks.length) { list.innerHTML = `<p class="pending-note">No gameweeks logged yet.</p>`; return; }
     const withXI = new Set((state.lineups || []).map((r) => +r.week));
     if (mu.week == null) mu.week = lw ?? [...weeks].reverse().find((w) => withXI.has(w)) ?? weeks[weeks.length - 1];
+    scrollWeekChip("#muWeeks");
     $("#muWeeks").innerHTML = weeks.map((w) => `<button type="button" class="chip${w === mu.week ? " is-active" : ""}${w === lw ? " is-live" : ""}" data-week="${w}" aria-pressed="${w === mu.week}">GW${w}${w === lw ? `<i class="mu-live-dot" aria-hidden="true"></i><span class="visually-hidden"> (live)</span>` : withXI.has(w) ? `<i class="mu-dot" title="Lineups logged"></i>` : ""}</button>`).join("");
     const isLive = mu.week === lw;
     const ready = isLive && live.stats && Object.keys(state.players || {}).length;
@@ -2611,6 +2620,7 @@
     const fromHash = +(location.hash.match(/gw(\d+)/) || [])[1];
     if (gz.week == null) gz.week = data.some((d) => d.week === fromHash) ? fromHash : data[data.length - 1].week;
     const wk = data.find((d) => d.week === gz.week) || data[data.length - 1];
+    scrollWeekChip("#gzWeeks");
     $("#gzWeeks").innerHTML = data.map((d) => `<button type="button" class="chip${d.week === wk.week ? " is-active" : ""}" data-gzweek="${d.week}" aria-pressed="${d.week === wk.week}">GW${d.week}</button>`).join("");
     const [lead, ...rest] = wk.stories;
     const who = (a) => (a.who.rosterId ? `${crest(a.who)}<b>${club(a.who)}</b>` : `<span class="gz-award__photo" data-photo="${esc(a.who.pid)}" data-player="${esc(a.who.pid)}" data-name="${esc(a.who.name)}"><span>${esc(initials(a.who.name))}</span></span><b>${plink(a.who.pid, a.who.name)}</b><small>${club(state.byRoster[a.who.id])}</small>`);
