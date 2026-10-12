@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Player stats · The Mater League</title>
+  <meta name="description" content="Every Premier League player's stats and fantasy points: sortable, filterable, per game or totals." />
+  <meta name="theme-color" content="#1b0020" />
+  <script>try{if(localStorage.getItem("mater-theme")==="dark")document.documentElement.dataset.theme="dark"}catch(e){}</script>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-title" content="Mater League" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=143" />
+</head>
+<body data-page="players">
+  <main id="main">
+    <header class="page-hero">
+      <div class="page-hero__inner">
+        <p class="eyebrow">Scouting report</p>
+        <h1>Player stats</h1>
+        <p class="page-hero__lede">Every Premier League player this season: fantasy points and every stat Sleeper records. Filter, then tap a column to sort. Tap a player for his week-by-week.</p>
+      </div>
+    </header>
+
+    <section class="section section--page" aria-label="Player stats">
+      <div class="pdb-controls">
+        <label class="hub-field pdb-search"><span>Search</span><input id="pdbSearch" type="search" placeholder="Player name" autocomplete="off"></label>
+        <label class="hub-field"><span>Position</span><select id="pdbPos"><option value="">All</option><option value="GK">Goalkeepers</option><option value="DEF">Defenders</option><option value="MID">Midfielders</option><option value="FWD">Forwards</option></select></label>
+        <label class="hub-field"><span>Real club</span><select id="pdbClub"><option value="">All clubs</option></select></label>
+        <label class="hub-field"><span>Fantasy club</span><select id="pdbOwner"><option value="">Everyone</option><option value="fa">Free agents</option></select></label>
+        <label class="hub-field"><span>Min. games</span><select id="pdbGp"><option value="1">Any</option><option value="2" selected>2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5+</option></select></label>
+      </div>
+      <div class="pdb-bar">
+        <div class="filters" id="pdbGroup" role="group" aria-label="Stat group">
+          <button type="button" class="chip is-active" data-group="all" aria-pressed="true">All</button>
+          <button type="button" class="chip" data-group="att" aria-pressed="false">Attack</button>
+          <button type="button" class="chip" data-group="def" aria-pressed="false">Defence</button>
+          <button type="button" class="chip" data-group="gk" aria-pressed="false">Goalkeeping</button>
+        </div>
+        <div class="filters" id="pdbMode" role="group" aria-label="Per game or totals">
+          <button type="button" class="chip is-active" data-mode="avg" aria-pressed="true">Per game</button>
+          <button type="button" class="chip" data-mode="tot" aria-pressed="false">Totals</button>
+        </div>
+      </div>
+      <p class="pdb-count" id="pdbCount" aria-live="polite"></p>
+      <div class="pdb-wrap"><div class="table-scroll" id="playerDb"><div class="skeleton" style="height:420px"></div></div></div>
+      <div class="pdb-more"><button type="button" class="gz-btn gz-btn--ghost" id="pdbMore" hidden>Show more players</button></div>
+    </section>
+  </main>
+
+  <script src="js/layout.js?v=143"></script>
+  <script src="data/league.js?v=143"></script>
+  <script src="js/motion.js?v=143"></script>
+  <script src="js/app.js?v=143"></script>
+</body>
+</html>

@@ -2094,7 +2094,7 @@ html.has-install-bar body { padding-bottom: 92px; }
   .podium__spot--3 .podium__block { height: 56px; }
   .finishes__table th, .finishes__table td { padding: 8px; }
   .finishes__table td { font-size: 17px; }
-  .finishes__table tbody th span { display: none; }
+  .finishes__table tbody th .fin__name { display: none; }
 }
 
 /* ================= SQUAD BY CLUB + MAN OF THE MATCH (club profile) ================= */
@@ -2137,6 +2137,45 @@ html.has-install-bar body { padding-bottom: 92px; }
 .motm__name small { color: var(--faint); font-size: 12px; }
 .motm__n { display: inline-flex; align-items: baseline; gap: 6px; color: var(--gold); font-size: 14px; letter-spacing: 1px; }
 .motm__n b { font-family: var(--f-display); font-weight: 400; font-size: 24px; color: var(--text); letter-spacing: 0; }
+
+/* ================= PLAYER STATS DATABASE ================= */
+.pdb-controls { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)) minmax(0, 0.7fr); gap: var(--s3); margin-bottom: var(--s4); }
+.pdb-controls select { width: 100%; min-width: 0; }
+.pdb-search input { width: 100%; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); font: 500 16px var(--f-body); }
+.pdb-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s2) var(--s4); }
+.pdb-bar .filters { margin-bottom: var(--s3); }
+.pdb-count { margin: 0 0 var(--s2); font-size: 13px; color: var(--faint); }
+.pdb-wrap { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; }
+.pdb-wrap .table-scroll { max-height: 75vh; overflow: auto; }
+.pdb { border-collapse: separate; border-spacing: 0; width: 100%; font-variant-numeric: tabular-nums; font-size: 14px; }
+.pdb th, .pdb td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+.pdb thead th { position: sticky; top: 0; z-index: 2; background: var(--band); color: #d5dbe6; font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.08em; }
+.pdb thead th button { all: unset; cursor: pointer; display: block; width: 100%; }
+.pdb thead th.is-sorted { color: #fff; box-shadow: inset 0 -3px 0 var(--accent); }
+.pdb .pdb-c-name { position: sticky; left: 0; z-index: 1; text-align: left; background: var(--surface); min-width: 210px; }
+.pdb thead .pdb-c-name { z-index: 3; background: var(--band); }
+.pdb .pdb-c-own { text-align: left; }
+.pdb .pdb-c-own .crest { width: 22px; height: 22px; margin-right: 6px; }
+.pdb .pdb-c-own span { font-size: 13px; }
+.pdb .pdb-c-pts { font-family: var(--f-display); font-size: 17px; background: var(--shade); }
+.pdb thead .pdb-c-pts { font-family: var(--f-label); font-size: 13px; background: #16335e; }
+.pdb tbody tr:hover td, .pdb tbody tr:hover th { background: var(--surface-2); }
+.pdb-player { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+.pdb-player b { display: block; font-size: 14px; }
+.pdb-player small { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--faint); }
+.pdb-player small .posb { font-size: 11px; padding: 0 5px; }
+.pdb-player:hover b { text-decoration: underline; }
+.pdb-photo { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2) center 6% / 150% auto no-repeat; font-family: var(--f-display); font-size: 11px; color: var(--muted); }
+.pdb-photo.has-photo { background-color: #fff; }
+.pdb-photo.has-photo span { display: none; }
+.pdb-zero { color: var(--faint); opacity: .6; }
+.pdb-more { display: flex; justify-content: center; margin-top: var(--s4); }
+@media (max-width: 760px) {
+  .pdb-controls { grid-template-columns: 1fr 1fr; }
+  .pdb-search { grid-column: 1 / -1; }
+  .pdb .pdb-c-name { min-width: 160px; }
+  .pdb .pdb-c-own span { display: none; }
+}
 
 /* ================= TACTICS (club profile) ================= */
 .tac__sub { margin: var(--s3) 0 var(--s2); font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }

@@ -645,6 +645,89 @@
     </section>`;
   }
 
+  // ---------- PLAYER STATS DATABASE (players.html) ----------
+  // Every player with Premier League minutes: season totals from Sleeper's weekly stats (fantasy points
+  // scored with this league's settings). Per game (default) divides by games played. Click a header to sort.
+  const PDB_COLS = [
+    // key, label, title, groups, decimals
+    ["g", "G", "Goals", "att", 0], ["at", "A", "Assists", "att", 0], ["xg", "xG", "Expected goals", "att", 2], ["xa", "xA", "Expected assists", "att", 2],
+    ["sat", "SH", "Shots", "att", 0], ["sot", "SOT", "Shots on target", "att", 0], ["xgot", "xGOT", "Expected goals on target", "att", 2],
+    ["kp", "KP", "Key passes", "att", 0], ["p_att", "PASS", "Passes attempted", "att", 0], ["dis", "DIS", "Times dispossessed", "att", 0],
+    ["tk", "TK", "Tackles", "def", 0], ["tkw", "TKW", "Tackles won", "def", 0], ["int", "INT", "Interceptions", "def", 0], ["clr", "CLR", "Clearances", "def", 0],
+    ["bs", "BS", "Blocked shots", "def", 0], ["aer", "AER", "Aerial duels won", "def", 0],
+    ["cs", "CS", "Clean sheets", "def gk", 0], ["ga", "GA", "Goals conceded", "def gk", 0], ["xgc", "xGC", "Expected goals conceded", "def gk", 2],
+    ["sv", "SV", "Saves", "gk", 0], ["pks", "PKS", "Penalties saved", "gk", 0],
+    ["yc", "YC", "Yellow cards", "", 0], ["rc", "RC", "Red cards", "", 0], ["og", "OG", "Own goals", "", 0],
+  ];
+  const pdb = { group: "all", mode: "avg", sort: "fpts", dir: -1, q: "", pos: "", club: "", owner: "", minGp: 2, limit: 100, built: false };
+  function pdbRows() {
+    const owner = {};
+    state.teams.forEach((t) => t.players.forEach((pid) => (owner[pid] = t)));
+    return Object.entries(state.playerTotals || {})
+      .filter(([pid, x]) => state.players[pid] && state.players[pid].p !== "DEF" && (x.min || 0) > 0)   // DEF = team defences, not players
+      .map(([pid, x]) => ({ pid, p: state.players[pid], x, gp: x.gp || 0, owner: owner[pid] || null }));
+  }
+  function initPlayerDb() {
+    if (!$("#playerDb") || pdb.built || !state.playerTotals) return;
+    pdb.built = true;
+    const rows = pdbRows();
+    const clubs = [...new Set(rows.map((r) => r.p.c).filter(Boolean))].sort((a, b) => (CLUB_NAME[a] || a).localeCompare(CLUB_NAME[b] || b));
+    $("#pdbClub").insertAdjacentHTML("beforeend", clubs.map((c) => `<option value="${esc(c)}">${esc(CLUB_NAME[c] || c)}</option>`).join(""));
+    $("#pdbOwner").insertAdjacentHTML("beforeend", state.teams.map((t) => `<option value="${t.rosterId}">${esc(t.name)}</option>`).join(""));
+    const re = () => { pdb.limit = 100; renderPlayerDb(); };
+    $("#pdbSearch").addEventListener("input", (e) => { pdb.q = e.target.value.trim().toLowerCase(); re(); });
+    $("#pdbPos").addEventListener("change", (e) => { pdb.pos = e.target.value; re(); });
+    $("#pdbClub").addEventListener("change", (e) => { pdb.club = e.target.value; re(); });
+    $("#pdbOwner").addEventListener("change", (e) => { pdb.owner = e.target.value; re(); });
+    $("#pdbGp").addEventListener("change", (e) => { pdb.minGp = +e.target.value; re(); });
+    $("#pdbMore").addEventListener("click", () => { pdb.limit += 100; renderPlayerDb(); });
+    document.addEventListener("click", (e) => {
+      const g = e.target.closest("#pdbGroup [data-group]"), m = e.target.closest("#pdbMode [data-mode]"), s = e.target.closest("#playerDb [data-sort]");
+      if (g) { pdb.group = g.dataset.group; $$("#pdbGroup .chip").forEach((c) => { const on = c === g; c.classList.toggle("is-active", on); c.setAttribute("aria-pressed", String(on)); }); renderPlayerDb(); }
+      if (m) { pdb.mode = m.dataset.mode; $$("#pdbMode .chip").forEach((c) => { const on = c === m; c.classList.toggle("is-active", on); c.setAttribute("aria-pressed", String(on)); }); renderPlayerDb(); }
+      if (s) { const k = s.dataset.sort; pdb.dir = pdb.sort === k ? -pdb.dir : (k === "name" ? 1 : -1); pdb.sort = k; renderPlayerDb(); }
+    });
+    renderPlayerDb();
+  }
+  function renderPlayerDb() {
+    const box = $("#playerDb");
+    if (!box || !state.playerTotals) return;
+    const avg = pdb.mode === "avg";
+    const cols = PDB_COLS.filter(([, , , g]) => pdb.group === "all" || g.split(" ").includes(pdb.group));
+    const val = (r, k) => {
+      if (k === "name") return r.p.n;
+      if (k === "gp") return r.gp;
+      if (k === "gs") return r.x.gs || 0;
+      const v = k === "fpts" ? r.x.fpts || 0 : r.x[k] || 0;
+      return avg && k !== "gp" && k !== "gs" ? (r.gp ? v / r.gp : 0) : v;
+    };
+    let rows = pdbRows().filter((r) =>
+      (!pdb.q || r.p.n.toLowerCase().includes(pdb.q)) &&
+      (!pdb.pos || playsIn(r.p, [{ GK: "GK", DEF: "D", MID: "M", FWD: "F" }[pdb.pos]])) &&
+      (!pdb.club || r.p.c === pdb.club) &&
+      (!pdb.owner || (pdb.owner === "fa" ? !r.owner : r.owner && String(r.owner.rosterId) === pdb.owner)) &&
+      r.gp >= pdb.minGp);
+    rows.sort((a, b) => (pdb.sort === "name" ? a.p.n.localeCompare(b.p.n) * pdb.dir : (val(a, pdb.sort) - val(b, pdb.sort)) * pdb.dir || b.x.fpts - a.x.fpts));
+    $("#pdbCount").textContent = `${rows.length} player${rows.length === 1 ? "" : "s"}${avg ? " · per game" : " · season totals"}`;
+    const shown = rows.slice(0, pdb.limit);
+    $("#pdbMore").hidden = rows.length <= pdb.limit;
+    const th = (k, label, title, cls = "") => `<th scope="col" class="${cls}${pdb.sort === k ? " is-sorted" : ""}" aria-sort="${pdb.sort === k ? (pdb.dir < 0 ? "descending" : "ascending") : "none"}"><button type="button" data-sort="${k}" title="${esc(title)}">${label}${pdb.sort === k ? (pdb.dir < 0 ? " ▾" : " ▴") : ""}</button></th>`;
+    const fmt = (v, dp) => (v === 0 ? `<span class="pdb-zero">·</span>` : avg ? num(v, dp || 2) : num(v, dp));
+    box.innerHTML = `<table class="pdb">
+      <thead><tr>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own">Fantasy club</th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", avg ? "PTS/G" : "PTS", "Fantasy points (this league's scoring)", "pdb-c-pts")}
+        ${cols.map(([k, l, t]) => th(k, l, t)).join("")}</tr></thead>
+      <tbody>${shown.map((r) => `<tr>
+        <th scope="row" class="pdb-c-name"><span class="pdb-player" data-player="${esc(r.pid)}" data-name="${esc(r.p.n)}" role="button" tabindex="0">
+          <span class="pdb-photo" data-photo="${esc(r.pid)}" aria-hidden="true"><span>${esc(initials(r.p.n))}</span></span>
+          <span><b>${esc(r.p.n)}</b><small><span class="posb ${esc(r.p.p)}">${esc(r.p.p || "–")}</span>${clubLogo(r.p.t)}${esc(r.p.c || "")}</small></span></span></th>
+        <td class="pdb-c-own">${r.owner ? `${crest(r.owner)}<span>${club(r.owner)}</span>` : `<span class="fa-tag">Free agent</span>`}</td>
+        <td>${r.gp}</td><td>${r.x.gs || 0}</td><td>${avg ? (r.gp ? Math.round((r.x.min || 0) / r.gp) : 0) : r.x.min || 0}</td>
+        <td class="pdb-c-pts">${num(val(r, "fpts"), avg ? 2 : 2)}</td>
+        ${cols.map(([k, , , , dp]) => `<td>${fmt(val(r, k), dp)}</td>`).join("")}
+      </tr>`).join("")}</tbody></table>`;
+    loadPhotos(shown.map((r) => r.pid), box);
+  }
+
   // ---------- TACTICS (club profile) ----------
   // Formations come from Sleeper's per-week formation history (it matched every logged XI). For each
   // logged gameweek: the shape this club played, and the shape its opponent played, with the result.
@@ -2572,7 +2655,7 @@
       <div class="table-scroll"><table class="finishes__table">
         <thead><tr><th scope="col">Club</th>${cols.map(([, l]) => `<th scope="col">${l}</th>`).join("")}<th scope="col">Avg finish</th></tr></thead>
         <tbody>${rows.map((r) => { const t = state.byRoster[r.id]; return `<tr>
-          <th scope="row">${crest(t)}<span>${club(t)}</span></th>
+          <th scope="row">${crest(t)}<span class="fin__name">${club(t)}</span></th>
           ${cols.map(([k, , good]) => `<td class="${good !== null && r[k] && r[k] === max[k] ? (good ? "is-lead" : "is-shame") : ""}${good === null ? " is-mid" : ""}${r[k] ? "" : " is-zero"}">${r[k]}</td>`).join("")}
           <td>${num(r.sum / r.n, 1)}</td></tr>`; }).join("")}</tbody>
       </table></div>
@@ -3943,7 +4026,7 @@
       const season = league.season || sportState.season;
       const [players, statsWeeks, ...txnLegs] = await Promise.all([
         loadPlayers().catch(() => ({})),
-        Promise.all(Array.from({ length: $("#clubGrid") || $("#hubGroups") || $("#draftBoard") ? scored : 0 }, (_, i) => get(`/stats/${SPORT}/regular/${season}/${i + 1}`).catch(() => ({})))),
+        Promise.all(Array.from({ length: $("#clubGrid") || $("#hubGroups") || $("#draftBoard") || $("#playerDb") ? scored : 0 }, (_, i) => get(`/stats/${SPORT}/regular/${season}/${i + 1}`).catch(() => ({})))),
         ...Array.from({ length: legs }, (_, i) => get(`/league/${LEAGUE_ID}/transactions/${i + 1}`).catch(() => [])),
       ]);
       state.players = players;
@@ -3954,6 +4037,7 @@
       state.projections = proj;
       state.seasonPts = seasonPts;
       if ($("#draftBoard")) { state.playerTotals = buildPlayerTotals(statsWeeks, league.scoring_settings || {}); state.scoredWeeks = statsWeeks.length; }
+      if ($("#playerDb")) { state.playerTotals = buildPlayerTotals(statsWeeks, league.scoring_settings || {}); initPlayerDb(); }
       if ($("#hubGroups")) {
         state.playerTotals = buildPlayerTotals(statsWeeks, league.scoring_settings || {});
         initHub();
