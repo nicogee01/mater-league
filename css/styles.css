@@ -2209,6 +2209,9 @@ html.has-install-bar body { padding-bottom: 92px; }
 }
 
 /* ================= TRADE CALCULATOR ================= */
+.wip-tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #d08a1c; color: #fff; letter-spacing: .08em; }
+.tc-wip { margin: 0 0 var(--s4); padding: 10px 14px; border-radius: 12px; background: rgba(208,138,28,.12); border: 1px solid #d08a1c; font-size: 14px; color: var(--muted); }
+.tc-wip b { color: var(--text); }
 .tc-sides { display: grid; grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr); gap: var(--s3); align-items: start; }
 .tc-swap { align-self: center; justify-self: center; font-size: 26px; color: var(--faint); margin-top: 28px; }
 .tc-side { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: var(--s4); min-width: 0; }
