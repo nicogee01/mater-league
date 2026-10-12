@@ -1,3 +1,0 @@
-<!doctype html><html><body><pre id="out">pending</pre><script>
-(async()=>{const b=await fetch("data/Matchups%20Vids/week6.MP4").then(r=>r.blob());const v=document.createElement('video');v.muted=true;v.src=URL.createObjectURL(b);await new Promise(r=>v.onloadedmetadata=r);out.textContent=JSON.stringify({d:v.duration,w:v.videoWidth,h:v.videoHeight});})();
-</script></body></html>
