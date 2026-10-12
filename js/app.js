@@ -1262,23 +1262,23 @@
                 <span class="nm">${esc(p.n)}<small>${clubLogo(p.t)}${esc(p.c)}${sp != null ? ` · ${num(sp)} pts` : ""}${pj(pid) ? ` · ${pj(pid)}` : ""}</small></span>${tag}</li>`;
             }).join("")}</ul>
           </details>
+          ${tacticsCard(t)}
+          ${motmCard(t)}
           <section class="cp-card cp-card--rt"><h4 class="cp-card__title">Club record transfer</h4>
             ${rt ? `<div class="rt"><span class="rt__fee">$${rt.bid}</span><b>${plink(rt.pid, rt.name)}</b><small>${new Date(rt.when).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</small></div>`
                  : `<p class="dim">No waiver fees paid yet.</p>`}
           </section>
         </div>
         <div class="cp-col">
-          ${t.games.length ? `<section class="cp-card"><h4 class="cp-card__title">Season sparkline</h4>${sparklineSVG(t.games)}</section>` : ""}
-          ${tacticsCard(t)}
-          ${squadByClubCard(t)}
-          ${motmCard(t)}
           ${derbyCard}
-          ${story ? `<section class="cp-card"><h4 class="cp-card__title">Season story</h4><ol class="cp-story">${story}</ol></section>` : ""}
+          <section class="cp-card"><h4 class="cp-card__title">Head-to-head</h4><ul class="cp-h2h">${h2hChips}</ul></section>
           ${t.nemesis || t.cupcake ? `<div class="nc">
             ${t.nemesis ? `<div class="nc__item nc__item--nem"><small>Nemesis</small>${crest(state.byRoster[t.nemesis.id])}<b>${clubById(t.nemesis.id)}</b><span>${rec(t.nemesis)}</span></div>` : ""}
             ${t.cupcake ? `<div class="nc__item nc__item--cup"><small>Cupcake</small>${crest(state.byRoster[t.cupcake.id])}<b>${clubById(t.cupcake.id)}</b><span>${rec(t.cupcake)}</span></div>` : ""}
           </div>` : ""}
-          <section class="cp-card"><h4 class="cp-card__title">Head-to-head</h4><ul class="cp-h2h">${h2hChips}</ul></section>
+          ${t.games.length ? `<section class="cp-card"><h4 class="cp-card__title">Season sparkline</h4>${sparklineSVG(t.games)}</section>` : ""}
+          ${story ? `<section class="cp-card"><h4 class="cp-card__title">Season story</h4><ol class="cp-story">${story}</ol></section>` : ""}
+          ${squadByClubCard(t)}
         </div>
       </div>`;
     el.hidden = false;
