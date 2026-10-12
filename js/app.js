@@ -307,140 +307,242 @@
     const records = [];
     if (before.length) {
       const pd = decided.length ? before.filter((m) => m.homePts !== m.awayPts) : [];
-      const chk = (label, val, prev, higher, who) => { if (prev.length && (higher ? val > Math.max(...prev) : val < Math.min(...prev))) records.push({ label, val, who }); };
+      const chk = (label, val, prev, higher, who, ids = []) => { if (prev.length && (higher ? val > Math.max(...prev) : val < Math.min(...prev))) records.push({ label, val, who, ids }); };
       const hi = pick(now, (x) => x.s), lo = pick(now, (x) => x.s, -1);
-      chk("Highest score of the season", hi.s, past.map((x) => x.s), true, T(hi.id).name);
-      chk("Lowest score of the season", lo.s, past.map((x) => x.s), false, T(lo.id).name);
-      chk("Biggest blowout of the season", margin(blow), before.map(margin), true, T(winLose(blow)[0]).name);
-      chk("Closest game of the season", margin(close), before.map(margin), false, `${T(close.home).name} v ${T(close.away).name}`);
+      chk("Highest score of the season", hi.s, past.map((x) => x.s), true, T(hi.id).name, [hi.id]);
+      chk("Lowest score of the season", lo.s, past.map((x) => x.s), false, T(lo.id).name, [lo.id]);
+      chk("Biggest blowout of the season", margin(blow), before.map(margin), true, T(winLose(blow)[0]).name, [winLose(blow)[0]]);
+      chk("Closest game of the season", margin(close), before.map(margin), false, `${T(close.home).name} v ${T(close.away).name}`, [winLose(close)[0]]);
       const comb = pick(games, (m) => m.homePts + m.awayPts);
-      chk("Highest-scoring matchup", comb.homePts + comb.awayPts, before.map((m) => m.homePts + m.awayPts), true, `${T(comb.home).name} v ${T(comb.away).name}`);
-      if (lowWin) chk("Lowest winning score", winLose(lowWin)[1], pd.map((m) => Math.max(m.homePts, m.awayPts)), false, T(winLose(lowWin)[0]).name);
-      if (highLoss) chk("Highest losing score", winLose(highLoss)[3], pd.map((m) => Math.min(m.homePts, m.awayPts)), true, T(winLose(highLoss)[2]).name);
-      if (bench) chk("Most points left on the bench", bench.best - bench.s, past.filter((x) => Number.isFinite(x.best)).map((x) => x.best - x.s), true, T(bench.id).name);
+      chk("Highest-scoring matchup", comb.homePts + comb.awayPts, before.map((m) => m.homePts + m.awayPts), true, `${T(comb.home).name} v ${T(comb.away).name}`, [comb.home]);
+      if (lowWin) chk("Lowest winning score", winLose(lowWin)[1], pd.map((m) => Math.max(m.homePts, m.awayPts)), false, T(winLose(lowWin)[0]).name, [winLose(lowWin)[0]]);
+      if (highLoss) chk("Highest losing score", winLose(highLoss)[3], pd.map((m) => Math.min(m.homePts, m.awayPts)), true, T(winLose(highLoss)[2]).name, [winLose(highLoss)[2]]);
+      if (bench) chk("Most points left on the bench", bench.best - bench.s, past.filter((x) => Number.isFinite(x.best)).map((x) => x.best - x.s), true, T(bench.id).name, [bench.id]);
     }
     return { week, podium: weekFinishes(week).slice(0, 3), blow, close, lowWin, highLoss, bench, star, records, winLose, margin };
   }
 
-  async function recapCanvas(week) {
+  // Four 1080x1350 cards, shared together: results, players of the week, left on the bench, the week in numbers.
+  // Style: bold blocks on deep purple, neon pitch green / hot pink / gold, Anton headlines, a ball watermark.
+  const RC = { W: 1080, H: 1350, green: "#00ff85", pink: "#ff2d6f", gold: "#f5c84c", cream: "#fbf7ee", soft: "#cfc6e0", ink: "#14001a",
+    pos: { GK: ["#f5c84c", "Goalkeeper"], DEF: ["#4da3ff", "Defender"], MID: ["#00ff85", "Midfielder"], FWD: ["#ff2d6f", "Forward"] } };
+  const RC_POS = ["GK", "DEF", "MID", "FWD"];
+  async function recapSlides(week) {
     const d = recapData(week);
-    if (!d) return null;
-    await Promise.all(["400 96px Anton", "700 30px 'Barlow Condensed'", "700 30px Barlow", "500 30px Barlow"].map((f) => document.fonts.load(f).catch(() => {})));
-    const W = 1080, H = 1350, c = document.createElement("canvas");
-    c.width = W; c.height = H;
-    const x = c.getContext("2d");
-    // ask for a fresh CORS copy: the page's own <img> tags cached these without CORS, which would block drawing them
-    const img = (src) => new Promise((res) => { if (!src) return res(null); const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => res(null); i.src = src + (src.includes("?") ? "&" : "?") + "recap=1"; });
+    if (!d) return [];
+    await Promise.all(["400 96px Anton", "700 30px 'Barlow Condensed'", "700 30px Barlow", "600 30px Barlow", "500 30px Barlow"].map((f) => document.fonts.load(f).catch(() => {})));
+    const { W, H } = RC;
     const T = (id) => { const t = state.byRoster[id]; return t ? { ...t, name: t.name.trim() } : t; };
-    const cream = "#fbf7ee", gold = "#e6c47a", red = "#ff4d63", soft = "#c9d1de";
-    // background
-    const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#0b1f3a"); g.addColorStop(1, "#2a0a35");
-    x.fillStyle = g; x.fillRect(0, 0, W, H);
-    x.fillStyle = "#c8102e"; x.fillRect(0, 0, W, 14);
-    x.textBaseline = "alphabetic";
-    const text = (s, px, py, font, color, align = "left", maxW) => { x.font = font; x.fillStyle = color; x.textAlign = align; x.fillText(s, px, py, maxW); };
-    const fit = (s, font, maxW) => { x.font = font; let t = String(s); while (x.measureText(t).width > maxW && t.length > 3) t = t.slice(0, -2) + "…"; return t; };
-    text("THE MATER LEAGUE", 64, 84, "700 30px 'Barlow Condensed'", gold);
-    text(`GAMEWEEK ${d.week}`, 64, 172, "400 92px Anton, Impact, sans-serif", cream);
-    x.font = "400 92px Anton, Impact, sans-serif";
-    text("RECAP", 64 + x.measureText(`GAMEWEEK ${d.week} `).width, 172, "400 92px Anton, Impact, sans-serif", red);
+    const cache = {};
+    // a fresh CORS copy: the page's own <img> tags cached these without CORS, which would block drawing them
+    const img = (src) => (cache[src] ||= new Promise((res) => { if (!src) return res(null); const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => res(null); i.src = src + (src.includes("?") ? "&" : "?") + "recap=1"; }));
+    let svg = "";
+    try { svg = await (await fetch("icons/icon.svg")).text(); } catch (_) {}
+    const ball = svg ? await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null);
+      i.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace(/<rect[^>]*\/>/, "").replace(/<circle[^>]*opacity="\.28"\/>/, "")); }) : null;
 
-    // podium: 2nd left, 1st centre, 3rd right
-    const crestDraw = async (t, cx, cy, r) => {
-      x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.closePath();
-      x.fillStyle = t.kit[0]; x.fill(); x.clip();
+    const slide = (n, total, kicker, title) => {
+      const c = document.createElement("canvas"); c.width = W; c.height = H;
+      const x = c.getContext("2d");
+      const g = x.createLinearGradient(0, 0, W * 0.4, H); g.addColorStop(0, "#2b0036"); g.addColorStop(1, "#0d0a2b");
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      // pitch lines + ball watermark
+      x.strokeStyle = "rgba(255,255,255,0.05)"; x.lineWidth = 4;
+      x.beginPath(); x.arc(W / 2, H + 60, 300, Math.PI, 2 * Math.PI); x.stroke();
+      x.strokeRect(-4, H - 120, W + 8, 200);
+      if (ball) { x.globalAlpha = 0.07; x.drawImage(ball, W - 520, -150, 720, 720); x.globalAlpha = 1; }
+      // header block: green tab with the league + gameweek, then the slide title
+      x.fillStyle = RC.green; x.beginPath(); x.moveTo(0, 0); x.lineTo(W, 0); x.lineTo(W, 12); x.lineTo(0, 12); x.fill();
+      if (ball) x.drawImage(ball, 56, 52, 64, 64);
+      text(x, "THE MATER LEAGUE", 134, 82, "700 28px 'Barlow Condensed'", RC.cream);
+      text(x, `GAMEWEEK ${week}`, 134, 112, "700 26px 'Barlow Condensed'", RC.green);
+      text(x, `${n}/${total}`, W - 60, 92, "700 28px 'Barlow Condensed'", "rgba(251,247,238,0.55)", "right");
+      text(x, kicker.toUpperCase(), 60, 196, "700 30px 'Barlow Condensed'", RC.pink);
+      const ts = shrink(x, title.toUpperCase(), W - 120, 112, 70, "Anton, Impact, sans-serif", "400");
+      text(x, title.toUpperCase(), 56, 300, ts, RC.cream);
+      // footer
+      text(x, "nicogee01.github.io/mater-league", W / 2, H - 40, "600 24px Barlow", "rgba(251,247,238,0.5)", "center");
+      return { c, x };
+    };
+    function text(x, s, px, py, font, color, align = "left") { x.font = font; x.fillStyle = color; x.textAlign = align; x.textBaseline = "alphabetic"; x.fillText(s, px, py); }
+    // largest font (down to min) that fits maxW
+    function shrink(x, s, maxW, size, min, family, weight = "700") {
+      let f = size;
+      for (; f > min; f -= 2) { x.font = `${weight} ${f}px ${family}`; if (x.measureText(s).width <= maxW) break; }
+      return `${weight} ${f}px ${family}`;
+    }
+    // wrap into at most `max` lines at the given font; shrinks the font first so a full name is never cut
+    function lines(x, s, maxW, size, min, family, weight, max = 2) {
+      for (let f = size; f >= min; f -= 2) {
+        x.font = `${weight} ${f}px ${family}`;
+        const words = String(s).split(" "), out = [];
+        let cur = "";
+        for (const w of words) { const t = cur ? cur + " " + w : w; if (x.measureText(t).width > maxW && cur) { out.push(cur); cur = w; } else cur = t; }
+        if (cur) out.push(cur);
+        if (out.length <= max && out.every((l) => x.measureText(l).width <= maxW)) return { font: x.font, out, size: f };
+      }
+      x.font = `${weight} ${min}px ${family}`;
+      return { font: x.font, out: [s], size: min };
+    }
+    function rrect(x, px, py, w, h, r, fill) { x.fillStyle = fill; x.beginPath(); x.roundRect ? x.roundRect(px, py, w, h, r) : x.rect(px, py, w, h); x.fill(); }
+    async function avatar(x, t, cx, cy, r, ring = RC.cream) {
+      x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fillStyle = t.kit[0]; x.fill(); x.clip();
       const im = await img(t.logo);
       if (im) x.drawImage(im, cx - r, cy - r, r * 2, r * 2);
-      else { x.fillStyle = cream; x.font = `400 ${Math.round(r * 0.8)}px Anton, Impact, sans-serif`; x.textAlign = "center"; x.fillText(initials(t.name), cx, cy + r * 0.28); }
+      else { x.fillStyle = RC.cream; x.font = `400 ${Math.round(r * 0.8)}px Anton, Impact, sans-serif`; x.textAlign = "center"; x.fillText(initials(t.name), cx, cy + r * 0.28); }
       x.restore();
-      x.lineWidth = 5; x.strokeStyle = cream; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
-    };
-    const spots = [[d.podium[1], 2, 230, 110, "#d9dee6"], [d.podium[0], 1, 540, 150, gold], [d.podium[2], 3, 850, 80, "#d08a55"]];
-    const base = 640;
-    for (const [r, place, cx, h, col] of spots) {
-      if (!r) continue;
-      const t = T(r.id), rad = place === 1 ? 66 : 52, top = base - h;
-      await crestDraw(t, cx, top - 128 - rad, rad);
-      text(fit(t.name, "700 28px Barlow", 290), cx, top - 68, "700 28px Barlow", cream, "center");
-      text(num(r.s, 2), cx, top - 14, `400 ${place === 1 ? 50 : 40}px Anton, Impact, sans-serif`, place === 1 ? gold : cream, "center");
-      x.fillStyle = col; x.beginPath(); x.roundRect ? x.roundRect(cx - 140, top, 280, h, [14, 14, 0, 0]) : x.rect(cx - 140, top, 280, h); x.fill();
-      text(String(place), cx, top + Math.min(h - 14, place === 1 ? 92 : 70), `400 ${place === 1 ? 84 : 60}px Anton, Impact, sans-serif`, "#0b1f3a", "center");
+      x.lineWidth = Math.max(3, r * 0.08); x.strokeStyle = ring; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
     }
-    let y = base + 28;
-
-    // records broken
-    if (d.records.length) {
-      const rec = d.records.slice(0, 3);
-      const boxH = 58 + rec.length * 44;
-      x.fillStyle = "rgba(230,196,122,0.14)"; x.strokeStyle = gold; x.lineWidth = 2;
-      x.beginPath(); x.roundRect ? x.roundRect(64, y, W - 128, boxH, 18) : x.rect(64, y, W - 128, boxH); x.fill(); x.stroke();
-      text(`★ RECORD${rec.length > 1 ? "S" : ""} BROKEN`, 92, y + 42, "700 28px 'Barlow Condensed'", gold);
-      rec.forEach((r, i) => {
-        const yy = y + 88 + i * 44;
-        text(fit(`${r.label}: ${r.who}`, "600 27px Barlow", W - 330), 92, yy, "600 27px Barlow", cream);
-        text(num(r.val, 2), W - 92, yy, "400 34px Anton, Impact, sans-serif", gold, "right");
-      });
-      y += boxH + 26;
+    async function headshot(x, pid, cx, cy, r, ring) {
+      x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fillStyle = "#fff"; x.fill(); x.clip();
+      const ph = await img(sleeperHeadshot(pid));
+      if (ph) {
+        const w = ph.naturalWidth, h = ph.naturalHeight;
+        // half-body shots (350 square, 220x280): zoom on the face at the top; close-ups and wide shots: cover
+        if ((w === 350 && h === 350) || h > w * 1.15) { const s = w * 0.62; x.drawImage(ph, (w - s) / 2, h * 0.02, s, s, cx - r, cy - r, r * 2, r * 2); }
+        else { const sc = Math.max((r * 2) / w, (r * 2) / h); x.drawImage(ph, cx - (w * sc) / 2, cy - (h * sc) * 0.42, w * sc, h * sc); }
+      } else { x.fillStyle = "#3a2a4a"; x.fillRect(cx - r, cy - r, r * 2, r * 2); }
+      x.restore();
+      x.lineWidth = 6; x.strokeStyle = ring; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
     }
 
-    // six tiles
-    const tiles = [];
-    const wl = (m) => d.winLose(m);
-    tiles.push(["Biggest blowout", `by ${num(d.margin(d.blow), 2)}`, `${T(wl(d.blow)[0]).name} over ${T(wl(d.blow)[2]).name}`]);
-    tiles.push(["Closest game", `by ${num(d.margin(d.close), 2)}`, `${T(wl(d.close)[0]).name} edged ${T(wl(d.close)[2]).name}`]);
-    if (d.lowWin) tiles.push(["Lowest winning score", num(wl(d.lowWin)[1], 2), `${T(wl(d.lowWin)[0]).name} got away with it`]);
-    if (d.highLoss) tiles.push(["Highest losing score", num(wl(d.highLoss)[3], 2), `${T(wl(d.highLoss)[2]).name} were robbed`]);
-    if (d.bench) tiles.push(["Bench blunder", `${num(d.bench.best - d.bench.s, 2)} left`, `${T(d.bench.id).name} benched the wrong guys`]);
-    if (d.star) tiles.push(["Player of the week", `${gp(+d.star.pts)} pts`, `${d.star.player} · ${T(rosterOf(d.star.manager)) ? T(rosterOf(d.star.manager)).name : ""}`, d.star.player_id]);
-    const cols = 2, gap = 18, tw = (W - 128 - gap) / cols, th = Math.min(150, (H - 84 - y - gap * 2) / 3);
-    for (let i = 0; i < tiles.length; i++) {
-      const [label, big, sub, pid] = tiles[i];
-      const tx = 64 + (i % cols) * (tw + gap), ty = y + Math.floor(i / cols) * (th + gap);
-      x.fillStyle = "rgba(255,255,255,0.07)"; x.beginPath(); x.roundRect ? x.roundRect(tx, ty, tw, th, 16) : x.rect(tx, ty, tw, th); x.fill();
-      let px = tx + 26;
-      if (pid) {
-        const ph = await img(sleeperHeadshot(pid));
-        if (ph) {
-          const r = 40, cx = tx + 26 + r, cy = ty + th / 2;
-          x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fillStyle = "#fff"; x.fill(); x.clip();
-          const half = ph.naturalWidth === 350 && ph.naturalHeight === 350;   // half-body shot: zoom on the face
-          if (half) x.drawImage(ph, ph.naturalWidth * 0.17, 0, ph.naturalWidth * 0.66, ph.naturalWidth * 0.66, cx - r, cy - r, r * 2, r * 2);
-          else { const s = Math.max((r * 2) / ph.naturalWidth, (r * 2) / ph.naturalHeight); x.drawImage(ph, cx - (ph.naturalWidth * s) / 2, cy - r, ph.naturalWidth * s, ph.naturalHeight * s); }
-          x.restore();
-          px = cx + r + 20;
-        }
+    const total = 4, out = [];
+    // ---- 1. results: podium + every scoreline ----
+    {
+      const { c, x } = slide(1, total, "Results", "Matchday recap");
+      const spots = [[d.podium[1], 2, 220, "#dfe4ec", "2ND"], [d.podium[0], 1, 540, RC.gold, "1ST"], [d.podium[2], 3, 860, "#e0955a", "3RD"]];
+      for (const [r, place, cx, col, lab] of spots) {
+        if (!r) continue;
+        const t = T(r.id), rad = place === 1 ? 92 : 70, cy = place === 1 ? 450 : 482;
+        await avatar(x, t, cx, cy, rad, col);
+        rrect(x, cx - 38, cy + rad - 18, 76, 36, 18, col);
+        text(x, lab, cx, cy + rad + 9, "700 24px 'Barlow Condensed'", RC.ink, "center");
+        const nm = lines(x, t.name, 290, 30, 22, "Barlow", "700", 2);
+        nm.out.forEach((l, i) => text(x, l, cx, cy + rad + 60 + i * (nm.size + 4), nm.font, RC.cream, "center"));
+        text(x, num(r.s, 2), cx, 718, `400 ${place === 1 ? 58 : 46}px Anton, Impact, sans-serif`, col, "center");   // scores share one baseline
       }
-      const maxW = tx + tw - 24 - px;
-      const k = th / 150;   // tiles shrink a little when a records box takes room
-      text(label.toUpperCase(), px, ty + 38 * k, `700 ${Math.round(24 * Math.max(k, 0.85))}px 'Barlow Condensed'`, gold);
-      text(big, px, ty + 88 * k, `400 ${Math.round(46 * k)}px Anton, Impact, sans-serif`, cream);
-      text(fit(sub, `500 ${Math.round(23 * Math.max(k, 0.85))}px Barlow`, maxW), px, ty + 124 * k, `500 ${Math.round(23 * Math.max(k, 0.85))}px Barlow`, soft);
+      // scoreboard
+      let y = 790;
+      const games = state.results.filter((m) => m.week === week);
+      for (const m of games) {
+        const H1 = T(m.home), A1 = T(m.away), hw = m.homePts > m.awayPts, aw = m.awayPts > m.homePts;
+        rrect(x, 60, y, W - 120, 104, 22, "rgba(255,255,255,0.07)");
+        await avatar(x, H1, 112, y + 52, 32);
+        await avatar(x, A1, W - 112, y + 52, 32);
+        const hn = lines(x, H1.name, 205, 26, 18, "Barlow", "700", 2), an = lines(x, A1.name, 205, 26, 18, "Barlow", "700", 2);
+        hn.out.forEach((l, i) => text(x, l, 160, y + 52 + (i - (hn.out.length - 1) / 2) * (hn.size + 2) + hn.size * 0.35, hn.font, RC.cream));
+        an.out.forEach((l, i) => text(x, l, W - 160, y + 52 + (i - (an.out.length - 1) / 2) * (an.size + 2) + an.size * 0.35, an.font, RC.cream, "right"));
+        text(x, num(m.homePts, 2), W / 2 - 20, y + 66, "400 40px Anton, Impact, sans-serif", hw ? RC.green : RC.soft, "right");
+        text(x, "–", W / 2, y + 64, "400 32px Anton, Impact, sans-serif", RC.soft, "center");
+        text(x, num(m.awayPts, 2), W / 2 + 20, y + 66, "400 40px Anton, Impact, sans-serif", aw ? RC.green : RC.soft);
+        y += 116;
+      }
+      out.push(c);
     }
-    // footer
-    text("nicogee01.github.io/mater-league", W / 2, H - 36, "600 24px Barlow", "rgba(251,247,238,0.6)", "center");
-    return c;
+
+    // ---- 2 & 3. best starter / best benched player at each position ----
+    const rows = (state.lineups || []).filter((r) => +r.week === week);
+    const posOfRow = (r) => (r.slot !== "BN" ? r.slot : G_POS[((state.players[r.player_id] || {}).ps || [])[0] || (state.players[r.player_id] || {}).p]);
+    const bestAt = (pool) => RC_POS.map((p) => { const c = pool.filter((r) => posOfRow(r) === p); return [p, c.length ? c.reduce((a, b) => (+b.pts > +a.pts ? b : a)) : null]; });
+    async function playerSlide(n, kicker, title, picks, verb) {
+      const { c, x } = slide(n, total, kicker, title);
+      let y = 350;
+      const rh = 230;
+      for (const [p, r] of picks) {
+        const [col, label] = RC.pos[p];
+        rrect(x, 60, y, W - 120, rh - 22, 26, "rgba(255,255,255,0.07)");
+        rrect(x, 60, y, 16, rh - 22, 8, col);
+        if (!r) { text(x, `${label}: nobody this week`, 110, y + 112, "600 30px Barlow", RC.soft); y += rh; continue; }
+        const t = T(rosterOf(r.manager));
+        await headshot(x, r.player_id, 180, y + (rh - 22) / 2, 78, col);
+        rrect(x, 286, y + 30, 54 + label.length * 13, 34, 17, col);
+        text(x, label.toUpperCase(), 304, y + 56, "700 22px 'Barlow Condensed'", RC.ink);
+        const nm = lines(x, r.player, 470, 46, 30, "Anton, Impact, sans-serif", "400", 1);
+        text(x, nm.out[0], 286, y + 118, nm.font, RC.cream);
+        const pl = state.players[r.player_id] || {};
+        if (t) {
+          await avatar(x, t, 304, y + 160, 20);
+          const sub = `${verb} ${t.name}${pl.c ? ` · ${pl.c}` : ""}`;
+          const sf = shrink(x, sub, 440, 24, 18, "Barlow", "600");
+          text(x, sub, 334, y + 168, sf, RC.soft);
+        }
+        text(x, gp(+r.pts), W - 100, y + 130, "400 92px Anton, Impact, sans-serif", col, "right");
+        text(x, "PTS", W - 100, y + 168, "700 22px 'Barlow Condensed'", RC.soft, "right");
+        y += rh;
+      }
+      return c;
+    }
+    out.push(await playerSlide(2, "Best starter at every position", "Players of the week", bestAt(rows.filter((r) => r.slot !== "BN")), "Started by"));
+    out.push(await playerSlide(3, "Best player left out at every position", "Left on the bench", bestAt(rows.filter((r) => r.slot === "BN" && +r.min > 0)), "Benched by"));
+
+    // ---- 4. the week in numbers ----
+    {
+      const { c, x } = slide(4, total, "Superlatives", "The week in numbers");
+      let y = 340;
+      if (d.records.length) {
+        const rec = d.records.slice(0, 3);
+        const bh = 70 + rec.length * 74;
+        rrect(x, 60, y, W - 120, bh, 26, "rgba(245,200,76,0.16)");
+        x.strokeStyle = RC.gold; x.lineWidth = 3; x.beginPath(); x.roundRect ? x.roundRect(60, y, W - 120, bh, 26) : x.rect(60, y, W - 120, bh); x.stroke();
+        text(x, `★  RECORD${rec.length > 1 ? "S" : ""} BROKEN`, 92, y + 48, "700 30px 'Barlow Condensed'", RC.gold);
+        for (let i = 0; i < rec.length; i++) {
+          const r = rec[i], yy = y + 96 + i * 74;
+          if (r.ids && r.ids[0]) await avatar(x, T(r.ids[0]), 116, yy, 26, RC.gold);
+          const lab = lines(x, `${r.label}: ${r.who}`, 680, 26, 19, "Barlow", "600", 2);
+          lab.out.forEach((l, k) => text(x, l, 158, yy + 9 + (k - (lab.out.length - 1) / 2) * (lab.size + 3), lab.font, RC.cream));
+          text(x, num(r.val, 2), W - 92, yy + 16, "400 44px Anton, Impact, sans-serif", RC.gold, "right");
+        }
+        y += bh + 24;
+      }
+      const wl = (m) => d.winLose(m);
+      const items = [];
+      items.push(["Biggest blowout", `by ${num(d.margin(d.blow), 2)}`, `${T(wl(d.blow)[0]).name} beat ${T(wl(d.blow)[2]).name}, ${num(wl(d.blow)[1], 2)}–${num(wl(d.blow)[3], 2)}`, [wl(d.blow)[0], wl(d.blow)[2]], RC.green]);
+      items.push(["Closest game", `by ${num(d.margin(d.close), 2)}`, `${T(wl(d.close)[0]).name} edged ${T(wl(d.close)[2]).name}, ${num(wl(d.close)[1], 2)}–${num(wl(d.close)[3], 2)}`, [wl(d.close)[0], wl(d.close)[2]], RC.pink]);
+      if (d.lowWin) items.push(["Lowest winning score", num(wl(d.lowWin)[1], 2), `${T(wl(d.lowWin)[0]).name} got away with it`, [wl(d.lowWin)[0]], RC.gold]);
+      if (d.highLoss) items.push(["Highest losing score", num(wl(d.highLoss)[3], 2), `${T(wl(d.highLoss)[2]).name} were robbed`, [wl(d.highLoss)[2]], "#4da3ff"]);
+      if (d.bench) items.push(["Bench blunder", `−${num(d.bench.best - d.bench.s, 2)}`, `${T(d.bench.id).name} scored ${num(d.bench.s, 2)} but could have scored ${num(d.bench.best, 2)}`, [d.bench.id], RC.pink]);
+      const rh = Math.min(170, (H - 90 - y) / items.length);
+      for (const [label, big, sub, ids, col] of items) {
+        rrect(x, 60, y, W - 120, rh - 16, 24, "rgba(255,255,255,0.07)");
+        rrect(x, 60, y, 14, rh - 16, 7, col);
+        const cy = y + (rh - 16) / 2;
+        if (ids.length > 1) { await avatar(x, T(ids[1]), 160, cy + 6, 30); await avatar(x, T(ids[0]), 126, cy - 6, 36, col); }
+        else await avatar(x, T(ids[0]), 136, cy, 38, col);
+        text(x, label.toUpperCase(), 204, cy - 22, "700 24px 'Barlow Condensed'", col);
+        const sb = lines(x, sub, 500, 26, 19, "Barlow", "600", 2);
+        sb.out.forEach((l, k) => text(x, l, 204, cy + 14 + k * (sb.size + 4), sb.font, RC.cream));
+        text(x, big, W - 92, cy + 22, shrink(x, big, 230, 60, 40, "Anton, Impact, sans-serif", "400"), RC.cream, "right");
+        y += rh;
+      }
+      out.push(c);
+    }
+    return out;
   }
   async function shareRecap(week, btn) {
-    const c = await recapCanvas(week);
-    if (!c) return;
-    const blob = await new Promise((r) => c.toBlob(r, "image/png"));
-    const file = new File([blob], `mater-league-gw${week}-recap.png`, { type: "image/png" });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: `Mater League · Gameweek ${week} recap` }); return; } catch (e) { if (e && e.name === "AbortError") return; }
-    }
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    flash(btn, "Saved");
+    const old = btn.textContent; btn.disabled = true; btn.textContent = "Building…";
+    try {
+      const cards = recapPreview.week === week && recapPreview.cards ? recapPreview.cards : await recapSlides(week);
+      const blobs = await Promise.all(cards.map((c) => new Promise((r) => c.toBlob(r, "image/png"))));
+      const files = blobs.map((b, i) => new File([b], `mater-league-gw${week}-recap-${i + 1}.png`, { type: "image/png" }));
+      if (navigator.canShare && navigator.canShare({ files })) {
+        try { await navigator.share({ files, title: `Mater League · Gameweek ${week} recap` }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+      }
+      for (const [i, b] of blobs.entries()) {
+        const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = files[i].name; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      }
+    } finally { btn.disabled = false; btn.textContent = old; }
   }
-  // preview on the Awards page (re-drawn when the week changes)
-  const recapPreview = { week: null };
+  // preview strip on the Awards page (re-drawn when the week changes)
+  const recapPreview = { week: null, cards: null };
   async function paintRecapPreview(week) {
     const box = $("#recapPreview");
     if (!box || recapPreview.week === week) return;
-    recapPreview.week = week;
-    const c = await recapCanvas(week);
-    if (c && recapPreview.week === week && $("#recapPreview")) $("#recapPreview").src = c.toDataURL("image/png");
+    recapPreview.week = week; recapPreview.cards = null;
+    const cards = await recapSlides(week);
+    if (recapPreview.week !== week || !$("#recapPreview")) return;
+    recapPreview.cards = cards;
+    $("#recapPreview").innerHTML = cards.map((c, i) => `<img src="${c.toDataURL("image/png")}" alt="Gameweek ${week} recap, card ${i + 1} of ${cards.length}" width="1080" height="1350">`).join("");
   }
 
   // ---------- TACTICS (club profile) ----------
@@ -2460,10 +2562,10 @@
     const recap = `<section class="recap" aria-labelledby="recapTitle">
         <div class="recap__text">
           <h2 class="subhead" id="recapTitle">Gameweek ${wk.week} recap</h2>
-          <p>One picture for the group chat: the podium, any records broken, and the week's headline numbers.</p>
+          <p>Four cards for the group chat: results and podium, players of the week, the best players left on the bench, and the week in numbers. On a phone, Share sends all four straight to Sleeper.</p>
           <button type="button" class="pr-btn recap__btn" data-recap="${wk.week}">${navigator.canShare ? "Share recap" : "Download recap"}</button>
         </div>
-        <img id="recapPreview" class="recap__img" alt="Gameweek ${wk.week} recap image" width="1080" height="1350">
+        <div id="recapPreview" class="recap__strip" aria-live="polite"><div class="skeleton recap__ph"></div><div class="skeleton recap__ph"></div><div class="skeleton recap__ph"></div><div class="skeleton recap__ph"></div></div>
       </section>`;
     root.innerHTML = awardsPage ? recap + podiumHTML(wk.week) + xis + awards + finishesHTML(wk.week) : front;
     if (awardsPage) { recapPreview.week = null; paintRecapPreview(wk.week); }
