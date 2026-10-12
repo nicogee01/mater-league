@@ -1994,6 +1994,14 @@ html.has-install-bar body { padding-bottom: 92px; }
 .install-sheet__ok { width: 100%; min-height: 48px; border: 0; border-radius: 999px; background: #1b0020; color: #fbf7ee; font: 700 16px var(--f-label, sans-serif); letter-spacing: .04em; cursor: pointer; }
 .mobile-menu__install { color: var(--accent) !important; font-weight: 700; }
 
+/* ================= AWARDS: WEEKLY RECAP ================= */
+.recap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: var(--s5); align-items: center; margin-bottom: var(--s7);
+  padding: var(--s5); border-radius: 20px; background: var(--surface); border: 1px solid var(--line); }
+.recap__text .subhead { margin: 0 0 var(--s2); }
+.recap__text p { margin: 0 0 var(--s4); color: var(--muted); }
+.recap__img { width: 100%; height: auto; aspect-ratio: 1080 / 1350; border-radius: 14px; background: #0b1f3a; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+@media (max-width: 720px) { .recap { grid-template-columns: 1fr; } .recap__img { max-width: 360px; justify-self: center; } }
+
 /* ================= AWARDS: PODIUM + FINISHES ================= */
 .podium { margin-bottom: var(--s7); }
 .podium__stage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: var(--s3); max-width: 760px; margin: 0 auto; }

@@ -277,6 +277,172 @@
   }
 
   // Everything that needs real matchups: splits, h2h, all-play, consistency, optimal lineups.
+  // ---------- WEEKLY RECAP IMAGE ----------
+  // One shareable picture per gameweek for the Sleeper group chat (a bot can't post there): podium,
+  // records broken that week, and six headline numbers. Phones get the share sheet (straight into
+  // Sleeper); computers download the PNG.
+  function recapData(week) {
+    const games = state.results.filter((m) => m.week === week);
+    if (!games.length) return null;
+    const before = state.results.filter((m) => m.week < week);
+    const T = (id) => state.byRoster[id];
+    const sides = (ms) => ms.flatMap((m) => [
+      { id: m.home, s: m.homePts, o: m.awayPts, opp: m.away, best: m.homeBest },
+      { id: m.away, s: m.awayPts, o: m.homePts, opp: m.home, best: m.awayBest },
+    ]);
+    const now = sides(games), past = sides(before);
+    const margin = (m) => Math.abs(m.homePts - m.awayPts);
+    const winLose = (m) => (m.homePts >= m.awayPts ? [m.home, m.homePts, m.away, m.awayPts] : [m.away, m.awayPts, m.home, m.homePts]);
+    const pick = (arr, f, dir = 1) => arr.reduce((a, b) => (dir * (f(b) - f(a)) > 0 ? b : a));
+    const blow = pick(games, margin), close = pick(games, margin, -1);
+    const decided = games.filter((m) => m.homePts !== m.awayPts);
+    const lowWin = decided.length ? pick(decided, (m) => Math.max(m.homePts, m.awayPts), -1) : null;
+    const highLoss = decided.length ? pick(decided, (m) => Math.min(m.homePts, m.awayPts)) : null;
+    const benchers = now.filter((x) => Number.isFinite(x.best));
+    const bench = benchers.length ? pick(benchers, (x) => x.best - x.s) : null;
+    // player of the week: best starter in the logged XIs
+    const xi = (state.lineups || []).filter((r) => +r.week === week && r.slot !== "BN");
+    const star = xi.length ? xi.reduce((a, b) => (+b.pts > +a.pts ? b : a)) : null;
+    // records: this week beats every earlier week (needs at least one earlier week)
+    const records = [];
+    if (before.length) {
+      const pd = decided.length ? before.filter((m) => m.homePts !== m.awayPts) : [];
+      const chk = (label, val, prev, higher, who) => { if (prev.length && (higher ? val > Math.max(...prev) : val < Math.min(...prev))) records.push({ label, val, who }); };
+      const hi = pick(now, (x) => x.s), lo = pick(now, (x) => x.s, -1);
+      chk("Highest score of the season", hi.s, past.map((x) => x.s), true, T(hi.id).name);
+      chk("Lowest score of the season", lo.s, past.map((x) => x.s), false, T(lo.id).name);
+      chk("Biggest blowout of the season", margin(blow), before.map(margin), true, T(winLose(blow)[0]).name);
+      chk("Closest game of the season", margin(close), before.map(margin), false, `${T(close.home).name} v ${T(close.away).name}`);
+      const comb = pick(games, (m) => m.homePts + m.awayPts);
+      chk("Highest-scoring matchup", comb.homePts + comb.awayPts, before.map((m) => m.homePts + m.awayPts), true, `${T(comb.home).name} v ${T(comb.away).name}`);
+      if (lowWin) chk("Lowest winning score", winLose(lowWin)[1], pd.map((m) => Math.max(m.homePts, m.awayPts)), false, T(winLose(lowWin)[0]).name);
+      if (highLoss) chk("Highest losing score", winLose(highLoss)[3], pd.map((m) => Math.min(m.homePts, m.awayPts)), true, T(winLose(highLoss)[2]).name);
+      if (bench) chk("Most points left on the bench", bench.best - bench.s, past.filter((x) => Number.isFinite(x.best)).map((x) => x.best - x.s), true, T(bench.id).name);
+    }
+    return { week, podium: weekFinishes(week).slice(0, 3), blow, close, lowWin, highLoss, bench, star, records, winLose, margin };
+  }
+
+  async function recapCanvas(week) {
+    const d = recapData(week);
+    if (!d) return null;
+    await Promise.all(["400 96px Anton", "700 30px 'Barlow Condensed'", "700 30px Barlow", "500 30px Barlow"].map((f) => document.fonts.load(f).catch(() => {})));
+    const W = 1080, H = 1350, c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const x = c.getContext("2d");
+    // ask for a fresh CORS copy: the page's own <img> tags cached these without CORS, which would block drawing them
+    const img = (src) => new Promise((res) => { if (!src) return res(null); const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => res(null); i.src = src + (src.includes("?") ? "&" : "?") + "recap=1"; });
+    const T = (id) => { const t = state.byRoster[id]; return t ? { ...t, name: t.name.trim() } : t; };
+    const cream = "#fbf7ee", gold = "#e6c47a", red = "#ff4d63", soft = "#c9d1de";
+    // background
+    const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#0b1f3a"); g.addColorStop(1, "#2a0a35");
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.fillStyle = "#c8102e"; x.fillRect(0, 0, W, 14);
+    x.textBaseline = "alphabetic";
+    const text = (s, px, py, font, color, align = "left", maxW) => { x.font = font; x.fillStyle = color; x.textAlign = align; x.fillText(s, px, py, maxW); };
+    const fit = (s, font, maxW) => { x.font = font; let t = String(s); while (x.measureText(t).width > maxW && t.length > 3) t = t.slice(0, -2) + "…"; return t; };
+    text("THE MATER LEAGUE", 64, 84, "700 30px 'Barlow Condensed'", gold);
+    text(`GAMEWEEK ${d.week}`, 64, 172, "400 92px Anton, Impact, sans-serif", cream);
+    x.font = "400 92px Anton, Impact, sans-serif";
+    text("RECAP", 64 + x.measureText(`GAMEWEEK ${d.week} `).width, 172, "400 92px Anton, Impact, sans-serif", red);
+
+    // podium: 2nd left, 1st centre, 3rd right
+    const crestDraw = async (t, cx, cy, r) => {
+      x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.closePath();
+      x.fillStyle = t.kit[0]; x.fill(); x.clip();
+      const im = await img(t.logo);
+      if (im) x.drawImage(im, cx - r, cy - r, r * 2, r * 2);
+      else { x.fillStyle = cream; x.font = `400 ${Math.round(r * 0.8)}px Anton, Impact, sans-serif`; x.textAlign = "center"; x.fillText(initials(t.name), cx, cy + r * 0.28); }
+      x.restore();
+      x.lineWidth = 5; x.strokeStyle = cream; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+    };
+    const spots = [[d.podium[1], 2, 230, 110, "#d9dee6"], [d.podium[0], 1, 540, 150, gold], [d.podium[2], 3, 850, 80, "#d08a55"]];
+    const base = 640;
+    for (const [r, place, cx, h, col] of spots) {
+      if (!r) continue;
+      const t = T(r.id), rad = place === 1 ? 66 : 52, top = base - h;
+      await crestDraw(t, cx, top - 128 - rad, rad);
+      text(fit(t.name, "700 28px Barlow", 290), cx, top - 68, "700 28px Barlow", cream, "center");
+      text(num(r.s, 2), cx, top - 14, `400 ${place === 1 ? 50 : 40}px Anton, Impact, sans-serif`, place === 1 ? gold : cream, "center");
+      x.fillStyle = col; x.beginPath(); x.roundRect ? x.roundRect(cx - 140, top, 280, h, [14, 14, 0, 0]) : x.rect(cx - 140, top, 280, h); x.fill();
+      text(String(place), cx, top + Math.min(h - 14, place === 1 ? 92 : 70), `400 ${place === 1 ? 84 : 60}px Anton, Impact, sans-serif`, "#0b1f3a", "center");
+    }
+    let y = base + 28;
+
+    // records broken
+    if (d.records.length) {
+      const rec = d.records.slice(0, 3);
+      const boxH = 58 + rec.length * 44;
+      x.fillStyle = "rgba(230,196,122,0.14)"; x.strokeStyle = gold; x.lineWidth = 2;
+      x.beginPath(); x.roundRect ? x.roundRect(64, y, W - 128, boxH, 18) : x.rect(64, y, W - 128, boxH); x.fill(); x.stroke();
+      text(`★ RECORD${rec.length > 1 ? "S" : ""} BROKEN`, 92, y + 42, "700 28px 'Barlow Condensed'", gold);
+      rec.forEach((r, i) => {
+        const yy = y + 88 + i * 44;
+        text(fit(`${r.label}: ${r.who}`, "600 27px Barlow", W - 330), 92, yy, "600 27px Barlow", cream);
+        text(num(r.val, 2), W - 92, yy, "400 34px Anton, Impact, sans-serif", gold, "right");
+      });
+      y += boxH + 26;
+    }
+
+    // six tiles
+    const tiles = [];
+    const wl = (m) => d.winLose(m);
+    tiles.push(["Biggest blowout", `by ${num(d.margin(d.blow), 2)}`, `${T(wl(d.blow)[0]).name} over ${T(wl(d.blow)[2]).name}`]);
+    tiles.push(["Closest game", `by ${num(d.margin(d.close), 2)}`, `${T(wl(d.close)[0]).name} edged ${T(wl(d.close)[2]).name}`]);
+    if (d.lowWin) tiles.push(["Lowest winning score", num(wl(d.lowWin)[1], 2), `${T(wl(d.lowWin)[0]).name} got away with it`]);
+    if (d.highLoss) tiles.push(["Highest losing score", num(wl(d.highLoss)[3], 2), `${T(wl(d.highLoss)[2]).name} were robbed`]);
+    if (d.bench) tiles.push(["Bench blunder", `${num(d.bench.best - d.bench.s, 2)} left`, `${T(d.bench.id).name} benched the wrong guys`]);
+    if (d.star) tiles.push(["Player of the week", `${gp(+d.star.pts)} pts`, `${d.star.player} · ${T(rosterOf(d.star.manager)) ? T(rosterOf(d.star.manager)).name : ""}`, d.star.player_id]);
+    const cols = 2, gap = 18, tw = (W - 128 - gap) / cols, th = Math.min(150, (H - 84 - y - gap * 2) / 3);
+    for (let i = 0; i < tiles.length; i++) {
+      const [label, big, sub, pid] = tiles[i];
+      const tx = 64 + (i % cols) * (tw + gap), ty = y + Math.floor(i / cols) * (th + gap);
+      x.fillStyle = "rgba(255,255,255,0.07)"; x.beginPath(); x.roundRect ? x.roundRect(tx, ty, tw, th, 16) : x.rect(tx, ty, tw, th); x.fill();
+      let px = tx + 26;
+      if (pid) {
+        const ph = await img(sleeperHeadshot(pid));
+        if (ph) {
+          const r = 40, cx = tx + 26 + r, cy = ty + th / 2;
+          x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fillStyle = "#fff"; x.fill(); x.clip();
+          const half = ph.naturalWidth === 350 && ph.naturalHeight === 350;   // half-body shot: zoom on the face
+          if (half) x.drawImage(ph, ph.naturalWidth * 0.17, 0, ph.naturalWidth * 0.66, ph.naturalWidth * 0.66, cx - r, cy - r, r * 2, r * 2);
+          else { const s = Math.max((r * 2) / ph.naturalWidth, (r * 2) / ph.naturalHeight); x.drawImage(ph, cx - (ph.naturalWidth * s) / 2, cy - r, ph.naturalWidth * s, ph.naturalHeight * s); }
+          x.restore();
+          px = cx + r + 20;
+        }
+      }
+      const maxW = tx + tw - 24 - px;
+      const k = th / 150;   // tiles shrink a little when a records box takes room
+      text(label.toUpperCase(), px, ty + 38 * k, `700 ${Math.round(24 * Math.max(k, 0.85))}px 'Barlow Condensed'`, gold);
+      text(big, px, ty + 88 * k, `400 ${Math.round(46 * k)}px Anton, Impact, sans-serif`, cream);
+      text(fit(sub, `500 ${Math.round(23 * Math.max(k, 0.85))}px Barlow`, maxW), px, ty + 124 * k, `500 ${Math.round(23 * Math.max(k, 0.85))}px Barlow`, soft);
+    }
+    // footer
+    text("nicogee01.github.io/mater-league", W / 2, H - 36, "600 24px Barlow", "rgba(251,247,238,0.6)", "center");
+    return c;
+  }
+  async function shareRecap(week, btn) {
+    const c = await recapCanvas(week);
+    if (!c) return;
+    const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+    const file = new File([blob], `mater-league-gw${week}-recap.png`, { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: `Mater League · Gameweek ${week} recap` }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    flash(btn, "Saved");
+  }
+  // preview on the Awards page (re-drawn when the week changes)
+  const recapPreview = { week: null };
+  async function paintRecapPreview(week) {
+    const box = $("#recapPreview");
+    if (!box || recapPreview.week === week) return;
+    recapPreview.week = week;
+    const c = await recapCanvas(week);
+    if (c && recapPreview.week === week && $("#recapPreview")) $("#recapPreview").src = c.toDataURL("image/png");
+  }
+
   // ---------- TACTICS (club profile) ----------
   // Formations come from Sleeper's per-week formation history (it matched every logged XI). For each
   // logged gameweek: the shape this club played, and the shape its opponent played, with the result.
@@ -2291,7 +2457,16 @@
         </div>
         <p class="chart-note">${esc(xiNote)}</p>` : `<p class="pending-note">${kind === "free" ? "Scouting the waiver wire…" : "Not enough players for a full eleven this week."}</p>`}
       </section>` : `<p class="pending-note">Team of the Week needs that gameweek's lineups.</p>`}`;
-    root.innerHTML = awardsPage ? podiumHTML(wk.week) + xis + awards + finishesHTML(wk.week) : front;
+    const recap = `<section class="recap" aria-labelledby="recapTitle">
+        <div class="recap__text">
+          <h2 class="subhead" id="recapTitle">Gameweek ${wk.week} recap</h2>
+          <p>One picture for the group chat: the podium, any records broken, and the week's headline numbers.</p>
+          <button type="button" class="pr-btn recap__btn" data-recap="${wk.week}">${navigator.canShare ? "Share recap" : "Download recap"}</button>
+        </div>
+        <img id="recapPreview" class="recap__img" alt="Gameweek ${wk.week} recap image" width="1080" height="1350">
+      </section>`;
+    root.innerHTML = awardsPage ? recap + podiumHTML(wk.week) + xis + awards + finishesHTML(wk.week) : front;
+    if (awardsPage) { recapPreview.week = null; paintRecapPreview(wk.week); }
     if (Object.keys(state.players || {}).length) loadPhotos($$("[data-photo]", root).map((e) => e.dataset.photo), root);
     countUp(root);
   }
@@ -2419,6 +2594,8 @@
   document.addEventListener("click", (e) => {
     const w = e.target.closest("[data-gzweek]");
     if (w) { gz.week = +w.dataset.gzweek; history.replaceState(null, "", `#gw${gz.week}`); renderGazette(); return; }
+    const rb = e.target.closest("[data-recap]");
+    if (rb) { shareRecap(+rb.dataset.recap, rb); return; }
     const xb = e.target.closest("[data-gzxi]");
     if (xb) { gz.xi = xb.dataset.gzxi; renderGazette(); return; }
     const sb = e.target.closest("[data-share]");
