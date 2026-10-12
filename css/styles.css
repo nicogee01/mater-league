@@ -517,6 +517,10 @@ html.menu-open, html.menu-open body { overflow: hidden; }
 .pitch::after { content: ""; position: absolute; left: 50%; top: 0; width: 28%; aspect-ratio: 1; border: 2px solid rgba(255,255,255,0.55); border-radius: 50%; transform: translate(-50%, -50%); }
 .pitch .box { position: absolute; left: 50%; bottom: 0; width: 48%; height: 16%; border: 2px solid rgba(255,255,255,0.55); border-bottom: 0; transform: translateX(-50%); }
 .pitch .box--six { width: 22%; height: 6%; }
+/* the real pitch (media/pitch.jpg, from media/soccer_pitch.png: portrait, our goal at the bottom) replaces the drawn
+   stripes and lines; it fills the frame's width without stretching and is anchored at the goal end */
+.pitch { background: #2a7a2a url("../media/pitch.jpg") center bottom / cover no-repeat; border-color: rgba(255,255,255,0.25); }
+.pitch::before, .pitch::after, .pitch .box { display: none; }
 .pitch__row { position: relative; z-index: 1; display: flex; justify-content: space-evenly; }
 .pl { display: grid; justify-items: center; gap: 4px; width: 22%; text-align: center; opacity: 0; animation: drop-in 480ms var(--ease-spring) forwards; }
 .pl__shirt { width: 38px; height: 38px; }
@@ -2126,6 +2130,7 @@ html.has-install-bar body { padding-bottom: 92px; }
 .tac-vs li.is-best { border-left-color: #1f8a4c; }
 .tac-vs li.is-best em { background: #1f8a4c; color: #fff; }
 .tac__note { margin: var(--s3) 0 0; font-size: 12px; color: var(--faint); }
+@media (max-width: 560px) { .tac-vs li { grid-template-columns: 52px 1fr 1fr; } .tac-vs em { grid-column: 1 / -1; justify-self: start; } .tac-vs span { white-space: nowrap; } }
 
 /* ================= LIVE GAMEWEEK ================= */
 .mu-side__pre { opacity: .7; }
