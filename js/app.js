@@ -2313,7 +2313,7 @@
     // the XI recorded for this gameweek (the snapshot Action), if there is one: managers may already be
     // changing their current lineup for the next week
     const logged = (state.lineups || []).filter((r) => +r.week === week && rosterOf(r.manager) === id);
-    if (logged.some((r) => r.slot !== "BN")) {
+    if (logged.filter((r) => r.slot !== "BN").length >= 11) {
       const xi = logged.filter((r) => r.slot !== "BN").map((r) => row(r.player_id, r.slot)).sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
       const bench = logged.filter((r) => r.slot === "BN").map((r) => row(r.player_id, "BN")).sort((a, b) => b.pts - a.pts);
       return { xi, bench };
