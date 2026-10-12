@@ -2077,6 +2077,34 @@ html.has-install-bar body { padding-bottom: 92px; }
   .finishes__table tbody th span { display: none; }
 }
 
+/* ================= SQUAD BY CLUB + MAN OF THE MATCH (club profile) ================= */
+.sbc__sub { margin: 0 0 var(--s3); font-size: 14px; color: var(--muted); }
+.sbc__sub b { color: var(--text); }
+.sbc__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sbc__list li { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) auto; align-items: center; gap: var(--s3); padding: 6px 10px; border-radius: 10px; background: var(--shade); }
+.sbc__club { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.sbc__club img { width: 24px; height: 24px; flex: none; object-fit: contain; }
+.sbc__club b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sbc__tiles { display: flex; flex-wrap: wrap; gap: 4px; }
+.sbc__tile { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; cursor: pointer;
+  background: var(--surface-2) center 6% / 150% auto no-repeat; font-family: var(--f-display); font-size: 11px; color: var(--muted); box-shadow: 0 0 0 1px var(--line); }
+.sbc__tile.has-photo { background-color: #fff; }
+.sbc__tile.has-photo span { display: none; }
+.sbc__tile:hover, .sbc__tile:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline: none; }
+.sbc__n { font-family: var(--f-display); font-size: 22px; line-height: 1; text-align: right; font-variant-numeric: tabular-nums; }
+.sbc__n small { display: block; font-family: var(--f-body); font-size: 11px; color: var(--faint); }
+.motm__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.motm__list li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: var(--s3); padding: 8px 10px; border-radius: 10px; background: var(--shade); cursor: pointer; }
+.motm__list li:hover { box-shadow: inset 3px 0 0 var(--accent); }
+.motm__photo { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2) center 6% / 150% auto no-repeat; font-family: var(--f-display); font-size: 13px; color: var(--muted); }
+.motm__photo.has-photo { background-color: #fff; }
+.motm__photo.has-photo span { display: none; }
+.motm__name b { display: block; font-size: 15px; }
+.motm__name small { color: var(--faint); font-size: 12px; }
+.motm__n { display: inline-flex; align-items: baseline; gap: 6px; color: var(--gold); font-size: 14px; letter-spacing: 1px; }
+.motm__n b { font-family: var(--f-display); font-weight: 400; font-size: 24px; color: var(--text); letter-spacing: 0; }
+@media (max-width: 560px) { .sbc__list li { grid-template-columns: minmax(0, 1fr) auto; } .sbc__tiles { grid-column: 1 / -1; grid-row: 2; } }
+
 /* ================= TACTICS (club profile) ================= */
 .tac__sub { margin: var(--s3) 0 var(--s2); font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
 .tac__sub:first-of-type { margin-top: 0; }

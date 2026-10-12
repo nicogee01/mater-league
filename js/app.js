@@ -181,7 +181,7 @@
   const EPL_ABBR = { "Arsenal": "ARS", "Aston Villa": "AVL", "Bournemouth": "BOU", "Brentford": "BRE", "Brighton": "BHA", "Chelsea": "CHE",
     "Crystal Palace": "CRY", "Everton": "EVE", "Fulham": "FUL", "Liverpool": "LIV", "Manchester City": "MCI", "Manchester United": "MUN",
     "Newcastle": "NEW", "Nottingham Forest": "NFO", "Spurs": "TOT", "Tottenham": "TOT", "West Ham": "WHU", "Wolves": "WOL",
-    "Leeds": "LEE", "Burnley": "BUR", "Sunderland": "SUN", "Hull": "HUL", "Hull City": "HUL", "Ipswich": "IPS" };
+    "Leeds": "LEE", "Burnley": "BUR", "Sunderland": "SUN", "Hull": "HUL", "Hull City": "HUL", "Coventry": "COV", "Coventry City": "COV", "Ipswich": "IPS" };
   // the Premier League club a manager supports, and its Sleeper team id (for the crest image)
   function favClub(t) {
     const fav = ((window.MATER_LEAGUE && window.MATER_LEAGUE.favourites) || {})[t.manager.toLowerCase()];
@@ -565,6 +565,58 @@
     recapPreview.canvas = c;
     $("#recapPreview").innerHTML = `<img src="${c.toDataURL("image/png")}" alt="Gameweek ${week} recap" width="${c.width}" height="${c.height}">`;
   }
+  // ---------- SQUAD BY CLUB + MAN OF THE MATCH (club profile) ----------
+  // Squad by club: one row per real club, one photo tile per player (a pictograph bar: longest row = most players).
+  const CLUB_NAME = Object.fromEntries(Object.entries(EPL_ABBR).reverse().map(([name, abbr]) => [abbr, name]));
+  function squadByClubCard(t) {
+    const groups = {};
+    for (const pid of t.players) {
+      const p = state.players[pid];
+      if (!p) continue;
+      const k = p.c || "—";
+      (groups[k] ||= { abbr: k, team: p.t, pids: [] }).pids.push(pid);
+    }
+    const rows = Object.values(groups).sort((a, b) => b.pids.length - a.pids.length || (CLUB_NAME[a.abbr] || a.abbr).localeCompare(CLUB_NAME[b.abbr] || b.abbr));
+    if (!rows.length) return "";
+    const total = rows.reduce((a, r) => a + r.pids.length, 0);
+    const top = rows[0], leaders = rows.filter((r) => r.pids.length === top.pids.length);
+    const name = (r) => CLUB_NAME[r.abbr] || r.abbr;
+    return `<section class="cp-card sbc"><h4 class="cp-card__title">Squad by club</h4>
+      <p class="sbc__sub">${total} players from ${rows.length} club${rows.length > 1 ? "s" : ""}${top.pids.length > 1 ? ` · most from ${leaders.map((r) => `<b>${esc(name(r))}</b>`).join(leaders.length > 2 ? ", " : " & ").replace(/, (?=[^,]*$)/, " & ")} (${top.pids.length}${leaders.length > 1 ? " each" : ""})` : ""}</p>
+      <ol class="sbc__list">${rows.map((r) => `<li>
+        <span class="sbc__club">${r.team ? `<img src="https://sleepercdn.com/images/team_logos/clubsoccer/${esc(r.team)}.png" alt="" width="24" height="24" loading="lazy" onerror="this.remove()">` : ""}<b>${esc(name(r))}</b></span>
+        <span class="sbc__tiles">${r.pids.map((pid) => { const p = state.players[pid]; return `<span class="sbc__tile" data-photo="${esc(pid)}" data-player="${esc(pid)}" data-name="${esc(p.n)}" role="button" tabindex="0" title="${esc(p.n)}" aria-label="${esc(p.n)}"><span>${esc(initials(p.n))}</span></span>`; }).join("")}</span>
+        <span class="sbc__n">${r.pids.length}<small>${Math.round((r.pids.length / total) * 100)}%</small></span>
+      </li>`).join("")}</ol>
+    </section>`;
+  }
+  // Man of the Match: the top scorer across both starting XIs of a fixture (as on the Matchups cards)
+  function motmCard(t) {
+    const tally = {};
+    let logged = 0, won = 0;
+    for (const g of t.games) {
+      const opp = state.byRoster[g.opp];
+      const xi = (state.lineups || []).filter((r) => +r.week === g.week && r.slot !== "BN" && (rosterOf(r.manager) === t.rosterId || rosterOf(r.manager) === g.opp));
+      if (!xi.length || !opp) continue;
+      logged++;
+      const best = xi.reduce((a, b) => (+b.pts > +a.pts ? b : a));
+      if (rosterOf(best.manager) !== t.rosterId) continue;
+      won++;
+      const x = (tally[best.player_id] ||= { pid: best.player_id, name: best.player, n: 0, top: 0, weeks: [] });
+      x.n++; x.top = Math.max(x.top, +best.pts); x.weeks.push(g.week);
+    }
+    if (!logged) return "";
+    const list = Object.values(tally).sort((a, b) => b.n - a.n || b.top - a.top);
+    return `<section class="cp-card motm"><h4 class="cp-card__title">Man of the Match</h4>
+      <p class="sbc__sub">Top scorer on the pitch in <b>${won}</b> of ${logged} match${logged > 1 ? "es" : ""}</p>
+      ${list.length ? `<ol class="motm__list">${list.map((x) => `<li data-player="${esc(x.pid)}" data-name="${esc(x.name)}" role="button" tabindex="0">
+          <span class="motm__photo" data-photo="${esc(x.pid)}" aria-hidden="true"><span>${esc(initials(x.name))}</span></span>
+          <span class="motm__name"><b>${esc(x.name)}</b><small>GW${x.weeks.join(", GW")} · best ${gp(x.top)} pts</small></span>
+          <span class="motm__n">${"★".repeat(Math.min(x.n, 5))}<b>×${x.n}</b></span>
+        </li>`).join("")}</ol>` : `<p class="dim">The opposition has had the best player on the pitch every week so far.</p>`}
+    </section>`;
+  }
+
   // ---------- TACTICS (club profile) ----------
   // Formations come from Sleeper's per-week formation history (it matched every logged XI). For each
   // logged gameweek: the shape this club played, and the shape its opponent played, with the result.
@@ -1195,6 +1247,8 @@
         <div class="cp-col">
           ${t.games.length ? `<section class="cp-card"><h4 class="cp-card__title">Season sparkline</h4>${sparklineSVG(t.games)}</section>` : ""}
           ${tacticsCard(t)}
+          ${squadByClubCard(t)}
+          ${motmCard(t)}
           ${derbyCard}
           ${story ? `<section class="cp-card"><h4 class="cp-card__title">Season story</h4><ol class="cp-story">${story}</ol></section>` : ""}
           ${t.nemesis || t.cupcake ? `<div class="nc">
@@ -1232,7 +1286,7 @@
     $$(".tk").forEach((c) => { const on = +c.dataset.open === id; c.setAttribute("aria-pressed", String(on)); c.classList.toggle("is-torn", on); });
     history.replaceState(null, "", `#club-${id}`);
     if (scroll) el.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
-    loadPhotos([...t.starters, ...squad.filter((p) => !starters.has(p))], el);
+    loadPhotos([...new Set([...t.starters, ...squad.filter((p) => !starters.has(p)), ...$$("[data-photo]", el).map((e) => e.dataset.photo)])], el);
   }
   function closeClub() {
     const el = $("#clubProfile");
