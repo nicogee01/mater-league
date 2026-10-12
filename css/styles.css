@@ -1997,7 +1997,7 @@ html[data-theme="dark"] .nav__theme .i-sun { display: block; }
 html[data-theme="dark"] .nav__theme .i-moon { display: none; }
 /* phones: the bar is brand + theme + (refresh) + menu. Nothing may shrink, or the menu button's lines vanish */
 .nav__theme, .nav__refresh, .nav__toggle { flex: none; }
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
   .nav__inner { gap: var(--s1); }
   .brand { flex: 0 1 auto; min-width: 0; }
   .nav__theme { margin-left: auto; }
@@ -2406,7 +2406,7 @@ html.has-install-bar body { padding-bottom: 92px; }
 
 /* ================= RESPONSIVE ================= */
 /* 13 tabs need ~1350px across; below that the bar switches to the menu button */
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
   .nav__links, .nav__cta { display: none; }
   .nav__toggle { display: block; }
 }
