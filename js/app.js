@@ -542,19 +542,24 @@
     }
     return out;
   }
-  // one picture per section (results with the records broken on top, players of the week, left on the
-  // bench, the week in numbers), each with the same header and footer, so each is a phone-sized screenshot
+  // two pictures: results (records broken on top) + players of the week, then left on the bench + the
+  // week in numbers. Each has the same header and footer.
+  const RECAP_PAGES = [[0, 1], [2, 3]];
   async function recapImages(week) {
     const secs = await recapSlides(week);
     if (!secs.length) return [];
     const { W, H } = RC, CROP = 150, SEC = H - 70 - CROP, TOP = 190, FOOT = 110, ball = secs.ball;
-    return secs.map((sec, i) => {
-      const rec = i === 0 && secs.records ? secs.records : null, REC = rec ? rec.height : 0;
-      const c = document.createElement("canvas"); c.width = W; c.height = TOP + REC + SEC + FOOT - 40;
+    const pages = RECAP_PAGES.map((ids) => ids.filter((i) => secs[i]));
+    return pages.map((ids, pi) => {
+      const rec = ids.includes(0) && secs.records ? secs.records : null, REC = rec ? rec.height : 0;
+      const c = document.createElement("canvas"); c.width = W; c.height = TOP + REC + ids.length * SEC + FOOT - 40;
       const x = c.getContext("2d");
       const g = x.createLinearGradient(0, 0, W * 0.4, c.height); g.addColorStop(0, "#2b0036"); g.addColorStop(1, "#0d0a2b");
       x.fillStyle = g; x.fillRect(0, 0, W, c.height);
-      if (ball) { x.globalAlpha = 0.09; x.drawImage(ball, i % 2 ? -240 : W - 480, TOP + REC - 120, 720, 720); x.globalAlpha = 1; }
+      ids.forEach((_, k) => {
+        if (ball) { x.globalAlpha = 0.09; x.drawImage(ball, k % 2 ? -240 : W - 480, TOP + REC + k * SEC - 120, 720, 720); x.globalAlpha = 1; }
+        if (k) { x.fillStyle = "rgba(255,255,255,0.08)"; x.fillRect(60, TOP + REC + k * SEC - 30, W - 120, 2); }
+      });
       x.strokeStyle = "rgba(255,255,255,0.05)"; x.lineWidth = 4;
       x.beginPath(); x.arc(W / 2, c.height + 40, 300, Math.PI, 2 * Math.PI); x.stroke();
       // header
@@ -563,9 +568,9 @@
       const t = (str, px, py, font, color, align = "left") => { x.font = font; x.fillStyle = color; x.textAlign = align; x.fillText(str, px, py); };
       t("THE MATER LEAGUE", 168, 92, "700 32px 'Barlow Condensed'", RC.cream);
       t(`GAMEWEEK ${week} · WEEKLY RECAP`, 168, 130, "700 30px 'Barlow Condensed'", RC.green);
-      t(`${i + 1}/${secs.length}`, W - 60, 110, "700 30px 'Barlow Condensed'", "rgba(251,247,238,0.55)", "right");
+      t(`${pi + 1}/${pages.length}`, W - 60, 110, "700 30px 'Barlow Condensed'", "rgba(251,247,238,0.55)", "right");
       if (rec) x.drawImage(rec, 0, TOP - 10);
-      x.drawImage(sec, 0, CROP, W, SEC, 0, TOP + REC - 40, W, SEC);
+      ids.forEach((i, k) => x.drawImage(secs[i], 0, CROP, W, SEC, 0, TOP + REC + k * SEC - 40, W, SEC));
       // footer
       x.fillStyle = "rgba(255,255,255,0.06)"; x.fillRect(0, c.height - FOOT + 20, W, FOOT - 20);
       t("nicogee01.github.io/mater-league", W / 2, c.height - 38, "600 26px Barlow", "rgba(251,247,238,0.6)", "center");
@@ -579,11 +584,11 @@
       if (!cards.length) return;
       const blobs = await Promise.all(cards.map((c) => new Promise((r) => c.toBlob(r, "image/png"))));
       const files = blobs.map((b, i) => new File([b], `mater-league-gw${week}-recap-${i + 1}.png`, { type: "image/png" }));
-      // phones: one share sheet with all four pictures (save them, or send them straight to Sleeper)
+      // phones: one share sheet with both pictures (save them, or send them straight to Sleeper)
       if (navigator.canShare && navigator.canShare({ files })) {
         try { await navigator.share({ files, title: `Mater League · Gameweek ${week} recap` }); return; } catch (e) { if (e && e.name === "AbortError") return; }
       }
-      // computers: download all four (a short pause between them so the browser doesn't drop any)
+      // computers: download both (a short pause between them so the browser doesn't drop any)
       for (const [i, b] of blobs.entries()) {
         const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = files[i].name; a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 8000);
@@ -3049,7 +3054,7 @@
       </section>` : `<p class="pending-note">Team of the Week needs that gameweek's lineups.</p>`}`;
     // a quiet button at the very bottom: the recap image is built only when it's tapped
     const recap = `<div class="recap-dl">
-        <button type="button" class="gz-btn gz-btn--ghost" data-recap="${wk.week}">Download GW${wk.week} recap (4 images)</button>
+        <button type="button" class="gz-btn gz-btn--ghost" data-recap="${wk.week}">Download GW${wk.week} recap (2 images)</button>
       </div>`;
     root.innerHTML = awardsPage ? podiumHTML(wk.week) + xis + awards + finishesHTML(wk.week) + recap : front;
     if (Object.keys(state.players || {}).length) loadPhotos($$("[data-photo]", root).map((e) => e.dataset.photo), root);
