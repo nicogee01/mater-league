@@ -430,20 +430,32 @@
         text(x, num(r.s, 2), cx, 718, `400 ${place === 1 ? 58 : 46}px Anton, Impact, sans-serif`, col, "center");   // scores share one baseline
       }
       // scoreboard
-      let y = 790;
+      let y = 770;
       const games = state.results.filter((m) => m.week === week);
+      // a derby gets a gold strip under its scoreline naming the derby and who won it
+      const derbyOf = (m) => { const h = state.byRoster[m.home], a = state.byRoster[m.away]; return h && h.derby && derbyRival(h) === a ? h.derby : null; };
+      const nDerby = games.filter(derbyOf).length, STRIP = 34, GAP = 12;
+      const rowH = Math.min(104, (500 - GAP * (games.length - 1) - STRIP * nDerby) / games.length);
       for (const m of games) {
         const H1 = T(m.home), A1 = T(m.away), hw = m.homePts > m.awayPts, aw = m.awayPts > m.homePts;
-        rrect(x, 60, y, W - 120, 104, 22, "rgba(255,255,255,0.07)");
-        await avatar(x, H1, 112, y + 52, 32);
-        await avatar(x, A1, W - 112, y + 52, 32);
+        const dz = derbyOf(m), boxH = rowH + (dz ? STRIP : 0);
+        rrect(x, 60, y, W - 120, boxH, 22, dz ? "rgba(245,200,76,0.14)" : "rgba(255,255,255,0.07)");
+        if (dz) {
+          x.strokeStyle = RC.gold; x.lineWidth = 3; x.beginPath(); x.roundRect ? x.roundRect(60, y, W - 120, boxH, 22) : x.rect(60, y, W - 120, boxH); x.stroke();
+          const who = hw ? H1.name : aw ? A1.name : null;
+          const msg = `★  ${dz.name.toUpperCase()}  ·  ${who ? `${who.toUpperCase()} WIN THE DERBY` : "HONOURS EVEN"}`;
+          text(x, msg, W / 2, y + rowH + 22, shrink(x, msg, W - 180, 22, 15, "'Barlow Condensed'", "700"), RC.gold, "center");
+        }
+        const cy0 = y + rowH / 2 - 52;   // centre the scoreline within the row (rows shrink when derbies need room)
+        await avatar(x, H1, 112, cy0 + 52, 32);
+        await avatar(x, A1, W - 112, cy0 + 52, 32);
         const hn = lines(x, H1.name, 205, 26, 18, "Barlow", "700", 2), an = lines(x, A1.name, 205, 26, 18, "Barlow", "700", 2);
-        hn.out.forEach((l, i) => text(x, l, 160, y + 52 + (i - (hn.out.length - 1) / 2) * (hn.size + 2) + hn.size * 0.35, hn.font, RC.cream));
-        an.out.forEach((l, i) => text(x, l, W - 160, y + 52 + (i - (an.out.length - 1) / 2) * (an.size + 2) + an.size * 0.35, an.font, RC.cream, "right"));
-        text(x, num(m.homePts, 2), W / 2 - 20, y + 66, "400 40px Anton, Impact, sans-serif", hw ? RC.green : RC.soft, "right");
-        text(x, "–", W / 2, y + 64, "400 32px Anton, Impact, sans-serif", RC.soft, "center");
-        text(x, num(m.awayPts, 2), W / 2 + 20, y + 66, "400 40px Anton, Impact, sans-serif", aw ? RC.green : RC.soft);
-        y += 116;
+        hn.out.forEach((l, i) => text(x, l, 160, cy0 + 52 + (i - (hn.out.length - 1) / 2) * (hn.size + 2) + hn.size * 0.35, hn.font, RC.cream));
+        an.out.forEach((l, i) => text(x, l, W - 160, cy0 + 52 + (i - (an.out.length - 1) / 2) * (an.size + 2) + an.size * 0.35, an.font, RC.cream, "right"));
+        text(x, num(m.homePts, 2), W / 2 - 20, cy0 + 66, "400 40px Anton, Impact, sans-serif", hw ? RC.green : RC.soft, "right");
+        text(x, "–", W / 2, cy0 + 64, "400 32px Anton, Impact, sans-serif", RC.soft, "center");
+        text(x, num(m.awayPts, 2), W / 2 + 20, cy0 + 66, "400 40px Anton, Impact, sans-serif", aw ? RC.green : RC.soft);
+        y += boxH + GAP;
       }
       out.push(c);
     }
