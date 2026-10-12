@@ -513,14 +513,24 @@ html.menu-open, html.menu-open body { overflow: hidden; }
   border: 2px solid rgba(255,255,255,0.55);
   display: flex; flex-direction: column-reverse; justify-content: space-around; padding: 36px 2% 44px;
 }
-.pitch::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 0; border-top: 2px solid rgba(255,255,255,0.55); }
-.pitch::after { content: ""; position: absolute; left: 50%; top: 0; width: 28%; aspect-ratio: 1; border: 2px solid rgba(255,255,255,0.55); border-radius: 50%; transform: translate(-50%, -50%); }
-.pitch .box { position: absolute; left: 50%; bottom: 0; width: 48%; height: 16%; border: 2px solid rgba(255,255,255,0.55); border-bottom: 0; transform: translateX(-50%); }
-.pitch .box--six { width: 22%; height: 6%; }
-/* the real pitch (media/pitch.jpg, from media/soccer_pitch.png: portrait, our goal at the bottom) replaces the drawn
-   stripes and lines; it fills the frame's width without stretching and is anchored at the goal end */
-.pitch { background: #2a7a2a url("../media/pitch.jpg") center bottom / cover no-repeat; border-color: rgba(255,255,255,0.25); }
-.pitch::before, .pitch::after, .pitch .box { display: none; }
+/* Pitch markings: our half, halfway line along the top, our goal at the bottom (as in media/originals/soccer_pitch.png).
+   Sizes are real-pitch metres scaled to the pitch's width (cqw), so circles stay round at any height:
+   68 m wide = the field between the touchlines (94cqw, 3cqw grass outside the lines), 1 m = 94/68 cqw. */
+.pitch { container-type: inline-size; border-color: rgba(255,255,255,0.25); --pm: 2px solid rgba(255,255,255,0.7); --m: 3cqw; }
+.pitch__lines { position: absolute; inset: 0; pointer-events: none; }
+.pitch__lines > span { position: absolute; box-sizing: border-box; }
+.pm-field { left: var(--m); right: var(--m); top: 0; bottom: var(--m); border: var(--pm); }                         /* touchlines, goal line, halfway line */
+.pm-cc { left: 50%; top: 0; width: 25.3cqw; aspect-ratio: 1; border: var(--pm); border-radius: 50%; transform: translate(-50%, -50%); }   /* centre circle, r 9.15 m */
+.pm-cs { left: 50%; top: 0; width: 1.3cqw; aspect-ratio: 1; border-radius: 50%; background: rgba(255,255,255,0.8); transform: translate(-50%, -50%); }
+.pm-box { left: 50%; bottom: var(--m); width: 55.7cqw; height: 22.8cqw; border: var(--pm); border-bottom: 0; transform: translateX(-50%); }  /* 40.3 x 16.5 m */
+.pm-six { left: 50%; bottom: var(--m); width: 25.3cqw; height: 7.6cqw; border: var(--pm); border-bottom: 0; transform: translateX(-50%); }   /* 18.3 x 5.5 m */
+.pm-spot { left: 50%; bottom: calc(var(--m) + 15.2cqw); width: 1.3cqw; aspect-ratio: 1; border-radius: 50%; background: rgba(255,255,255,0.8); transform: translate(-50%, 50%); }  /* 11 m */
+.pm-d { left: 50%; bottom: calc(var(--m) + 2.55cqw); width: 25.3cqw; aspect-ratio: 1; border: var(--pm); border-radius: 50%; transform: translateX(-50%);
+  clip-path: inset(0 0 calc(25.3cqw - 5.05cqw) 0); }                                                             /* the D: r 9.15 m round the spot, outside the box */
+.pm-goal { left: 50%; bottom: calc(var(--m) - 2.4cqw); width: 10.1cqw; height: 2.4cqw; border: var(--pm); border-top: 0; transform: translateX(-50%); }  /* 7.32 m goal, behind the line */
+.pm-cor { bottom: calc(var(--m) - 2.4cqw); width: 4.8cqw; aspect-ratio: 1; border: var(--pm); border-radius: 50%; }
+.pm-cor--l { left: calc(var(--m) - 2.4cqw); clip-path: inset(0 0 50% 50%); }
+.pm-cor--r { right: calc(var(--m) - 2.4cqw); clip-path: inset(0 50% 50% 0); }
 .pitch__row { position: relative; z-index: 1; display: flex; justify-content: space-evenly; }
 .pl { display: grid; justify-items: center; gap: 4px; width: 22%; text-align: center; opacity: 0; animation: drop-in 480ms var(--ease-spring) forwards; }
 .pl__shirt { width: 38px; height: 38px; }
@@ -2084,19 +2094,33 @@ html.has-install-bar body { padding-bottom: 92px; }
 /* ================= SQUAD BY CLUB + MAN OF THE MATCH (club profile) ================= */
 .sbc__sub { margin: 0 0 var(--s3); font-size: 14px; color: var(--muted); }
 .sbc__sub b { color: var(--text); }
-.sbc__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.sbc__list li { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) auto; align-items: center; gap: var(--s3); padding: 6px 10px; border-radius: 10px; background: var(--shade); }
-.sbc__club { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
-.sbc__club img { width: 24px; height: 24px; flex: none; object-fit: contain; }
+.sbc__wrap { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: var(--s4); align-items: center; }
+.sbc__donut { position: relative; margin: 0; width: 170px; aspect-ratio: 1; }
+.sbc__donut svg { width: 100%; height: 100%; display: block; }
+.sbc__donut circle { transition: stroke-width var(--t-fast); }
+.sbc__donut circle:hover { stroke-width: 30; }
+.sbc__donut figcaption { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; line-height: 1.1; pointer-events: none; }
+.sbc__donut figcaption b { font-family: var(--f-display); font-weight: 400; font-size: 40px; }
+.sbc__donut figcaption small { color: var(--faint); font-size: 12px; }
+.sbc__legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sbc__legend li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; grid-template-areas: "sw club n" ". faces faces"; align-items: center; column-gap: 10px; row-gap: 4px; }
+.sbc__sw { grid-area: sw; width: 10px; height: 10px; border-radius: 3px; }
+.sbc__club { grid-area: club; display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.sbc__club img { flex: none; object-fit: contain; }
 .sbc__club b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sbc__tiles { display: flex; flex-wrap: wrap; gap: 4px; }
-.sbc__tile { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; cursor: pointer;
-  background: var(--surface-2) center 6% / 150% auto no-repeat; font-family: var(--f-display); font-size: 11px; color: var(--muted); box-shadow: 0 0 0 1px var(--line); }
+.sbc__club small { color: var(--faint); font-size: 12px; }
+.sbc__mini { display: inline-flex; }
+.sbc__mini img { width: 16px; height: 16px; margin-right: -4px; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 1.5px var(--surface); }
+.sbc__n { grid-area: n; font-family: var(--f-display); font-size: 20px; line-height: 1; text-align: right; font-variant-numeric: tabular-nums; }
+.sbc__n small { margin-left: 4px; font-family: var(--f-body); font-size: 11px; color: var(--faint); }
+.sbc__faces { grid-area: faces; display: flex; align-items: center; }
+.sbc__faces em { margin-left: 8px; font-style: normal; font-size: 12px; color: var(--faint); }
+.sbc__tile { width: 26px; height: 26px; margin-right: -6px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  background: var(--surface-2) center 6% / 150% auto no-repeat; font-family: var(--f-display); font-size: 10px; color: var(--muted); box-shadow: 0 0 0 2px var(--surface); }
 .sbc__tile.has-photo { background-color: #fff; }
 .sbc__tile.has-photo span { display: none; }
-.sbc__tile:hover, .sbc__tile:focus-visible { box-shadow: 0 0 0 2px var(--accent); outline: none; }
-.sbc__n { font-family: var(--f-display); font-size: 22px; line-height: 1; text-align: right; font-variant-numeric: tabular-nums; }
-.sbc__n small { display: block; font-family: var(--f-body); font-size: 11px; color: var(--faint); }
+.sbc__tile:hover, .sbc__tile:focus-visible { position: relative; z-index: 1; box-shadow: 0 0 0 2px var(--accent); outline: none; }
+@media (max-width: 560px) { .sbc__wrap { grid-template-columns: 1fr; justify-items: center; } .sbc__legend { width: 100%; } }
 .motm__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .motm__list li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: var(--s3); padding: 8px 10px; border-radius: 10px; background: var(--shade); cursor: pointer; }
 .motm__list li:hover { box-shadow: inset 3px 0 0 var(--accent); }
@@ -2107,7 +2131,6 @@ html.has-install-bar body { padding-bottom: 92px; }
 .motm__name small { color: var(--faint); font-size: 12px; }
 .motm__n { display: inline-flex; align-items: baseline; gap: 6px; color: var(--gold); font-size: 14px; letter-spacing: 1px; }
 .motm__n b { font-family: var(--f-display); font-weight: 400; font-size: 24px; color: var(--text); letter-spacing: 0; }
-@media (max-width: 560px) { .sbc__list li { grid-template-columns: minmax(0, 1fr) auto; } .sbc__tiles { grid-column: 1 / -1; grid-row: 2; } }
 
 /* ================= TACTICS (club profile) ================= */
 .tac__sub { margin: var(--s3) 0 var(--s2); font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }

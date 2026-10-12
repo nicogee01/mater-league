@@ -565,6 +565,9 @@
     recapPreview.canvas = c;
     $("#recapPreview").innerHTML = `<img src="${c.toDataURL("image/png")}" alt="Gameweek ${week} recap" width="${c.width}" height="${c.height}">`;
   }
+  // pitch markings drawn to real proportions (see .pitch__lines in styles.css)
+  const PITCH_LINES = `<span class="pitch__lines" aria-hidden="true"><span class="pm-field"></span><span class="pm-cc"></span><span class="pm-cs"></span><span class="pm-box"></span><span class="pm-six"></span><span class="pm-spot"></span><span class="pm-d"></span><span class="pm-goal"></span><span class="pm-cor pm-cor--l"></span><span class="pm-cor pm-cor--r"></span></span>`;
+
   // ---------- SQUAD BY CLUB + MAN OF THE MATCH (club profile) ----------
   // Squad by club: one row per real club, one photo tile per player (a pictograph bar: longest row = most players).
   const CLUB_NAME = Object.fromEntries(Object.entries(EPL_ABBR).reverse().map(([name, abbr]) => [abbr, name]));
@@ -576,18 +579,38 @@
       const k = p.c || "—";
       (groups[k] ||= { abbr: k, team: p.t, pids: [] }).pids.push(pid);
     }
-    const rows = Object.values(groups).sort((a, b) => b.pids.length - a.pids.length || (CLUB_NAME[a.abbr] || a.abbr).localeCompare(CLUB_NAME[b.abbr] || b.abbr));
-    if (!rows.length) return "";
-    const total = rows.reduce((a, r) => a + r.pids.length, 0);
-    const top = rows[0], leaders = rows.filter((r) => r.pids.length === top.pids.length);
     const name = (r) => CLUB_NAME[r.abbr] || r.abbr;
+    const all = Object.values(groups).sort((a, b) => b.pids.length - a.pids.length || name(a).localeCompare(name(b)));
+    if (!all.length) return "";
+    const total = all.reduce((a, r) => a + r.pids.length, 0);
+    // top five clubs keep their own slice; everything else folds into "Other"
+    const top = all.slice(0, 5), rest = all.slice(5);
+    const slices = top.map((r, i) => ({ ...r, color: SERIES[i] }));
+    if (rest.length) slices.push({ other: true, abbr: "", pids: rest.flatMap((r) => r.pids), clubs: rest, color: "var(--faint)" });
+    // donut: one circle per slice, drawn with dash offsets, a 2px gap between slices
+    const R = 62, C = 2 * Math.PI * R;
+    let at = 0;
+    const arcs = slices.map((s) => {
+      const len = (s.pids.length / total) * C, gap = slices.length > 1 ? 2.5 : 0;
+      const arc = `<circle r="${R}" cx="80" cy="80" fill="none" stroke="${s.color}" stroke-width="26" stroke-dasharray="${Math.max(0, len - gap).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}"><title>${esc(s.other ? `Other: ${s.clubs.length} clubs` : name(s))}, ${s.pids.length} of ${total}</title></circle>`;
+      at += len;
+      return arc;
+    }).join("");
+    const crestImg = (team, size = 22) => (team ? `<img src="https://sleepercdn.com/images/team_logos/clubsoccer/${esc(team)}.png" alt="" width="${size}" height="${size}" loading="lazy" onerror="this.remove()">` : "");
+    const faces = (pids) => `<span class="sbc__faces">${pids.slice(0, 5).map((pid) => { const p = state.players[pid]; return `<span class="sbc__tile" data-photo="${esc(pid)}" data-player="${esc(pid)}" data-name="${esc(p.n)}" role="button" tabindex="0" title="${esc(p.n)}" aria-label="${esc(p.n)}"><span>${esc(initials(p.n))}</span></span>`; }).join("")}${pids.length > 5 ? `<em>+${pids.length - 5}</em>` : ""}</span>`;
     return `<section class="cp-card sbc"><h4 class="cp-card__title">Squad by club</h4>
-      <p class="sbc__sub">${total} players from ${rows.length} club${rows.length > 1 ? "s" : ""}${top.pids.length > 1 ? ` · most from ${leaders.map((r) => `<b>${esc(name(r))}</b>`).join(leaders.length > 2 ? ", " : " & ").replace(/, (?=[^,]*$)/, " & ")} (${top.pids.length}${leaders.length > 1 ? " each" : ""})` : ""}</p>
-      <ol class="sbc__list">${rows.map((r) => `<li>
-        <span class="sbc__club">${r.team ? `<img src="https://sleepercdn.com/images/team_logos/clubsoccer/${esc(r.team)}.png" alt="" width="24" height="24" loading="lazy" onerror="this.remove()">` : ""}<b>${esc(name(r))}</b></span>
-        <span class="sbc__tiles">${r.pids.map((pid) => { const p = state.players[pid]; return `<span class="sbc__tile" data-photo="${esc(pid)}" data-player="${esc(pid)}" data-name="${esc(p.n)}" role="button" tabindex="0" title="${esc(p.n)}" aria-label="${esc(p.n)}"><span>${esc(initials(p.n))}</span></span>`; }).join("")}</span>
-        <span class="sbc__n">${r.pids.length}<small>${Math.round((r.pids.length / total) * 100)}%</small></span>
-      </li>`).join("")}</ol>
+      <div class="sbc__wrap">
+        <figure class="sbc__donut" role="img" aria-label="${esc(slices.map((s) => `${s.other ? "Other" : name(s)} ${s.pids.length}`).join(", "))} (of ${total} players)">
+          <svg viewBox="0 0 160 160"><g transform="rotate(-90 80 80)">${arcs}</g></svg>
+          <figcaption><b>${total}</b><small>players<br>${all.length} clubs</small></figcaption>
+        </figure>
+        <ol class="sbc__legend">${slices.map((s) => `<li>
+          <i class="sbc__sw" style="background:${s.color}"></i>
+          <span class="sbc__club">${s.other ? `<span class="sbc__mini">${s.clubs.slice(0, 6).map((r) => crestImg(r.team, 16)).join("")}</span><b>Other</b><small>${s.clubs.length} club${s.clubs.length > 1 ? "s" : ""}</small>` : `${crestImg(s.team)}<b>${esc(name(s))}</b>`}</span>
+          <span class="sbc__n">${s.pids.length}<small>${Math.round((s.pids.length / total) * 100)}%</small></span>
+          ${faces(s.pids)}
+        </li>`).join("")}</ol>
+      </div>
     </section>`;
   }
   // Man of the Match: the top scorer across both starting XIs of a fixture (as on the Matchups cards)
@@ -1220,7 +1243,7 @@
           <div class="formation">
             <div class="formation__label"><h4 class="subhead" style="margin:0">Starting XI</h4><b>${shape || "–"}</b></div>
             <div class="pitch" role="img" aria-label="${esc(t.name)} starting eleven in a ${shape} formation: ${esc(t.starters.map((pid) => pl(pid).n).join(", "))}">
-              <span class="box"></span><span class="box box--six"></span>
+              ${PITCH_LINES}
               ${row(lines.GK)}${row(lines.D)}${row(lines.M)}${row(lines.F)}
             </div>
             ${shapeHistory ? `<p class="formation__hist"><b>Formations used:</b> ${shapeHistory}</p>` : ""}
@@ -2625,7 +2648,7 @@
         ${t ? `<div class="gz-totw__head"><h2 class="subhead" id="gzTotwTitle">${K.label}</h2><p><b>${t.f}</b> · ${num(t.total, 2)} pts</p>
           <button type="button" class="gz-btn gz-btn--ghost" data-img="${kind}">Save image</button></div>
         <div class="pitch gz-pitch" role="img" aria-label="${K.aria} in a ${t.f}: ${esc(eleven(t).map((p) => p.name).join(", "))}">
-          <span class="box"></span><span class="box box--six"></span>
+          ${PITCH_LINES}
           <div class="pitch__row">${t.gk ? pl(t.gk) : ""}</div>
           <div class="pitch__row">${t.lines.DEF.map(pl).join("")}</div>
           <div class="pitch__row">${t.lines.MID.map(pl).join("")}</div>
