@@ -354,10 +354,14 @@
     const cache = {};
     // a fresh CORS copy: the page's own <img> tags cached these without CORS, which would block drawing them
     const img = (src) => (cache[src] ||= new Promise((res) => { if (!src) return res(null); const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => res(null); i.src = src + (src.includes("?") ? "&" : "?") + "recap=1"; }));
-    let svg = "";
-    try { svg = await (await fetch("icons/icon.svg")).text(); } catch (_) {}
-    const ball = svg ? await new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null);
-      i.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace(/<rect[^>]*\/>/, "").replace(/<circle[^>]*opacity="\.28"\/>/, "")); }) : null;
+    // media/soccerball.png, cut out of its grey backdrop along the ball's outline (centre 431,267, radius ~228)
+    const ball = await new Promise((res) => {
+      const i = new Image();
+      i.onload = () => { const k = document.createElement("canvas"); k.width = k.height = 512; const q = k.getContext("2d");
+        q.beginPath(); q.arc(256, 256, 255, 0, Math.PI * 2); q.clip(); q.drawImage(i, 431 - 229, 267 - 229, 458, 458, 0, 0, 512, 512); res(k); };
+      i.onerror = () => res(null);
+      i.src = "media/soccerball.png";
+    });
 
     // each section is drawn on a transparent card-sized canvas: just its kicker, title and content
     const slide = (n, total, kicker, title) => {
@@ -483,21 +487,7 @@
     {
       const { c, x } = slide(4, total, "Superlatives", "The week in numbers");
       let y = 340;
-      if (d.records.length) {
-        const rec = d.records.slice(0, 3);
-        const bh = 70 + rec.length * 74;
-        rrect(x, 60, y, W - 120, bh, 26, "rgba(245,200,76,0.16)");
-        x.strokeStyle = RC.gold; x.lineWidth = 3; x.beginPath(); x.roundRect ? x.roundRect(60, y, W - 120, bh, 26) : x.rect(60, y, W - 120, bh); x.stroke();
-        text(x, `★  RECORD${rec.length > 1 ? "S" : ""} BROKEN`, 92, y + 48, "700 30px 'Barlow Condensed'", RC.gold);
-        for (let i = 0; i < rec.length; i++) {
-          const r = rec[i], yy = y + 96 + i * 74;
-          if (r.ids && r.ids[0]) await avatar(x, T(r.ids[0]), 116, yy, 26, RC.gold);
-          const lab = lines(x, `${r.label}: ${r.who}`, 680, 26, 19, "Barlow", "600", 2);
-          lab.out.forEach((l, k) => text(x, l, 158, yy + 9 + (k - (lab.out.length - 1) / 2) * (lab.size + 3), lab.font, RC.cream));
-          text(x, num(r.val, 2), W - 92, yy + 16, "400 44px Anton, Impact, sans-serif", RC.gold, "right");
-        }
-        y += bh + 24;
-      }
+
       const wl = (m) => d.winLose(m);
       const items = [];
       items.push(["Biggest blowout", `by ${num(d.margin(d.blow), 2)}`, `${T(wl(d.blow)[0]).name} beat ${T(wl(d.blow)[2]).name}, ${num(wl(d.blow)[1], 2)}–${num(wl(d.blow)[3], 2)}`, [wl(d.blow)[0], wl(d.blow)[2]], RC.green]);
@@ -521,6 +511,23 @@
       out.push(c);
     }
     out.ball = ball;
+    // records broken: a gold band that goes right under the header
+    if (d.records.length) {
+      const rec = d.records.slice(0, 3), bh = 70 + rec.length * 74;
+      const c = document.createElement("canvas"); c.width = W; c.height = bh + 30;
+      const x = c.getContext("2d"), y = 0;
+          rrect(x, 60, y, W - 120, bh, 26, "rgba(245,200,76,0.16)");
+          x.strokeStyle = RC.gold; x.lineWidth = 3; x.beginPath(); x.roundRect ? x.roundRect(60, y, W - 120, bh, 26) : x.rect(60, y, W - 120, bh); x.stroke();
+          text(x, `★  RECORD${rec.length > 1 ? "S" : ""} BROKEN`, 92, y + 48, "700 30px 'Barlow Condensed'", RC.gold);
+          for (let i = 0; i < rec.length; i++) {
+            const r = rec[i], yy = y + 96 + i * 74;
+            if (r.ids && r.ids[0]) await avatar(x, T(r.ids[0]), 116, yy, 26, RC.gold);
+            const lab = lines(x, `${r.label}: ${r.who}`, 680, 26, 19, "Barlow", "600", 2);
+            lab.out.forEach((l, k) => text(x, l, 158, yy + 9 + (k - (lab.out.length - 1) / 2) * (lab.size + 3), lab.font, RC.cream));
+            text(x, num(r.val, 2), W - 92, yy + 16, "400 44px Anton, Impact, sans-serif", RC.gold, "right");
+          }
+      out.records = c;
+    }
     return out;
   }
   // stitch the four sections into one long page: one header, the sections top to bottom, one footer
@@ -528,14 +535,15 @@
     const secs = await recapSlides(week);
     if (!secs.length) return null;
     const { W, H } = RC, CROP = 150, SEC = H - 70 - CROP, TOP = 190, FOOT = 110;
-    const c = document.createElement("canvas"); c.width = W; c.height = TOP + secs.length * SEC + FOOT;
+    const REC = secs.records ? secs.records.height : 0;
+    const c = document.createElement("canvas"); c.width = W; c.height = TOP + REC + secs.length * SEC + FOOT;
     const x = c.getContext("2d"), ball = secs.ball;
     const g = x.createLinearGradient(0, 0, W * 0.5, c.height); g.addColorStop(0, "#2b0036"); g.addColorStop(0.5, "#170b33"); g.addColorStop(1, "#0d0a2b");
     x.fillStyle = g; x.fillRect(0, 0, W, c.height);
     // a ball watermark beside each section (alternating sides), a divider between sections, faint pitch markings
     secs.forEach((_, i) => {
-      if (ball) { x.globalAlpha = 0.06; x.drawImage(ball, i % 2 ? -240 : W - 480, TOP + i * SEC - 120, 720, 720); x.globalAlpha = 1; }
-      if (i) { x.fillStyle = "rgba(255,255,255,0.08)"; x.fillRect(60, TOP + i * SEC - 30, W - 120, 2); }
+      if (ball) { x.globalAlpha = 0.09; x.drawImage(ball, i % 2 ? -240 : W - 480, TOP + REC + i * SEC - 120, 720, 720); x.globalAlpha = 1; }
+      if (i) { x.fillStyle = "rgba(255,255,255,0.08)"; x.fillRect(60, TOP + REC + i * SEC - 30, W - 120, 2); }
     });
     x.strokeStyle = "rgba(255,255,255,0.05)"; x.lineWidth = 4;
     x.beginPath(); x.arc(W / 2, c.height + 40, 300, Math.PI, 2 * Math.PI); x.stroke();
@@ -545,7 +553,8 @@
     const t = (str, px, py, font, color, align = "left") => { x.font = font; x.fillStyle = color; x.textAlign = align; x.fillText(str, px, py); };
     t("THE MATER LEAGUE", 168, 92, "700 32px 'Barlow Condensed'", RC.cream);
     t(`GAMEWEEK ${week} · WEEKLY RECAP`, 168, 130, "700 30px 'Barlow Condensed'", RC.green);
-    secs.forEach((sec, i) => x.drawImage(sec, 0, CROP, W, SEC, 0, TOP + i * SEC - 40, W, SEC));
+    if (secs.records) x.drawImage(secs.records, 0, TOP - 10);
+    secs.forEach((sec, i) => x.drawImage(sec, 0, CROP, W, SEC, 0, TOP + REC + i * SEC - 40, W, SEC));
     // footer
     x.fillStyle = "rgba(255,255,255,0.06)"; x.fillRect(0, c.height - FOOT + 20, W, FOOT - 20);
     t("nicogee01.github.io/mater-league", W / 2, c.height - 38, "600 26px Barlow", "rgba(251,247,238,0.6)", "center");
