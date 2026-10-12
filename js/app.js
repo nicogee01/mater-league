@@ -659,7 +659,7 @@
     ["sv", "SV", "Saves", "gk", 0], ["pks", "PKS", "Penalties saved", "gk", 0],
     ["yc", "YC", "Yellow cards", "", 0], ["rc", "RC", "Red cards", "", 0], ["og", "OG", "Own goals", "", 0],
   ];
-  const pdb = { group: "all", mode: "avg", sort: "fpts", dir: -1, q: "", pos: "", club: "", owner: "", minGp: 2, limit: 100, built: false };
+  const pdb = { group: "all", mode: "avg", sort: "fpts", dir: -1, q: "", pos: "", club: "", owner: "", minGp: 1, limit: 100, built: false };
   function pdbRows() {
     const owner = {};
     state.teams.forEach((t) => t.players.forEach((pid) => (owner[pid] = t)));
