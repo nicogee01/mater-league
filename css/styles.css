@@ -1994,6 +1994,49 @@ html.has-install-bar body { padding-bottom: 92px; }
 .install-sheet__ok { width: 100%; min-height: 48px; border: 0; border-radius: 999px; background: #1b0020; color: #fbf7ee; font: 700 16px var(--f-label, sans-serif); letter-spacing: .04em; cursor: pointer; }
 .mobile-menu__install { color: var(--accent) !important; font-weight: 700; }
 
+/* ================= AWARDS: PODIUM + FINISHES ================= */
+.podium { margin-bottom: var(--s7); }
+.podium__stage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: var(--s3); max-width: 760px; margin: 0 auto; }
+.podium__spot { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.podium__club { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding-bottom: var(--s3); min-width: 0; max-width: 100%; }
+.podium__club b { font-weight: 700; font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
+.podium__club small { color: var(--faint); font-size: 12px; }
+.podium__pts { font-family: var(--f-display); font-size: 30px; line-height: 1; color: var(--text); margin-top: 2px; }
+.podium__spot--1 .podium__pts { font-size: 40px; }
+.podium__spot--1 .crest { transform: scale(1.15); margin-bottom: 6px; }
+.podium__block { width: 100%; display: grid; place-items: start center; padding-top: 10px; border-radius: 12px 12px 0 0; font-family: var(--f-display); color: #0b1f3a; }
+.podium__block span { font-size: 40px; line-height: 1; }
+.podium__spot--1 .podium__block { height: 140px; background: linear-gradient(180deg, #f2d27a, #c9a032); }
+.podium__spot--2 .podium__block { height: 100px; background: linear-gradient(180deg, #e4e8ee, #aeb6c2); }
+.podium__spot--3 .podium__block { height: 72px; background: linear-gradient(180deg, #e2a878, #b06f3e); }
+.podium__spot--1 .podium__block span { font-size: 56px; }
+.finishes { margin-top: var(--s8); }
+.finishes__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s2) var(--s4); margin-bottom: var(--s3); }
+.finishes__head .subhead { margin: 0; }
+.finishes__head p { margin: 0; color: var(--muted); font-size: 14px; }
+.finishes__table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; font-variant-numeric: tabular-nums; }
+.finishes__table th, .finishes__table td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: center; }
+.finishes__table thead th { background: var(--band); color: #d5dbe6; font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+.finishes__table tbody th { text-align: left; font-weight: 700; white-space: nowrap; }
+.finishes__table tbody th .crest { vertical-align: middle; margin-right: 8px; }
+.finishes__table td { font-family: var(--f-display); font-size: 20px; }
+.finishes__table td.is-zero { color: var(--faint); opacity: .6; }
+.finishes__table td.is-lead { color: #fff; background: #1f8a4c; }
+.finishes__table td.is-shame { color: #fff; background: var(--neg); }
+.finishes__table tr:last-child th, .finishes__table tr:last-child td { border-bottom: 0; }
+@media (max-width: 560px) {
+  .podium__stage { gap: var(--s2); }
+  .podium__club b { font-size: 13px; }
+  .podium__pts { font-size: 22px; }
+  .podium__spot--1 .podium__pts { font-size: 28px; }
+  .podium__spot--1 .podium__block { height: 104px; }
+  .podium__spot--2 .podium__block { height: 76px; }
+  .podium__spot--3 .podium__block { height: 56px; }
+  .finishes__table th, .finishes__table td { padding: 8px; }
+  .finishes__table td { font-size: 17px; }
+  .finishes__table tbody th span { display: none; }
+}
+
 /* ================= TACTICS (club profile) ================= */
 .tac__sub { margin: var(--s3) 0 var(--s2); font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
 .tac__sub:first-of-type { margin-top: 0; }
