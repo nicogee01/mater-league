@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trade calculator · The Mater League</title>
+  <meta name="description" content="Who wins the trade? Rest-of-season value for both clubs, with injuries, fixtures and team fit." />
+  <meta name="theme-color" content="#1b0020" />
+  <script>try{if(localStorage.getItem("mater-theme")==="dark")document.documentElement.dataset.theme="dark"}catch(e){}</script>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-title" content="Mater League" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css?v=153" />
+</head>
+<body data-page="trade">
+  <main id="main">
+    <header class="page-hero">
+      <div class="page-hero__inner">
+        <p class="eyebrow">Rest of season</p>
+        <h1>Trade calculator</h1>
+        <p class="page-hero__lede">Pick two clubs and the players each side sends. It judges the teams, not just the players: each club's best starting XI for every remaining gameweek, before and after, with injuries, fixtures and positional fit.</p>
+      </div>
+    </header>
+
+    <section class="section section--page" aria-label="Trade calculator">
+      <div class="tc" id="tradeRoot"><div class="skeleton" style="height:420px"></div></div>
+    </section>
+  </main>
+
+  <script src="js/layout.js?v=153"></script>
+  <script src="data/league.js?v=153"></script>
+  <script src="js/motion.js?v=153"></script>
+  <script src="js/app.js?v=153"></script>
+</body>
+</html>

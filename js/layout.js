@@ -17,6 +17,7 @@
     { id: "h2h", href: "h2h.html", label: "H2H", long: "Head-to-Head", group: "Clubs & players" },
     { id: "transfers", href: "transfers.html", label: "Transfers", group: "Clubs & players" },
     { id: "draft", href: "draft.html", label: "Draft", long: "Draft board", group: "Clubs & players" },
+    { id: "trade", href: "trade.html", label: "Trade Calculator", group: "Stats" },
     { id: "players", href: "players.html", label: "Player stats", group: "Stats" },
     { id: "analytics", href: "analytics.html", label: "Analytics", group: "Stats" },
     { id: "records", href: "records.html", label: "Records", long: "Hall of Records", group: "Stats" },

@@ -2208,6 +2208,70 @@ html.has-install-bar body { padding-bottom: 92px; }
   .pdb th, .pdb td { padding: 8px 7px; }
 }
 
+/* ================= TRADE CALCULATOR ================= */
+.tc-sides { display: grid; grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr); gap: var(--s3); align-items: start; }
+.tc-swap { align-self: center; justify-self: center; font-size: 26px; color: var(--faint); margin-top: 28px; }
+.tc-side { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: var(--s4); min-width: 0; }
+.tc-side select { width: 100%; }
+.tc-sends { display: flex; flex-wrap: wrap; gap: 6px; min-height: 40px; align-items: center; margin: var(--s3) 0; }
+.tc-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 3px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 700; font-size: 13px; }
+.tc-chip .pdb-photo { width: 26px; height: 26px; }
+.tc-chip button { all: unset; cursor: pointer; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; font-size: 16px; }
+.tc-chip button:hover { background: rgba(255,255,255,.2); }
+.tc-roster { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow-y: auto; border-top: 1px solid var(--line); }
+.tc-roster li { border-bottom: 1px solid var(--line); }
+.tc-roster label { display: grid; grid-template-columns: 20px 30px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 4px; cursor: pointer; }
+.tc-roster label:hover { background: var(--shade); }
+.tc-roster input { width: 18px; height: 18px; accent-color: var(--accent); }
+.tc-roster .posb { font-size: 11px; text-align: center; }
+.tc-name { font-size: 14px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-name small { display: block; font-weight: 500; font-size: 12px; color: var(--faint); }
+.tc-ros { text-align: right; font-family: var(--f-display); font-size: 18px; line-height: 1; }
+.tc-ros small { display: block; font-family: var(--f-body); font-size: 10px; color: var(--faint); letter-spacing: .06em; }
+.tc-result { margin-top: var(--s6); }
+.tc-result .subhead { margin: 0 0 var(--s4); }
+.tc-res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); }
+.tc-res { border-radius: 18px; padding: var(--s5); background: var(--surface); border: 1px solid var(--line); border-top: 6px solid var(--faint); }
+.tc-res--win { border-top-color: #1f8a4c; }
+.tc-res--loss { border-top-color: var(--neg); }
+.tc-res__club { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 17px; }
+.tc-res__tag { margin-left: auto; padding: 3px 10px; border-radius: 999px; font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; background: var(--surface-2); }
+.tc-res--win .tc-res__tag { background: #1f8a4c; color: #fff; }
+.tc-res--loss .tc-res__tag { background: var(--neg); color: #fff; }
+.tc-res__big { margin: var(--s3) 0 0; font-family: var(--f-display); font-size: 56px; line-height: 1; }
+.tc-res--win .tc-res__big { color: #1f8a4c; }
+.tc-res--loss .tc-res__big { color: var(--neg); }
+.tc-res__big small { display: block; margin-top: 4px; font-family: var(--f-body); font-size: 13px; color: var(--faint); }
+.tc-res__sub { margin: var(--s2) 0 var(--s4); color: var(--muted); font-size: 14px; }
+.tc-lines { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.tc-lines li { background: var(--shade); border-radius: 10px; padding: 8px; text-align: center; }
+.tc-lines span { display: block; font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: .1em; color: var(--faint); }
+.tc-lines b { display: block; font-family: var(--f-display); font-weight: 400; font-size: 20px; }
+.tc-lines em { font-style: normal; font-size: 12px; color: var(--faint); }
+.tc-lines em.up { color: #1f8a4c; font-weight: 700; }
+.tc-lines em.down { color: var(--neg); font-weight: 700; }
+.tc-notes { margin: var(--s3) 0 0; padding-left: 18px; font-size: 14px; color: var(--muted); }
+.tc-deal { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); margin-top: var(--s5); }
+.tc-deal h3 { margin: 0 0 var(--s2); font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+.tc-players { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tc-players > li { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 10px; }
+.tc-players .pdb-player small { flex-wrap: wrap; white-space: normal; }
+.tc-p__stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.tc-p__stats > span { text-align: center; background: var(--shade); border-radius: 8px; padding: 6px 2px; }
+.tc-p__stats b { display: block; font-family: var(--f-display); font-weight: 400; font-size: 18px; }
+.tc-p__stats small { font-size: 11px; color: var(--faint); }
+.tc-p__fx { display: flex; flex-wrap: wrap; gap: 3px; }
+.tc-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s5) 0 var(--s3); }
+.tc-how__body { padding: var(--s3) 14px var(--s4); font-size: 14px; color: var(--muted); line-height: 1.55; }
+.tc-how__body p { margin: 0 0 var(--s2); }
+@media (max-width: 760px) {
+  .tc-sides { grid-template-columns: 1fr; }
+  .tc-swap { margin: 0; transform: rotate(90deg); }
+  .tc-res-grid, .tc-deal { grid-template-columns: 1fr; }
+  .tc-res__big { font-size: 44px; }
+  .tc-roster { max-height: 300px; }
+}
+
 /* ================= TACTICS (club profile) ================= */
 .tac__sub { margin: var(--s3) 0 var(--s2); font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
 .tac__sub:first-of-type { margin-top: 0; }

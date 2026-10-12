@@ -164,14 +164,17 @@ function buildModel(curGames, prevGames, weeksPlayed, nextGw) {
     const fx = (fixturesBy[p.team_abbr] || []).filter((f) => f.gw >= nextGw);
     const tilt = pos === "GK" || pos === "DEF" ? 0.08 : 0.06;
     let ros = 0;
+    const w = Array(Math.max(0, SEASON_WEEKS - nextGw + 1)).fill(0);   // expected points in each remaining gameweek (the trade calculator picks XIs from these)
     for (const f of fx) {
       const avail = back && f.gw < back ? 0 : share * (f.gw === nextGw ? nextChance : 1);
-      ros += avail * rate * (1 + tilt * (3 - f.d));
+      const e = avail * rate * (1 + tilt * (3 - f.d));
+      ros += e;
+      if (f.gw - nextGw < w.length) w[f.gw - nextGw] += e;
     }
     const all = [...c, ...v].map((g) => g.pts);
     const goals = c.reduce((s, g) => s + g.g, 0), xg = c.reduce((s, g) => s + g.xg, 0);
     out[pid] = {
-      rate: round(rate), share: round(share), ros: round(ros, 1), next5: fx.slice(0, 5).map((f) => [f.gw, f.opp, f.home ? 1 : 0, f.d]),
+      rate: round(rate), share: round(share), ros: round(ros, 1), w: w.map((x) => round(x, 1)), pos: posOf(p), ps: (p.fantasy_positions || []).filter((x) => x !== "DEF"), next5: fx.slice(0, 5).map((f) => [f.gw, f.opp, f.home ? 1 : 0, f.d]),
       back: back && back <= SEASON_WEEKS ? back : back ? 99 : null, note: note.slice(0, 80), chance: nextChance < 1 ? nextChance : undefined,
       sd: round(Math.sqrt(mean(all.map((x) => (x - mean(all)) ** 2)))), floor: round(pct(all, 0.1), 1), ceil: round(pct(all, 0.9), 1),
       prev: v.length ? round(mean(v.map((g) => g.pts))) : null, prevGp: v.length || undefined,

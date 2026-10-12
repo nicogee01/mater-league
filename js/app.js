@@ -769,6 +769,182 @@
     loadPhotos(shown.map((r) => r.pid), box);
   }
 
+  // ---------- TRADE CALCULATOR (trade.html) ----------
+  // Judges teams, not players: for every remaining gameweek it picks each club's best legal XI
+  // (1 GK, 3+ D, 3+ M, 1+ F and the FM / MD / FMD flex spots, from data/model.json's expected
+  // points for that week) and adds them up, before and after. A club that ends up short of
+  // players fills the gap with the best free agent; one with too many drops its least useful man.
+  const tc = { a: null, b: null, ga: new Set(), gb: new Set() };
+  const TC_FORMS = [];
+  for (let d = 3; d <= 5; d++) for (let m = 3; m <= 6; m++) for (let f = 1; f <= 3; f++) {
+    const ed = d - 3, ef = f - 1;
+    if (d + m + f === 10 && ed <= 2 && ef <= 2 && ed + ef <= 3) TC_FORMS.push({ DEF: d, MID: m, FWD: f });
+  }
+  const TC_PS = { D: "DEF", M: "MID", F: "FWD", GK: "GK" };
+  const tcM = (pid) => (state.model && state.model.players[pid]) || null;
+  // best XI for one gameweek: tries every legal shape, fills it greedily from the best players down
+  function tcBestXI(pids, wk) {
+    const pool = pids.map((pid) => ({ pid, m: tcM(pid) })).filter((x) => x.m)
+      .map((x) => ({ pid: x.pid, v: x.m.w[wk] || 0, ps: x.m.ps.map((q) => TC_PS[q]).filter(Boolean) }))
+      .sort((a, b) => b.v - a.v);
+    let best = { total: 0, lines: { GK: 0, DEF: 0, MID: 0, FWD: 0 }, xi: [] };
+    for (const form of TC_FORMS) {
+      const room = { GK: 1, ...form }, lines = { GK: 0, DEF: 0, MID: 0, FWD: 0 }, xi = [];
+      let total = 0;
+      for (const p of pool) {
+        const slot = p.ps.filter((q) => room[q] > 0).sort((a, b) => room[b] - room[a])[0];
+        if (!slot) continue;
+        room[slot]--; lines[slot] += p.v; total += p.v; xi.push(p.pid);
+      }
+      if (total > best.total) best = { total, lines, xi };
+    }
+    return best;
+  }
+  function tcValue(pids) {
+    const weeks = state.model ? state.model.players[Object.keys(state.model.players)[0]].w.length : 0;
+    const lines = { GK: 0, DEF: 0, MID: 0, FWD: 0 };
+    let total = 0;
+    for (let w = 0; w < weeks; w++) { const b = tcBestXI(pids, w); total += b.total; for (const k in lines) lines[k] += b.lines[k]; }
+    return { total, per: weeks ? total / weeks : 0, weeks, lines: Object.fromEntries(Object.entries(lines).map(([k, v]) => [k, weeks ? v / weeks : 0])) };
+  }
+  // keep the roster size: drop the least useful players, or sign the most useful free agents
+  function tcBalance(pids, size, keep) {
+    let cur = [...pids];
+    const dropped = [], added = [];
+    while (cur.length > size) {
+      let best = null;
+      for (const pid of cur) {
+        if (keep.has(pid)) continue;
+        const v = tcValue(cur.filter((x) => x !== pid)).total;
+        if (!best || v > best.v) best = { pid, v };
+      }
+      if (!best) break;
+      cur = cur.filter((x) => x !== best.pid); dropped.push(best.pid);
+    }
+    if (cur.length < size) {
+      const owned = new Set(state.teams.flatMap((t) => t.players));
+      const fa = Object.entries(state.model.players).filter(([pid]) => !owned.has(pid));
+      const pool = [];
+      for (const pos of ["GK", "DEF", "MID", "FWD"]) pool.push(...fa.filter(([, m]) => m.pos === pos).sort((a, b) => b[1].ros - a[1].ros).slice(0, 5).map(([pid]) => pid));
+      while (cur.length < size) {
+        let best = null;
+        for (const pid of pool) {
+          if (cur.includes(pid)) continue;
+          const v = tcValue([...cur, pid]).total;
+          if (!best || v > best.v) best = { pid, v };
+        }
+        if (!best) break;
+        cur.push(best.pid); added.push(best.pid);
+      }
+    }
+    return { pids: cur, dropped, added };
+  }
+  function tcSide(team, give, get) {
+    const before = tcValue(team.players);
+    const raw = team.players.filter((p) => !give.has(p)).concat([...get]);
+    const bal = tcBalance(raw, team.players.length, new Set(get));
+    const after = tcValue(bal.pids);
+    return { team, before, after, bal, delta: after.per - before.per, deltaTot: after.total - before.total };
+  }
+
+  async function initTrade() {
+    const root = $("#tradeRoot");
+    if (!root || tc.ready || !Object.keys(state.players || {}).length) return;
+    tc.ready = true;
+    try { state.model = state.model || (await fetch("data/model.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null))); } catch (_) {}
+    if (!state.model) { root.innerHTML = `<p class="pending-note">Player values aren't available right now. Try again later.</p>`; return; }
+    // a shared link carries the trade: #a=1&b=3&ga=pid,pid&gb=pid
+    const h = new URLSearchParams(location.hash.slice(1));
+    tc.a = state.byRoster[+h.get("a")] ? +h.get("a") : null;
+    tc.b = state.byRoster[+h.get("b")] ? +h.get("b") : null;
+    tc.ga = new Set((h.get("ga") || "").split(",").filter(Boolean));
+    tc.gb = new Set((h.get("gb") || "").split(",").filter(Boolean));
+    root.addEventListener("change", (e) => {
+      const sel = e.target.closest("[data-tcteam]");
+      if (sel) { const k = sel.dataset.tcteam; tc[k] = +sel.value || null; tc["g" + k].clear(); renderTrade(); return; }
+      const cb = e.target.closest("[data-tcgive]");
+      if (cb) { const set = tc["g" + cb.dataset.tcgive]; cb.checked ? set.add(cb.value) : set.delete(cb.value); renderTrade(); }
+    });
+    root.addEventListener("click", (e) => {
+      const x = e.target.closest("[data-tcremove]");
+      if (x) { tc["g" + x.dataset.side].delete(x.dataset.tcremove); renderTrade(); }
+      if (e.target.closest("#tcReset")) { tc.ga.clear(); tc.gb.clear(); renderTrade(); }
+      const sh = e.target.closest("#tcShare");
+      if (sh) { navigator.clipboard && navigator.clipboard.writeText(location.href).then(() => flash(sh, "Link copied"), () => {}); }
+    });
+    renderTrade();
+  }
+
+  function renderTrade() {
+    const root = $("#tradeRoot");
+    if (!root) return;
+    const T = state.teams;
+    const P = (pid) => state.players[pid] || { n: pid, p: "", c: "", t: "" };
+    const ros = (pid) => (tcM(pid) ? tcM(pid).ros : 0);
+    const badge = (pid) => { const m = tcM(pid); return m ? injBadge(m) : ""; };
+    const opts = (k) => `<option value="">Choose a club</option>${T.map((t) => `<option value="${t.rosterId}"${tc[k] === t.rosterId ? " selected" : ""}${tc[k === "a" ? "b" : "a"] === t.rosterId ? " disabled" : ""}>${esc(t.name)}</option>`).join("")}`;
+    const panel = (k) => {
+      const t = state.byRoster[tc[k]], give = tc["g" + k];
+      const roster = t ? [...t.players].sort((a, b) => ros(b) - ros(a)) : [];
+      return `<div class="tc-side">
+        <label class="hub-field"><span>${k === "a" ? "Club A sends" : "Club B sends"}</span><select data-tcteam="${k}">${opts(k)}</select></label>
+        ${t ? `<div class="tc-sends">${give.size ? [...give].map((pid) => `<span class="tc-chip"><span class="pdb-photo" data-photo="${esc(pid)}"><span>${esc(initials(P(pid).n))}</span></span>${esc(surname(pid, P(pid).n))}<button type="button" data-tcremove="${esc(pid)}" data-side="${k}" aria-label="Remove ${esc(P(pid).n)}">×</button></span>`).join("") : `<span class="dim">Tick the players ${esc(t.name)} sends</span>`}</div>
+        <ul class="tc-roster">${roster.map((pid) => { const p = P(pid), m = tcM(pid); return `<li><label>
+          <input type="checkbox" data-tcgive="${k}" value="${esc(pid)}"${give.has(pid) ? " checked" : ""}>
+          <span class="posb ${esc(p.p)}">${esc(p.p || "–")}</span>
+          <span class="tc-name">${esc(p.n)}${badge(pid)}<small>${clubLogo(p.t)}${esc(p.c || "")}</small></span>
+          <span class="tc-ros">${m ? num(m.ros, 0) : "–"}<small>ROS</small></span></label></li>`; }).join("")}</ul>` : ""}
+      </div>`;
+    };
+    let result = "";
+    const A = state.byRoster[tc.a], B = state.byRoster[tc.b];
+    if (A && B && (tc.ga.size || tc.gb.size)) {
+      const sa = tcSide(A, tc.ga, tc.gb), sb = tcSide(B, tc.gb, tc.ga);
+      const verdict = (s) => (s.delta >= 0.4 ? ["win", "Wins"] : s.delta <= -0.4 ? ["loss", "Loses"] : ["even", "About even"]);
+      const lineRow = (s) => ["GK", "DEF", "MID", "FWD"].map((k) => { const d = s.after.lines[k] - s.before.lines[k]; return `<li><span>${k}</span><b>${num(s.after.lines[k], 1)}</b><em class="${d > 0.05 ? "up" : d < -0.05 ? "down" : ""}">${d > 0.05 ? "+" : d < -0.05 ? "−" : "±"}${num(Math.abs(d), 1)}</em></li>`; }).join("");
+      const moves = (s) => [
+        ...s.bal.added.map((pid) => `Fills the open spot with free agent <b>${plink(pid, P(pid).n)}</b> (${num(ros(pid), 0)} ROS).`),
+        ...s.bal.dropped.map((pid) => `Has to drop <b>${plink(pid, P(pid).n)}</b> to make room (${num(ros(pid), 0)} ROS).`),
+      ];
+      const card = (s) => { const [cls, word] = verdict(s); return `<div class="tc-res tc-res--${cls}">
+        <p class="tc-res__club">${crest(s.team)}<b>${club(s.team)}</b><span class="tc-res__tag">${word}</span></p>
+        <p class="tc-res__big">${s.delta >= 0 ? "+" : "−"}${num(Math.abs(s.delta), 2)}<small>points per gameweek</small></p>
+        <p class="tc-res__sub">${num(s.before.per, 1)} → ${num(s.after.per, 1)} a week · ${s.deltaTot >= 0 ? "+" : "−"}${num(Math.abs(s.deltaTot), 0)} over the ${s.after.weeks} gameweeks left</p>
+        <ul class="tc-lines">${lineRow(s)}</ul>
+        ${moves(s).length ? `<ul class="tc-notes">${moves(s).map((m) => `<li>${m}</li>`).join("")}</ul>` : ""}
+      </div>`; };
+      const gap = sa.delta - sb.delta;
+      const headline = Math.abs(sa.delta) < 0.4 && Math.abs(sb.delta) < 0.4 ? "A fair trade: neither side moves much."
+        : sa.delta > 0 && sb.delta > 0 ? "Both clubs get better: a genuine win-win."
+        : gap > 0 ? `${A.name} win this trade.` : `${B.name} win this trade.`;
+      // the players in the deal, side by side
+      const pl = (pid) => { const p = P(pid), m = tcM(pid); if (!m) return ""; return `<li>
+        <span class="pdb-player" data-player="${esc(pid)}" data-name="${esc(p.n)}" role="button" tabindex="0"><span class="pdb-photo" data-photo="${esc(pid)}"><span>${esc(initials(p.n))}</span></span>
+        <span><b>${esc(p.n)}${injBadge(m)}</b><small><span class="posb ${esc(p.p)}">${esc(p.p)}</span>${clubLogo(p.t)}${esc(p.c)}${m.note ? ` · ${esc(m.note)}` : ""}</small></span></span>
+        <span class="tc-p__stats"><span><b>${num(m.rate * m.share, 1)}</b><small>exp/GW</small></span><span><b>${num(m.ros, 0)}</b><small>ROS</small></span><span><b>${num(m.floor, 0)}–${num(m.ceil, 0)}</b><small>floor–ceil</small></span><span><b>${m.prev != null ? num(m.prev, 1) : "–"}</b><small>last szn</small></span></span>
+        <span class="tc-p__fx">${m.next5.map(([gw, opp, home, d]) => `<span class="fx fx--${d}" title="GW${gw}">${esc(opp)}${home ? "" : "<i>a</i>"}</span>`).join("")}</span>
+      </li>`; };
+      result = `<section class="tc-result" aria-live="polite">
+        <h2 class="subhead">${esc(headline)}</h2>
+        <div class="tc-res-grid">${card(sa)}${card(sb)}</div>
+        <div class="tc-deal">
+          <div><h3>${esc(A.name)} send</h3><ul class="tc-players">${[...tc.ga].map(pl).join("") || `<li class="dim">Nobody</li>`}</ul></div>
+          <div><h3>${esc(B.name)} send</h3><ul class="tc-players">${[...tc.gb].map(pl).join("") || `<li class="dim">Nobody</li>`}</ul></div>
+        </div>
+        <div class="tc-actions"><button type="button" class="gz-btn" id="tcShare">Copy link to this trade</button><button type="button" class="gz-btn gz-btn--ghost" id="tcReset">Clear players</button></div>
+        <details class="pdb-guide tc-how"><summary>How it works</summary><div class="tc-how__body">
+          <p>Each club's value is its <b>best possible starting XI in every remaining gameweek</b>, added up. Each player's expected points for a week come from how good he is when he plays (this season and last, half on xG and xA), how often he plays, injuries (0 until his expected return), and how hard that week's opponent is.</p>
+          <p>So it judges fit, not just names: a fourth good striker who wouldn't start adds little, a defender who walks into a weak back line adds a lot, and a 2-for-1 for a star works when the star plus the best free agent beats the two you gave up.</p>
+          <p>Values update every night. Floor and ceiling show a bad and a great week for each player. Projections, not promises.</p>
+        </div></details>
+      </section>`;
+    } else if (A && B) result = `<p class="pending-note">Tick the players each club sends to see who wins.</p>`;
+    root.innerHTML = `<div class="tc-sides">${panel("a")}<div class="tc-swap" aria-hidden="true">⇄</div>${panel("b")}</div>${result}`;
+    const parts = [tc.a && `a=${tc.a}`, tc.b && `b=${tc.b}`, tc.ga.size && `ga=${[...tc.ga].join(",")}`, tc.gb.size && `gb=${[...tc.gb].join(",")}`].filter(Boolean);
+    history.replaceState(null, "", parts.length ? `#${parts.join("&")}` : location.pathname);
+    loadPhotos([...new Set($$("[data-photo]", root).map((e) => e.dataset.photo))], root);
+  }
+
   // ---------- TACTICS (club profile) ----------
   // Formations come from Sleeper's per-week formation history (it matched every logged XI). For each
   // logged gameweek: the shape this club played, and the shape its opponent played, with the result.
@@ -4098,6 +4274,7 @@
       renderRecords();
       renderClubs();   // again, now star men (season points) are known
       initDraft();
+      initTrade();
       if ($("#derbies")) loadPhotos($$("#derbies [data-photo]").map((e) => e.dataset.photo), $("#derbies"));
       renderMarket();
       renderHomeSnap();
