@@ -671,6 +671,8 @@
   async function initPlayerDb() {
     if (!$("#playerDb") || pdb.built || !state.playerTotals) return;
     pdb.built = true;
+    // rest-of-season values from scripts/build-model.mjs (rebuilt nightly)
+    try { state.model = await fetch("data/model.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)); } catch (_) { state.model = null; }
     // this season's 20 Premier League clubs, from Sleeper's fixture list: players who've left the league
     // (e.g. sold abroad mid-season) drop out of the database
     try {
@@ -695,6 +697,8 @@
       ["Basics", [["GP", "Games played"], ["GS", "Games started"], ["MIN", "Minutes (MIN/G per game)"],
         ["PTS", "Fantasy points, this league's scoring"], ["GH PTS", "Ghost points: fantasy points without goals, assists and clean sheets"]]],
       ["Attack", grp("att")], ["Defence", grp("def")], ["Goalkeeping", grp("gk")], ["Discipline", grp("")],
+      ["Outlook", [["EXP/GW", "Expected points per gameweek: how good he is when he plays × how often he plays"], ["ROS", "Expected points for the rest of the season, after injuries and fixtures"],
+        ["FLOOR / CEIL", "A bad week and a great week for him (10th and 90th percentile scores)"], ["LAST SZN", "Points per game last season"], ["NEXT 5", "Next five opponents; green = easier, red = harder"]]],
     ];
     $(".pdb-guide__body").innerHTML = sections.map(([h, rows]) => `<section><h3>${h}</h3><dl>${rows.map(([l, t]) => `<div><dt>${esc(l)}</dt><dd>${esc(t)}</dd></div>`).join("")}</dl></section>`).join("")
       + `<p>Per game divides each total by games played; per 90 divides by minutes played over 90. Tap any header to sort; tap again to flip the order.</p>`;
@@ -706,14 +710,27 @@
     });
     renderPlayerDb();
   }
+  // injury badge: out (with expected return gameweek) or a doubt (chance of playing)
+  const injBadge = (m) => (!m ? "" : m.back ? `<span class="pdb-inj" title="${esc(m.note || "Injured")}">${m.back === 99 ? "OUT" : `GW${m.back}`}</span>`
+    : m.chance != null ? `<span class="pdb-inj pdb-inj--doubt" title="${esc(m.note || "")}">${Math.round(m.chance * 100)}%</span>` : "");
+  function outlookCells(m) {
+    if (!m) return `<td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td class="pdb-c-fx">–</td>`;
+    const fx = m.next5.map(([gw, opp, home, d]) => `<span class="fx fx--${d}" title="GW${gw}: ${home ? "vs" : "at"} ${esc(CLUB_NAME[opp] || opp)} (difficulty ${d})">${esc(opp)}${home ? "" : "<i>a</i>"}</span>`).join("");
+    return `<td>${num(m.rate * m.share, 2)}</td><td><b>${num(m.ros, 0)}</b></td><td>${num(m.floor, 1)}</td><td>${num(m.ceil, 1)}</td><td>${m.prev != null ? num(m.prev, 2) : "–"}</td><td class="pdb-c-fx">${fx || "–"}</td>`;
+  }
   function renderPlayerDb() {
     const box = $("#playerDb");
     if (!box || !state.playerTotals) return;
     const avg = pdb.mode === "avg", p90 = pdb.mode === "p90", rate = avg || p90;
     const suf = avg ? "/G" : p90 ? "/90" : "";
-    const cols = PDB_COLS.filter(([, , , g]) => pdb.group === "all" || g.split(" ").includes(pdb.group));
+    const outlook = pdb.group === "out";
+    const cols = outlook ? [] : PDB_COLS.filter(([, , , g]) => pdb.group === "all" || g.split(" ").includes(pdb.group));
+    const M = (r) => (state.model && state.model.players[r.pid]) || null;
     const val = (r, k) => {
       if (k === "name") return r.p.n;
+      if (k === "exp") { const m = M(r); return m ? m.rate * m.share : -1; }
+      if (["ros", "floor", "ceil", "prev"].includes(k)) { const m = M(r); return m && m[k] != null ? m[k] : -1; }
+      if (k === "fdr") { const m = M(r); return m && m.next5.length ? -m.next5.reduce((s, f) => s + f[3], 0) / m.next5.length : -9; }
       if (k === "gp") return r.gp;
       if (k === "gs") return r.x.gs || 0;
       const v = r.x[k] || 0;
@@ -737,16 +754,17 @@
     const fmt = (v, dp) => (v === 0 ? `<span class="pdb-zero">·</span>` : rate ? num(v, dp || 2) : num(v, dp));
     box.innerHTML = `<table class="pdb">
       <thead><tr>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own"><span class="pdb-full">Fantasy club</span><span class="pdb-last">Club</span></th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", "PTS" + suf, "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", "GH PTS" + suf, "Ghost points: fantasy points without goals, assists and clean sheets", "pdb-c-ghost")}
-        ${cols.map(([k, l, t]) => th(k, l, t)).join("")}</tr></thead>
+        ${cols.map(([k, l, t]) => th(k, l, t)).join("")}${outlook ? th("exp", "EXP/GW", "Expected points per gameweek") + th("ros", "ROS", "Expected points, rest of season") + th("floor", "FLOOR", "A bad week (10th percentile)") + th("ceil", "CEIL", "A great week (90th percentile)") + th("prev", "LAST SZN", "Points per game last season") + th("fdr", "NEXT 5", "Next five opponents (sort: easiest first)", "pdb-c-fx") : ""}</tr></thead>
       <tbody>${shown.map((r) => `<tr>
         <th scope="row" class="pdb-c-name"><span class="pdb-player" data-player="${esc(r.pid)}" data-name="${esc(r.p.n)}" role="button" tabindex="0">
           <span class="pdb-photo" data-photo="${esc(r.pid)}" aria-hidden="true"><span>${esc(initials(r.p.n))}</span></span>
-          <span><b><span class="pdb-full">${esc(r.p.n)}</span><span class="pdb-last">${esc(surname(r.pid, r.p.n))}</span></b><small><span class="posb ${esc(r.p.p)}">${esc(r.p.p || "–")}</span>${clubLogo(r.p.t)}${esc(r.p.c || "")}</small></span></span></th>
+          <span><b><span class="pdb-full">${esc(r.p.n)}</span><span class="pdb-last">${esc(surname(r.pid, r.p.n))}</span>${injBadge(M(r))}</b><small><span class="posb ${esc(r.p.p)}">${esc(r.p.p || "–")}</span>${clubLogo(r.p.t)}${esc(r.p.c || "")}</small></span></span></th>
         <td class="pdb-c-own">${r.owner ? `${crest(r.owner)}<span class="pdb-own-name">${club(r.owner)}</span>` : `<span class="fa-tag"><span class="pdb-full">Free agent</span><span class="pdb-last">FA</span></span>`}</td>
         <td>${r.gp}</td><td>${r.x.gs || 0}</td><td>${Math.round(val(r, "min"))}</td>
         <td class="pdb-c-pts">${num(val(r, "fpts"), avg ? 2 : 2)}</td>
         <td class="pdb-c-ghost">${num(val(r, "ghost"), 2)}</td>
         ${cols.map(([k, , , , dp]) => `<td>${fmt(val(r, k), dp)}</td>`).join("")}
+        ${outlook ? outlookCells(M(r)) : ""}
       </tr>`).join("")}</tbody></table>`;
     loadPhotos(shown.map((r) => r.pid), box);
   }

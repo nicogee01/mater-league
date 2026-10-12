@@ -1,0 +1,36 @@
+# Rebuilds data/model.json (rest-of-season player values for the trade calculator) every night,
+# after the day's matches and injury news. See scripts/build-model.mjs.
+name: Player model
+
+on:
+  schedule:
+    - cron: "40 5 * * *"   # 05:40 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: player-model
+  cancel-in-progress: false
+
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build model
+        run: node scripts/build-model.mjs
+      - name: Commit
+        run: |
+          if git diff --quiet data/model.json; then echo "No change."; exit 0; fi
+          git config user.name "mater-league-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/model.json
+          git commit -m "Nightly player model"
+          git pull --rebase
+          git push

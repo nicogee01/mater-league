@@ -1,0 +1,4 @@
+# Injury return dates we know better than the official feed.
+# player = full name as on Sleeper; return_gw = first gameweek he is expected to play; note = shown on the site
+player,return_gw,note
+Hugo Ekitiké,15,Achilles: expected back mid-December

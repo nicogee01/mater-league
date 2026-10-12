@@ -2183,6 +2183,15 @@ html.has-install-bar body { padding-bottom: 92px; }
 .pdb-photo.has-photo { background-color: #fff; }
 .pdb-photo.has-photo span { display: none; }
 .pdb-zero { color: var(--faint); opacity: .6; }
+.pdb-inj { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 4px; background: var(--neg); color: #fff; font-family: var(--f-label); font-size: 11px; font-weight: 700; letter-spacing: .04em; vertical-align: 2px; }
+.pdb-inj--doubt { background: #d08a1c; }
+.pdb .pdb-c-fx { text-align: left; }
+.fx { display: inline-block; min-width: 40px; margin-right: 3px; padding: 2px 4px; border-radius: 5px; text-align: center; font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: .03em; }
+.fx i { font-style: normal; font-weight: 500; margin-left: 2px; opacity: .75; text-transform: lowercase; }
+.fx--1, .fx--2 { background: #1f8a4c; color: #fff; }
+.fx--3 { background: var(--surface-2); color: var(--text); }
+.fx--4 { background: #e27c7c; color: #fff; }
+.fx--5 { background: #b3172d; color: #fff; }
 .pdb-more { display: flex; justify-content: center; margin-top: var(--s4); }
 @media (max-width: 760px) {
   .pdb-controls { grid-template-columns: 1fr 1fr; }
