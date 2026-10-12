@@ -2575,7 +2575,6 @@
     // a quiet button at the very bottom: the recap image is built only when it's tapped
     const recap = `<div class="recap-dl">
         <button type="button" class="gz-btn gz-btn--ghost" data-recap="${wk.week}">Download GW${wk.week} recap</button>
-        <small>One long image of the week for the group chat.</small>
       </div>`;
     root.innerHTML = awardsPage ? podiumHTML(wk.week) + xis + awards + finishesHTML(wk.week) + recap : front;
     if (Object.keys(state.players || {}).length) loadPhotos($$("[data-photo]", root).map((e) => e.dataset.photo), root);
