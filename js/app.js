@@ -706,7 +706,7 @@
       if (k === "name") return r.p.n;
       if (k === "gp") return r.gp;
       if (k === "gs") return r.x.gs || 0;
-      const v = k === "fpts" ? r.x.fpts || 0 : r.x[k] || 0;
+      const v = r.x[k] || 0;
       return avg && k !== "gp" && k !== "gs" ? (r.gp ? v / r.gp : 0) : v;
     };
     let rows = pdbRows().filter((r) =>
@@ -722,7 +722,7 @@
     const th = (k, label, title, cls = "") => `<th scope="col" class="${cls}${pdb.sort === k ? " is-sorted" : ""}" aria-sort="${pdb.sort === k ? (pdb.dir < 0 ? "descending" : "ascending") : "none"}"><button type="button" data-sort="${k}" title="${esc(title)}">${label}${pdb.sort === k ? (pdb.dir < 0 ? " ▾" : " ▴") : ""}</button></th>`;
     const fmt = (v, dp) => (v === 0 ? `<span class="pdb-zero">·</span>` : avg ? num(v, dp || 2) : num(v, dp));
     box.innerHTML = `<table class="pdb">
-      <thead><tr>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own">Fantasy club</th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", avg ? "PTS/G" : "PTS", "Fantasy points (this league's scoring)", "pdb-c-pts")}
+      <thead><tr>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own">Fantasy club</th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", avg ? "PTS/G" : "PTS", "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", avg ? "GHOST/G" : "GHOST", "Ghost points: fantasy points without goals, assists and clean sheets", "pdb-c-ghost")}
         ${cols.map(([k, l, t]) => th(k, l, t)).join("")}</tr></thead>
       <tbody>${shown.map((r) => `<tr>
         <th scope="row" class="pdb-c-name"><span class="pdb-player" data-player="${esc(r.pid)}" data-name="${esc(r.p.n)}" role="button" tabindex="0">
@@ -731,6 +731,7 @@
         <td class="pdb-c-own">${r.owner ? `${crest(r.owner)}<span>${club(r.owner)}</span>` : `<span class="fa-tag">Free agent</span>`}</td>
         <td>${r.gp}</td><td>${r.x.gs || 0}</td><td>${avg ? (r.gp ? Math.round((r.x.min || 0) / r.gp) : 0) : r.x.min || 0}</td>
         <td class="pdb-c-pts">${num(val(r, "fpts"), avg ? 2 : 2)}</td>
+        <td class="pdb-c-ghost">${num(val(r, "ghost"), 2)}</td>
         ${cols.map(([k, , , , dp]) => `<td>${fmt(val(r, k), dp)}</td>`).join("")}
       </tr>`).join("")}</tbody></table>`;
     loadPhotos(shown.map((r) => r.pid), box);
@@ -3429,9 +3430,16 @@
     const out = {};
     for (const week of statsByWeek) {
       for (const [pid, line] of Object.entries(week || {})) {
-        const t = (out[pid] ||= { fpts: 0 });
+        const t = (out[pid] ||= { fpts: 0, ghost: 0 });
         for (const [k, v] of Object.entries(line)) {
-          if (k.startsWith("pos_")) { if (scoring[k] !== undefined) t.fpts += Number(v) * Number(scoring[k]); continue; }
+          if (k.startsWith("pos_")) {
+            if (scoring[k] === undefined) continue;
+            const pts = Number(v) * Number(scoring[k]);
+            t.fpts += pts;
+            // ghost points: everything except goals, assists and clean sheets
+            if (!/_(g|at|cs|cs90)$/.test(k)) t.ghost += pts;
+            continue;
+          }
           if (typeof v === "number") t[k] = (t[k] || 0) + v;
         }
       }
