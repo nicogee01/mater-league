@@ -722,7 +722,7 @@
     const th = (k, label, title, cls = "") => `<th scope="col" class="${cls}${pdb.sort === k ? " is-sorted" : ""}" aria-sort="${pdb.sort === k ? (pdb.dir < 0 ? "descending" : "ascending") : "none"}"><button type="button" data-sort="${k}" title="${esc(title)}">${label}${pdb.sort === k ? (pdb.dir < 0 ? " ▾" : " ▴") : ""}</button></th>`;
     const fmt = (v, dp) => (v === 0 ? `<span class="pdb-zero">·</span>` : avg ? num(v, dp || 2) : num(v, dp));
     box.innerHTML = `<table class="pdb">
-      <thead><tr>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own">Fantasy club</th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", avg ? "PTS/G" : "PTS", "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", avg ? "GHOST/G" : "GHOST", "Ghost points: fantasy points without goals, assists and clean sheets", "pdb-c-ghost")}
+      <thead><tr>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own">Fantasy club</th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", avg ? "PTS/G" : "PTS", "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", avg ? "GH PTS/G" : "GH PTS", "Ghost points: fantasy points without goals, assists and clean sheets", "pdb-c-ghost")}
         ${cols.map(([k, l, t]) => th(k, l, t)).join("")}</tr></thead>
       <tbody>${shown.map((r) => `<tr>
         <th scope="row" class="pdb-c-name"><span class="pdb-player" data-player="${esc(r.pid)}" data-name="${esc(r.p.n)}" role="button" tabindex="0">

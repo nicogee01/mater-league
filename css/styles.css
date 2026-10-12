@@ -2159,7 +2159,7 @@ html.has-install-bar body { padding-bottom: 92px; }
 .pdb .pdb-c-own span { font-size: 13px; }
 .pdb .pdb-c-pts { font-family: var(--f-display); font-size: 17px; background: var(--shade); }
 .pdb thead .pdb-c-pts { font-family: var(--f-label); font-size: 13px; background: #16335e; }
-.pdb .pdb-c-ghost { font-family: var(--f-display); font-size: 16px; color: var(--muted); }
+
 .pdb tbody tr:hover td, .pdb tbody tr:hover th { background: var(--surface-2); }
 .pdb-player { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
 .pdb-player b { display: block; font-size: 14px; }
