@@ -664,12 +664,20 @@
     const owner = {};
     state.teams.forEach((t) => t.players.forEach((pid) => (owner[pid] = t)));
     return Object.entries(state.playerTotals || {})
-      .filter(([pid, x]) => state.players[pid] && state.players[pid].p !== "DEF" && (x.min || 0) > 0)   // DEF = team defences, not players
+      .filter(([pid, x]) => state.players[pid] && state.players[pid].p !== "DEF" && (x.min || 0) > 0   // DEF = team defences, not players
+        && (!pdb.epl || pdb.epl.has(state.players[pid].c)))                                          // only players still at a Premier League club
       .map(([pid, x]) => ({ pid, p: state.players[pid], x, gp: x.gp || 0, owner: owner[pid] || null }));
   }
-  function initPlayerDb() {
+  async function initPlayerDb() {
     if (!$("#playerDb") || pdb.built || !state.playerTotals) return;
     pdb.built = true;
+    // this season's 20 Premier League clubs, from Sleeper's fixture list: players who've left the league
+    // (e.g. sold abroad mid-season) drop out of the database
+    try {
+      const games = await fetch(`https://api.sleeper.app/schedule/${SPORT}/regular/${state.league.season}`).then((r) => (r.ok ? r.json() : []));
+      const clubs = new Set(games.flatMap((g) => [g.home && g.home.abbr, g.away && g.away.abbr]).filter(Boolean));
+      if (clubs.size >= 18) pdb.epl = clubs;
+    } catch (_) {}
     const rows = pdbRows();
     const clubs = [...new Set(rows.map((r) => r.p.c).filter(Boolean))].sort((a, b) => (CLUB_NAME[a] || a).localeCompare(CLUB_NAME[b] || b));
     $("#pdbClub").insertAdjacentHTML("beforeend", clubs.map((c) => `<option value="${esc(c)}">${esc(CLUB_NAME[c] || c)}</option>`).join(""));
