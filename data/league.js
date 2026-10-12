@@ -45,7 +45,7 @@ window.MATER_LEAGUE = {
     "officialmaje": "Arsenal",
     "glenm22": "West Ham",
     "austinclifton": "Spurs",
-    "kingabes": "Brighton",
+    "kingabes": "Hull City",
     "bottomcap": "Chelsea",
     "treyclif3": "Chelsea",
     "nictrn": "Arsenal"
