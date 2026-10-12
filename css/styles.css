@@ -2021,6 +2021,7 @@ html.has-install-bar body { padding-bottom: 92px; }
 .finishes__table tbody th .crest { vertical-align: middle; margin-right: 8px; }
 .finishes__table td { font-family: var(--f-display); font-size: 20px; }
 .finishes__table td.is-zero { color: var(--faint); opacity: .6; }
+.finishes__table td.is-mid { background: var(--shade); }
 .finishes__table td.is-lead { color: #fff; background: #1f8a4c; }
 .finishes__table td.is-shame { color: #fff; background: var(--neg); }
 .finishes__table tr:last-child th, .finishes__table tr:last-child td { border-bottom: 0; }

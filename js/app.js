@@ -2180,13 +2180,14 @@
     if (!weeks.length) return "";
     const tally = {};
     for (const w of weeks) for (const r of weekFinishes(w)) {
-      const x = (tally[r.id] ||= { id: r.id, first: 0, top2: 0, top3: 0, bot2: 0, last: 0, sum: 0, n: 0 });
+      const x = (tally[r.id] ||= { id: r.id, first: 0, top2: 0, top3: 0, mid: 0, bot2: 0, last: 0, sum: 0, n: 0 });
       if (r.top === 1) x.first++; if (r.top <= 2) x.top2++; if (r.top <= 3) x.top3++;
       if (r.low <= 2) x.bot2++; if (r.low === 1) x.last++;
+      if (r.top > 3 && r.low > 2) x.mid++;   // mid-table: neither top 3 nor bottom 2, so top 3 + mid + bottom 2 = weeks
       x.sum += r.top; x.n++;
     }
     const rows = Object.values(tally).sort((a, b) => b.first - a.first || b.top2 - a.top2 || b.top3 - a.top3 || a.bot2 - b.bot2 || a.sum / a.n - b.sum / b.n);
-    const cols = [["first", "1st", true], ["top2", "Top 2", true], ["top3", "Top 3", true], ["bot2", "Bottom 2", false], ["last", "Last", false]];
+    const cols = [["first", "1st", true], ["top2", "Top 2", true], ["top3", "Top 3", true], ["mid", "Mid-table", null], ["bot2", "Bottom 2", false], ["last", "Last", false]];
     const max = Object.fromEntries(cols.map(([k]) => [k, Math.max(...rows.map((r) => r[k]))]));
     return `<section class="finishes" aria-labelledby="finTitle">
       <div class="finishes__head"><h2 class="subhead" id="finTitle">Weekly finishes</h2><p>Through Gameweek ${week} · ${weeks.length} gameweek${weeks.length > 1 ? "s" : ""}</p></div>
@@ -2194,10 +2195,10 @@
         <thead><tr><th scope="col">Club</th>${cols.map(([, l]) => `<th scope="col">${l}</th>`).join("")}<th scope="col">Avg finish</th></tr></thead>
         <tbody>${rows.map((r) => { const t = state.byRoster[r.id]; return `<tr>
           <th scope="row">${crest(t)}<span>${club(t)}</span></th>
-          ${cols.map(([k, , good]) => `<td class="${r[k] && r[k] === max[k] ? (good ? "is-lead" : "is-shame") : ""}${r[k] ? "" : " is-zero"}">${r[k]}</td>`).join("")}
+          ${cols.map(([k, , good]) => `<td class="${good !== null && r[k] && r[k] === max[k] ? (good ? "is-lead" : "is-shame") : ""}${good === null ? " is-mid" : ""}${r[k] ? "" : " is-zero"}">${r[k]}</td>`).join("")}
           <td>${num(r.sum / r.n, 1)}</td></tr>`; }).join("")}</tbody>
       </table></div>
-      <p class="chart-note">Finishing position by points scored that gameweek, out of ${state.teams.length}; ties share a place. Green = most of the good kind, red = most of the bad kind.</p>
+      <p class="chart-note">Finishing position by points scored that gameweek, out of ${state.teams.length}; ties share a place. Mid-table = neither top 3 nor bottom 2, so Top 3 + Mid-table + Bottom 2 = gameweeks played. Green = most of the good kind, red = most of the bad kind.</p>
     </section>`;
   }
 
