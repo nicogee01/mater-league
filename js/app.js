@@ -277,6 +277,49 @@
   }
 
   // Everything that needs real matchups: splits, h2h, all-play, consistency, optimal lineups.
+  // ---------- TACTICS (club profile) ----------
+  // Formations come from Sleeper's per-week formation history (it matched every logged XI). For each
+  // logged gameweek: the shape this club played, and the shape its opponent played, with the result.
+  const TAC_COLORS = ["var(--ink)", "var(--accent)", "var(--gold)", "var(--blue)", "var(--faint)", "var(--line-2)"];
+  function tacticsCard(t) {
+    const shapeOf = (team, week) => { const x = team && formationFor(team, week); return x ? x.f : null; };
+    const games = t.games.filter((g) => shapeOf(t, g.week));
+    if (!games.length) return "";
+    const use = {};
+    games.forEach((g) => { const f = shapeOf(t, g.week); use[f] = (use[f] || 0) + 1; });
+    const used = Object.entries(use).sort((a, b) => b[1] - a[1]);
+    const pct = (n) => Math.round((n / games.length) * 100);
+    const vs = {};
+    games.forEach((g) => {
+      const f = shapeOf(state.byRoster[g.opp], g.week);
+      if (!f) return;
+      const v = (vs[f] ||= { f, n: 0, w: 0, d: 0, l: 0, margin: 0 });
+      v.n++; v[g.res.toLowerCase()]++; v.margin += g.score - g.oppScore;
+    });
+    // worst first: lowest win share (draws count half), then the heaviest average margin of defeat
+    const rate = (v) => (v.w + v.d / 2) / v.n;
+    const faced = Object.values(vs).sort((a, b) => rate(a) - rate(b) || a.margin / a.n - b.margin / b.n);
+    // only call it a struggle if it's a losing record, and "best" only if it's a winning one
+    const worst = faced.length > 1 && rate(faced[0]) < 0.5 ? faced[0] : null;
+    const top = faced[faced.length - 1], best = faced.length > 1 && rate(top) > 0.5 ? top : null;
+    const sign = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + num(Math.abs(x), 2);
+    return `<section class="cp-card tac"><h4 class="cp-card__title">Tactics</h4>
+      <p class="tac__sub">Preferred formation</p>
+      <div class="tac-bar" role="img" aria-label="${esc(used.map(([f, n]) => `${f} ${pct(n)}%`).join(", "))}">
+        ${used.map(([f, n], i) => `<span style="flex:${n};background:${TAC_COLORS[i % TAC_COLORS.length]}"></span>`).join("")}
+      </div>
+      <ul class="tac-legend">${used.map(([f, n], i) => `<li><i style="background:${TAC_COLORS[i % TAC_COLORS.length]}"></i><b>${esc(f)}</b> ${pct(n)}%<small>${n} of ${games.length}</small></li>`).join("")}</ul>
+      ${faced.length ? `<p class="tac__sub">Against each formation</p>
+      <ol class="tac-vs">${faced.map((v) => `<li class="${v === worst ? "is-worst" : v === best ? "is-best" : ""}">
+          <b>${esc(v.f)}</b>
+          <span class="tac-vs__rec">${v.w}-${v.d}-${v.l}<small>${v.n} game${v.n > 1 ? "s" : ""}</small></span>
+          <span class="tac-vs__m">${sign(v.margin / v.n)}<small>avg margin</small></span>
+          ${v === worst ? `<em>Struggles most</em>` : v === best ? `<em>Best against</em>` : ""}
+        </li>`).join("")}</ol>` : ""}
+      <p class="tac__note">From ${games.length} logged gameweek${games.length > 1 ? "s" : ""}, formations as set in Sleeper. Small samples swing fast.</p>
+    </section>`;
+  }
+
   function deriveFromResults() {
     const T = state.teams;
     T.forEach((t) => Object.assign(t, { games: [], home: { w: 0, l: 0, d: 0 }, away: { w: 0, l: 0, d: 0 }, h2h: {}, allPlay: null, stdDev: null, optimal: null, robbed: 0 }));
@@ -863,6 +906,7 @@
         </div>
         <div class="cp-col">
           ${t.games.length ? `<section class="cp-card"><h4 class="cp-card__title">Season sparkline</h4>${sparklineSVG(t.games)}</section>` : ""}
+          ${tacticsCard(t)}
           ${derbyCard}
           ${story ? `<section class="cp-card"><h4 class="cp-card__title">Season story</h4><ol class="cp-story">${story}</ol></section>` : ""}
           ${t.nemesis || t.cupcake ? `<div class="nc">

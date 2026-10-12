@@ -1994,6 +1994,28 @@ html.has-install-bar body { padding-bottom: 92px; }
 .install-sheet__ok { width: 100%; min-height: 48px; border: 0; border-radius: 999px; background: #1b0020; color: #fbf7ee; font: 700 16px var(--f-label, sans-serif); letter-spacing: .04em; cursor: pointer; }
 .mobile-menu__install { color: var(--accent) !important; font-weight: 700; }
 
+/* ================= TACTICS (club profile) ================= */
+.tac__sub { margin: var(--s3) 0 var(--s2); font-family: var(--f-label); font-weight: 700; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+.tac__sub:first-of-type { margin-top: 0; }
+.tac-bar { display: flex; gap: 2px; height: 14px; border-radius: 7px; overflow: hidden; background: var(--surface-2); }
+.tac-bar span { min-width: 4px; }
+.tac-legend { list-style: none; margin: var(--s2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: var(--muted); }
+.tac-legend li { display: inline-flex; align-items: baseline; gap: 6px; }
+.tac-legend i { width: 10px; height: 10px; border-radius: 3px; align-self: center; }
+.tac-legend b { font-family: var(--f-display); font-weight: 400; font-size: 18px; color: var(--text); letter-spacing: 0.02em; }
+.tac-legend small { color: var(--faint); font-size: 12px; }
+.tac-vs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tac-vs li { display: grid; grid-template-columns: 64px 1fr 1fr auto; align-items: center; gap: var(--s3); padding: 8px 12px; border-radius: 10px; background: var(--shade); border-left: 3px solid transparent; }
+.tac-vs b { font-family: var(--f-display); font-weight: 400; font-size: 20px; letter-spacing: 0.02em; }
+.tac-vs span { font-variant-numeric: tabular-nums; font-weight: 700; }
+.tac-vs small { display: block; font-weight: 500; font-size: 11px; color: var(--faint); }
+.tac-vs em { font-style: normal; font-family: var(--f-label); font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; }
+.tac-vs li.is-worst { border-left-color: var(--neg); }
+.tac-vs li.is-worst em { background: var(--neg); color: #fff; }
+.tac-vs li.is-best { border-left-color: #1f8a4c; }
+.tac-vs li.is-best em { background: #1f8a4c; color: #fff; }
+.tac__note { margin: var(--s3) 0 0; font-size: 12px; color: var(--faint); }
+
 /* ================= LIVE GAMEWEEK ================= */
 .mu-side__pre { opacity: .7; }
 .mu-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #e0263c; display: inline-block; margin-left: 2px; animation: live-pulse 1.6s ease-in-out infinite; }
