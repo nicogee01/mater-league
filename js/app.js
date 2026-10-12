@@ -689,6 +689,15 @@
     $("#pdbOwner").addEventListener("change", (e) => { pdb.owner = e.target.value; re(); });
     $("#pdbGp").addEventListener("change", (e) => { pdb.minGp = +e.target.value; re(); });
     $("#pdbMore").addEventListener("click", () => { pdb.limit += 100; renderPlayerDb(); });
+    // column guide: every abbreviation, grouped, folded away until asked for
+    const grp = (g) => PDB_COLS.filter(([, , , gs]) => gs.split(" ")[0] === g).map(([, l, t]) => [l, t]);
+    const sections = [
+      ["Basics", [["GP", "Games played"], ["GS", "Games started"], ["MIN", "Minutes (MIN/G per game)"],
+        ["PTS", "Fantasy points, this league's scoring"], ["GH PTS", "Ghost points: fantasy points without goals, assists and clean sheets, so what a player earns from everything else (tackles, key passes, saves, minutes, cards…)"]]],
+      ["Attack", grp("att")], ["Defence", grp("def")], ["Goalkeeping", grp("gk")], ["Discipline", grp("")],
+    ];
+    $(".pdb-guide__body").innerHTML = sections.map(([h, rows]) => `<section><h3>${h}</h3><dl>${rows.map(([l, t]) => `<div><dt>${esc(l)}</dt><dd>${esc(t)}</dd></div>`).join("")}</dl></section>`).join("")
+      + `<p>Per game divides each total by games played. Tap any header to sort; tap again to flip the order.</p>`;
     document.addEventListener("click", (e) => {
       const g = e.target.closest("#pdbGroup [data-group]"), m = e.target.closest("#pdbMode [data-mode]"), s = e.target.closest("#playerDb [data-sort]");
       if (g) { pdb.group = g.dataset.group; $$("#pdbGroup .chip").forEach((c) => { const on = c === g; c.classList.toggle("is-active", on); c.setAttribute("aria-pressed", String(on)); }); renderPlayerDb(); }

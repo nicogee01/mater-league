@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=147" />
+  <link rel="stylesheet" href="css/styles.css?v=148" />
 </head>
 <body data-page="players">
   <main id="main">
@@ -25,7 +25,7 @@
       <div class="page-hero__inner">
         <p class="eyebrow">Scouting report</p>
         <h1>Player stats</h1>
-        <p class="page-hero__lede">Every Premier League player this season: fantasy points and every stat Sleeper records. Ghost points are fantasy points without goals, assists and clean sheets: what a player earns from everything else. Filter, then tap a column to sort. Tap a player for his week-by-week.</p>
+        <p class="page-hero__lede">Every Premier League player this season: fantasy points and every stat Sleeper records. Filter, then tap a column to sort. Tap a player for his week-by-week.</p>
       </div>
     </header>
 
@@ -49,15 +49,16 @@
           <button type="button" class="chip" data-mode="tot" aria-pressed="false">Totals</button>
         </div>
       </div>
+      <details class="pdb-guide" id="pdbGuide"><summary>Column guide</summary><div class="pdb-guide__body"></div></details>
       <p class="pdb-count" id="pdbCount" aria-live="polite"></p>
       <div class="pdb-wrap"><div class="table-scroll" id="playerDb"><div class="skeleton" style="height:420px"></div></div></div>
       <div class="pdb-more"><button type="button" class="gz-btn gz-btn--ghost" id="pdbMore" hidden>Show more players</button></div>
     </section>
   </main>
 
-  <script src="js/layout.js?v=147"></script>
-  <script src="data/league.js?v=147"></script>
-  <script src="js/motion.js?v=147"></script>
-  <script src="js/app.js?v=147"></script>
+  <script src="js/layout.js?v=148"></script>
+  <script src="data/league.js?v=148"></script>
+  <script src="js/motion.js?v=148"></script>
+  <script src="js/app.js?v=148"></script>
 </body>
 </html>
