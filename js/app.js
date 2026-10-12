@@ -2042,10 +2042,13 @@
   // each club's current XI from its Sleeper roster, points from Sleeper's live stats, refreshed every
   // two minutes. Once that week's final scores are in matchups.csv the live view steps aside.
   const live = { stats: null, proj: null, games: null, at: 0, loading: false, timer: null };
+  // the oldest gameweek that has started but isn't logged yet: once a gameweek's games end Sleeper
+  // moves on to the next week, but this one stays up (unofficial) until its final scores are logged
   const liveWeek = () => {
-    const w = state.week;
-    return (state.fixtures || []).some((m) => m.week === w) && !state.results.some((m) => m.week === w) ? w : null;
+    const open = [...new Set((state.fixtures || []).map((m) => m.week))].filter((w) => w <= state.week && !state.results.some((m) => m.week === w));
+    return open.length ? Math.min(...open) : null;
   };
+  const liveDone = (w) => w < state.week;   // Sleeper has moved past it: every match in it is over
   function loadLive() {
     const w = liveWeek();
     if (!w || live.loading) return;
@@ -2076,6 +2079,14 @@
       const now = status === "pre" || status === "unknown" ? proj || 0 : status === "live" ? pts + (proj || 0) * Math.max(0, (90 - min) / 90) : pts;
       return { pid, name: (state.players[pid] || {}).n || `Player ${pid}`, slot, pts, proj, min, status, now };
     };
+    // the XI recorded for this gameweek (the snapshot Action), if there is one: managers may already be
+    // changing their current lineup for the next week
+    const logged = (state.lineups || []).filter((r) => +r.week === week && rosterOf(r.manager) === id);
+    if (logged.some((r) => r.slot !== "BN")) {
+      const xi = logged.filter((r) => r.slot !== "BN").map((r) => row(r.player_id, r.slot)).sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
+      const bench = logged.filter((r) => r.slot === "BN").map((r) => row(r.player_id, "BN")).sort((a, b) => b.pts - a.pts);
+      return { xi, bench };
+    }
     const lines = lineUp(t, formationFor(t, week) && formationFor(t, week).f);
     const xi = Object.entries(lines).flatMap(([ln, ps]) => ps.map((p) => row(p.id, LINE_SLOT[ln] || "MID")))
       .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
@@ -2171,7 +2182,7 @@
         ${derby ? `<p class="mu-derby ${dtClass(derby, H)}">Derby day <b>${esc(derby.name)}</b></p>` : ""}
         <button type="button" class="mu-card__head" aria-expanded="${open}" aria-controls="mu-body-${gi}" data-key="${key}">
           ${side(H, m.homePts, m.homePts > m.awayPts, hs, "home")}
-          <span class="mu-card__mid"><span class="mu-card__ft${m.live ? " is-live" : ""}">${m.live ? "Live" : "FT"}</span><span class="mu-card__chev" aria-hidden="true"></span></span>
+          <span class="mu-card__mid"><span class="mu-card__ft${m.live && !liveDone(m.week) ? " is-live" : ""}">${m.live ? (liveDone(m.week) ? "FT*" : "Live") : "FT"}</span><span class="mu-card__chev" aria-hidden="true"></span></span>
           ${side(A, m.awayPts, m.awayPts > m.homePts, as, "away")}
         </button>
         ${story && !m.live ? `<p class="mu-card__news"><a href="gazette.html#gw${m.week}-${m.home}-${m.away}"><span>${GZ_TAGS[story.type] || "Result"}</span>${esc(story.headline)}</a></p>` : ""}
@@ -2179,7 +2190,9 @@
       </article>`;
     }).join("");
     attachDerbyVideos(list);
-    $("#muNote").textContent = isLive
+    $("#muNote").textContent = isLive && liveDone(lw)
+      ? `Gameweek ${lw} is over. FT* = unofficial: Sleeper's stats, before the final scores are logged. Tap a fixture for both team sheets.`
+      : isLive
       ? `Live: each club's current XI from Sleeper, with points from Sleeper's live match stats. Proj = points so far plus the projection for players yet to play (as in the Sleeper app); pre-match = the whole XI's projection before kick-off (updated ${new Date(live.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}, refreshes every 2 minutes). Tap a fixture for both team sheets. Final scores replace these once the gameweek is logged.`
       : withXI.has(mu.week)
       ? "Tap a fixture to open both team sheets, then tap any player for recent games. Starting XIs come from Sleeper's matchup screens and add up to each club's score; benches show only players on that roster at the end of the gameweek. Projections are Sleeper's."
