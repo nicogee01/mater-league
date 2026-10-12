@@ -182,12 +182,19 @@
     "Crystal Palace": "CRY", "Everton": "EVE", "Fulham": "FUL", "Liverpool": "LIV", "Manchester City": "MCI", "Manchester United": "MUN",
     "Newcastle": "NEW", "Nottingham Forest": "NFO", "Spurs": "TOT", "Tottenham": "TOT", "West Ham": "WHU", "Wolves": "WOL",
     "Leeds": "LEE", "Burnley": "BUR", "Sunderland": "SUN", "Hull": "HUL", "Ipswich": "IPS" };
-  function supports(t) {
+  // the Premier League club a manager supports, and its Sleeper team id (for the crest image)
+  function favClub(t) {
     const fav = ((window.MATER_LEAGUE && window.MATER_LEAGUE.favourites) || {})[t.manager.toLowerCase()];
-    if (!fav) return "";
+    if (!fav) return null;
     const abbr = EPL_ABBR[fav];
-    const p = abbr && Object.values(state.players).find((x) => x.c === abbr && x.t);
-    return `<span class="badge badge--fav">${p ? clubLogo(p.t) : ""}Supports ${esc(fav)}</span>`;
+    const p = abbr && Object.values(state.players || {}).find((x) => x.c === abbr && x.t);
+    return { name: fav, team: p ? p.t : null };
+  }
+  const favCrest = (t) => { const f = favClub(t); return f && f.team ? `https://sleepercdn.com/images/team_logos/clubsoccer/${f.team}.png` : null; };
+  function supports(t) {
+    const f = favClub(t);
+    if (!f) return "";
+    return `<span class="badge badge--fav">${f.team ? clubLogo(f.team) : ""}Supports ${esc(f.name)}</span>`;
   }
   const clubText = (t) => t.name + (t.prTag ? " " + EMBLEM[t.prTag][0] : ""); // plain text (dropdowns)
 
@@ -993,7 +1000,7 @@
       const star = starMan(t);
       return `
       <button type="button" class="tk${open === t.rosterId ? " is-torn" : ""}" data-pos="${t.pos}" data-open="${t.rosterId}" aria-pressed="${open === t.rosterId}" aria-controls="clubProfile" style="--c1:${t.kit[0]};--c2:${t.kit[1]}">
-        <span class="tk__kit">${crest(t, "lg")}</span>
+        <span class="tk__kit"${favCrest(t) ? ` data-fav style="--fav:url('${favCrest(t)}')"` : ""}>${crest(t, "lg")}</span>
         <span class="tk__main">
           ${t.derby ? `<span class="tk__ribbon dt dt--${esc(t.derby.slug)}">${esc(t.derby.name)}</span>` : ""}
           <span class="tk__name">${club(t)}</span>

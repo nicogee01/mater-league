@@ -1698,6 +1698,13 @@ section.wk { margin-top: var(--s8); }
   display: grid; place-items: center; border-radius: 16px 0 0 16px; overflow: hidden; position: relative;
   background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0 9px, transparent 9px 18px), linear-gradient(160deg, var(--c1), var(--c2));
 }
+/* the club the manager supports, as a big crest behind their avatar (falls back to the kit stripes) */
+.tk__kit[data-fav] { background: linear-gradient(160deg, var(--c1), var(--c2)); }
+.tk__kit[data-fav]::before {
+  content: ""; position: absolute; inset: -12%; background: var(--fav) center / contain no-repeat;
+  opacity: 0.38; transform: rotate(-12deg) scale(1.15); filter: saturate(1.1);
+}
+.tk__kit[data-fav] .crest { position: relative; z-index: 1; }
 .tk__kit::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.25) 50%, transparent 70%); transform: translateX(-120%); transition: transform 700ms var(--ease-out); }
 .tk:hover .tk__kit::after { transform: translateX(120%); }
 .tk__kit .crest { width: 78px; height: 78px; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 10px 20px rgba(0, 0, 0, 0.35); }
@@ -1940,6 +1947,22 @@ html[data-theme="dark"] .nav.is-solid { box-shadow: 0 1px 0 var(--line), 0 3px 0
 html[data-theme="dark"] .footer { border-top-color: #c8102e; }
 /* the dropdown panel pins light colours for the see-through home bar; in dark mode it's a dark panel */
 html[data-theme="dark"] .nav__menu { --text: #f1e8d4; --muted: #b8c1d0; --line: rgba(241, 232, 212, 0.13); --accent: #ff4d63; --shade: rgba(241, 232, 212, 0.06); }
+
+/* dark mode: chart lines and markers that were navy-on-paper become cream-on-navy */
+html[data-theme="dark"] .spark__best { stroke: rgba(241, 232, 212, 0.6); }
+html[data-theme="dark"] .spark__guide, html[data-theme="dark"] .ax__cross, html[data-theme="dark"] .lk__zero { stroke: rgba(241, 232, 212, 0.4); background: rgba(241, 232, 212, 0.4); }
+html[data-theme="dark"] .k--pot, html[data-theme="dark"] .k--best, html[data-theme="dark"] .sw--outline { border-color: rgba(241, 232, 212, 0.6); }
+html[data-theme="dark"] .lc__pot { border-color: rgba(241, 232, 212, 0.5); }
+html[data-theme="dark"] .sw--bg, html[data-theme="dark"] .hub-key--other, html[data-theme="dark"] .hub-dot, html[data-theme="dark"] .rk__dot { background: rgba(241, 232, 212, 0.3); fill: rgba(241, 232, 212, 0.3); }
+html[data-theme="dark"] .ax__grid { stroke: rgba(241, 232, 212, 0.1); }
+html[data-theme="dark"] .sc__bg, html[data-theme="dark"] .rk__line { stroke: rgba(241, 232, 212, 0.2); }
+html[data-theme="dark"] .bc__plot { border-bottom-color: rgba(241, 232, 212, 0.35); }
+html[data-theme="dark"] .bracket__lines path { stroke: rgba(241, 232, 212, 0.35); }
+html[data-theme="dark"] .pr-range__span { background: rgba(241, 232, 212, 0.3); }
+html[data-theme="dark"] .league-table tbody tr.cut td { border-top-color: rgba(241, 232, 212, 0.45); }
+html[data-theme="dark"] .matrix td.self { background: repeating-linear-gradient(45deg, transparent 0 6px, rgba(241, 232, 212, 0.06) 6px 12px); }
+html[data-theme="dark"] .skeleton { background: linear-gradient(90deg, rgba(241, 232, 212, 0.04) 25%, rgba(241, 232, 212, 0.09) 50%, rgba(241, 232, 212, 0.04) 75%); background-size: 200% 100%; }
+html[data-theme="dark"] .pr-card.is-drag { background: var(--surface); }
 
 /* theme toggle in the nav */
 .nav__theme { display: grid; place-items: center; width: 40px; height: 40px; flex: none; background: none; border: 0; border-radius: 50%; color: var(--text); cursor: pointer; }
