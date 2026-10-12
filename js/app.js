@@ -613,7 +613,8 @@
       </div>
     </section>`;
   }
-  // Man of the Match: the top scorer across both starting XIs of a fixture (as on the Matchups cards)
+  // Man of the Match (league rule): the top scorer on the winning team, so every win brings one.
+  // A draw goes to the best player on the pitch from either side.
   function motmCard(t) {
     const tally = {};
     let logged = 0, won = 0;
@@ -622,7 +623,10 @@
       const xi = (state.lineups || []).filter((r) => +r.week === g.week && r.slot !== "BN" && (rosterOf(r.manager) === t.rosterId || rosterOf(r.manager) === g.opp));
       if (!xi.length || !opp) continue;
       logged++;
-      const best = xi.reduce((a, b) => (+b.pts > +a.pts ? b : a));
+      if (g.res === "L") continue;
+      const pool = g.res === "W" ? xi.filter((r) => rosterOf(r.manager) === t.rosterId) : xi;
+      if (!pool.length) continue;
+      const best = pool.reduce((a, b) => (+b.pts > +a.pts ? b : a));
       if (rosterOf(best.manager) !== t.rosterId) continue;
       won++;
       const x = (tally[best.player_id] ||= { pid: best.player_id, name: best.player, n: 0, top: 0, weeks: [] });
@@ -631,12 +635,12 @@
     if (!logged) return "";
     const list = Object.values(tally).sort((a, b) => b.n - a.n || b.top - a.top);
     return `<section class="cp-card motm"><h4 class="cp-card__title">Man of the Match</h4>
-      <p class="sbc__sub">Top scorer on the pitch in <b>${won}</b> of ${logged} match${logged > 1 ? "es" : ""}</p>
+      <p class="sbc__sub">Top scorer on the winning side · <b>${won}</b> in ${logged} match${logged > 1 ? "es" : ""}</p>
       ${list.length ? `<ol class="motm__list">${list.map((x) => `<li data-player="${esc(x.pid)}" data-name="${esc(x.name)}" role="button" tabindex="0">
           <span class="motm__photo" data-photo="${esc(x.pid)}" aria-hidden="true"><span>${esc(initials(x.name))}</span></span>
           <span class="motm__name"><b>${esc(x.name)}</b><small>GW${x.weeks.join(", GW")} · best ${gp(x.top)} pts</small></span>
           <span class="motm__n">${"★".repeat(Math.min(x.n, 5))}<b>×${x.n}</b></span>
-        </li>`).join("")}</ol>` : `<p class="dim">The opposition has had the best player on the pitch every week so far.</p>`}
+        </li>`).join("")}</ol>` : `<p class="dim">No wins yet, so no Man of the Match awards.</p>`}
     </section>`;
   }
 
