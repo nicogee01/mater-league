@@ -1,0 +1,41 @@
+# Logs each gameweek's scores into data/matchups.csv as soon as Sleeper finalizes them, so the
+# table, Gazette, Awards and recap update on their own. See scripts/log-scores.mjs.
+name: Log scores
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"   # every half hour; does nothing until Sleeper scores a new gameweek
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: log-scores
+  cancel-in-progress: false
+
+jobs:
+  scores:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Log a newly scored gameweek
+        run: node scripts/log-scores.mjs
+      - name: Balance home/away and check against Sleeper
+        run: |
+          if git diff --quiet data/matchups.csv; then echo "Nothing new."; exit 0; fi
+          node scripts/balance-home-away.mjs
+          node scripts/check-matchups.mjs
+      - name: Commit
+        run: |
+          if git diff --quiet; then echo "Nothing new."; exit 0; fi
+          git config user.name "mater-league-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/matchups.csv data/fixtures.csv
+          git commit -m "Log gameweek scores from Sleeper"
+          git pull --rebase
+          git push
