@@ -135,10 +135,14 @@ const NEWCOMER = { GK: 5.5, DEF: 3.75, MID: 4.75, FWD: 5.25 };
 const posOf = (p) => POS[(p.fantasy_positions || [])[0]] || null;
 function buildModel(curGames, prevGames, weeksPlayed, nextGw) {
   // each position's typical regular: the median points per game of players with 3+ appearances
-  const baseline = {};
+  const baseline = {}, ghostBase = {};
   for (const pos of Object.values(POS)) {
     const rates = Object.entries(curGames).filter(([pid, gs]) => gs.length >= 3 && players[pid] && posOf(players[pid]) === pos).map(([, gs]) => mean(gs.map((g) => g.pts)));
     baseline[pos] = pct(rates, 0.5) || 4;
+    // how much of a typical regular's points are ghost points (everything but goals, assists, clean sheets)
+    const regs = Object.entries(curGames).filter(([pid, gs]) => gs.length >= 3 && players[pid] && posOf(players[pid]) === pos);
+    const gshare = mean(regs.map(([, gs]) => mean(gs.map((g) => g.ghost)))) / (mean(regs.map(([, gs]) => mean(gs.map((g) => g.pts)))) || 1);
+    ghostBase[pos] = Math.min(0.9, Math.max(0.3, gshare || 0.6));
   }
   const out = {};
   for (const [pid, p] of Object.entries(players)) {
@@ -150,11 +154,23 @@ function buildModel(curGames, prevGames, weeksPlayed, nextGw) {
     // xG and xA). Last season: actual points (Sleeper's older seasons have no xG). Small samples are pulled
     // toward a typical level: his position's regular for established players (3 games' worth), or, for players
     // new to the league, the newcomer level measured from the 2024 and 2025 seasons (9 games' worth).
-    const XM = +(process.env.MX || 0.5), curRate = (gs) => (1 - XM) * mean(gs.map((g) => g.pts)) + XM * mean(gs.map((g) => g.xpts));
-    const wc = c.length, wp = Math.min(v.length, 30) * +(process.env.MP || 0.5);
+    // Points are split in two and each part is estimated on its own:
+    //  - ghost points (everything but goals, assists and clean sheets) are steady, so they need few games
+    //    to trust (KG pretend games at a typical level);
+    //  - goal / assist / clean-sheet points are swingy, so this season's come mostly from his chances
+    //    (xG and xA, weight XM) and they're pulled toward a typical level for much longer (KA pretend games).
+    const XM = +(process.env.MX || 0.75);
+    const curGhost = (gs) => mean(gs.map((g) => g.ghost));
+    const curGA = (gs) => (1 - XM) * mean(gs.map((g) => g.pts - g.ghost)) + XM * mean(gs.map((g) => g.xpts - g.ghost));
+    const wc = c.length, wp = Math.min(v.length, 30) * +(process.env.MP || 0.3);
     const newcomer = !v.length;
-    const K = newcomer ? 9 : +(process.env.MK || 3), prior = newcomer ? NEWCOMER[pos] : baseline[pos];
-    const rate = (wc * (wc ? curRate(c) : 0) + wp * (wp ? mean(v.map((g) => g.pts)) : 0) + K * prior) / (wc + wp + K);
+    // fitted on 2024-25 (1,706 cases): ghost points are worth trusting after ~2 games, goals/assists/clean
+    // sheets only after ~25; newcomers lean harder on the newcomer level for ghost points too
+    const KG = newcomer ? 6 : +(process.env.KG || 2), KA = newcomer ? 30 : +(process.env.KA || 25);
+    const prior = newcomer ? NEWCOMER[pos] : baseline[pos], pg = prior * ghostBase[pos], pa = prior * (1 - ghostBase[pos]);
+    const ghostRate = (wc * (wc ? curGhost(c) : 0) + wp * (wp ? mean(v.map((g) => g.ghost)) : 0) + KG * pg) / (wc + wp + KG);
+    const gaRate = (wc * (wc ? curGA(c) : 0) + wp * (wp ? mean(v.map((g) => g.pts - g.ghost)) : 0) + KA * pa) / (wc + wp + KA);
+    const rate = ghostRate + gaRate;
     // how often he plays, from his recent gameweeks: the last four (fewer if he only arrived lately; weeks
     // before his first appearance don't count against him). No games this season: last season's rate.
     let share;
@@ -189,7 +205,7 @@ function buildModel(curGames, prevGames, weeksPlayed, nextGw) {
     const all = [...c, ...v].map((g) => g.pts);
     const goals = c.reduce((s, g) => s + g.g, 0), xg = c.reduce((s, g) => s + g.xg, 0);
     out[pid] = {
-      rate: round(rate), share: round(share), ros: round(ros, 1), w: w.map((x) => round(x, 1)), pos: posOf(p), ps: (p.fantasy_positions || []).filter((x) => x !== "DEF"), next5: fx.slice(0, 5).map((f) => [f.gw, f.opp, f.home ? 1 : 0, f.d]),
+      rate: round(rate), ghost: round(ghostRate), share: round(share), ros: round(ros, 1), w: w.map((x) => round(x, 1)), pos: posOf(p), ps: (p.fantasy_positions || []).filter((x) => x !== "DEF"), next5: fx.slice(0, 5).map((f) => [f.gw, f.opp, f.home ? 1 : 0, f.d]),
       back: back && back <= SEASON_WEEKS ? back : back ? 99 : null, note: note.slice(0, 80), chance: nextChance < 1 ? nextChance : undefined,
       sd: round(Math.sqrt(mean(all.map((x) => (x - mean(all)) ** 2)))), floor: round(pct(all, 0.1), 1), ceil: round(pct(all, 0.9), 1),
       prev: v.length ? round(mean(v.map((g) => g.pts))) : null, prevGp: v.length || undefined,
@@ -201,7 +217,7 @@ function buildModel(curGames, prevGames, weeksPlayed, nextGw) {
 
 if (BACKTEST) {
   // predict each player's points per game in weeks 4..lastScored using only weeks 1-3 (+ last season)
-  const split = 3;
+  const split = +(process.env.SPLIT || 3);
   const train = gamesBy(cur.slice(0, split)), test = gamesBy(cur.map((w, i) => (i >= split ? w : {})));
   const prevG = gamesBy(prev);
   const m = buildModel(train, prevG, split, split + 1).players;
