@@ -129,6 +129,9 @@ const eplClubs = new Set(Object.values(teamAbbr));
 
 // ---------------- the model ----------------
 const POS = { GK: "GK", D: "DEF", M: "MID", F: "FWD" };
+// typical points per game for a player new to the Premier League, by position (fitted on the 2024 and 2025
+// seasons: their first six gameweeks vs the rest of the season; keepers had too few to fit)
+const NEWCOMER = { GK: 5.5, DEF: 3.75, MID: 4.75, FWD: 5.25 };
 const posOf = (p) => POS[(p.fantasy_positions || [])[0]] || null;
 function buildModel(curGames, prevGames, weeksPlayed, nextGw) {
   // each position's typical regular: the median points per game of players with 3+ appearances
@@ -143,12 +146,23 @@ function buildModel(curGames, prevGames, weeksPlayed, nextGw) {
     if (!pos || p.fantasy_positions.includes("DEF") || !eplClubs.has(p.team_abbr)) continue;
     const c = curGames[pid] || [], v = prevGames[pid] || [];
     if (!c.length && !v.length) continue;
-    // how good when he plays: half actual, half expected (xG/xA), weighted by sample size, shrunk to his position's typical regular
-    const XM = +(process.env.MX || 0.5), rateOf = (gs) => (1 - XM) * mean(gs.map((g) => g.pts)) + XM * mean(gs.map((g) => g.xpts));
-    const K = +(process.env.MK || 3), wc = c.length, wp = Math.min(v.length, 30) * +(process.env.MP || 0.5);
-    const rate = (wc * (wc ? rateOf(c) : 0) + wp * (wp ? rateOf(v) : 0) + K * baseline[pos]) / (wc + wp + K);
-    // how often he plays when fit: this season if he has played, else last season, else a squad player's 50%
-    const share = weeksPlayed && c.length ? Math.min(1, c.length / weeksPlayed) : v.length ? Math.min(0.9, v.length / SEASON_WEEKS) : 0.5;
+    // how good when he plays. This season: half actual points, half expected (goals and assists swapped for
+    // xG and xA). Last season: actual points (Sleeper's older seasons have no xG). Small samples are pulled
+    // toward a typical level: his position's regular for established players (3 games' worth), or, for players
+    // new to the league, the newcomer level measured from the 2024 and 2025 seasons (9 games' worth).
+    const XM = +(process.env.MX || 0.5), curRate = (gs) => (1 - XM) * mean(gs.map((g) => g.pts)) + XM * mean(gs.map((g) => g.xpts));
+    const wc = c.length, wp = Math.min(v.length, 30) * +(process.env.MP || 0.5);
+    const newcomer = !v.length;
+    const K = newcomer ? 9 : +(process.env.MK || 3), prior = newcomer ? NEWCOMER[pos] : baseline[pos];
+    const rate = (wc * (wc ? curRate(c) : 0) + wp * (wp ? mean(v.map((g) => g.pts)) : 0) + K * prior) / (wc + wp + K);
+    // how often he plays, from his recent gameweeks: the last four (fewer if he only arrived lately; weeks
+    // before his first appearance don't count against him). No games this season: last season's rate.
+    let share;
+    if (weeksPlayed && c.length) {
+      const debut = Math.min(...c.map((g) => g.week));
+      const from = Math.max(debut, weeksPlayed - 3);
+      share = c.filter((g) => g.week >= from).length / (weeksPlayed - from + 1);
+    } else share = v.length ? Math.min(0.9, v.length / SEASON_WEEKS) : 0.5;
     // injuries: override file > FPL "expected back" date > FPL chance of playing > Sleeper's status
     const fpl = fplFor(p);
     const ov = overrides[norm(p.full_name)] || overrides[norm(`${p.first_name}${p.last_name}`)];

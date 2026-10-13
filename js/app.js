@@ -881,11 +881,20 @@
     }
     return { pids: cur, dropped, added };
   }
+  // the free agents a club could sign instead of playing a weak backup: the best two at each position.
+  // They're in the pool both before and after, so a club's "next best option" is whichever is better,
+  // its own backup or the waiver wire.
+  function tcFreeAgents(exclude) {
+    const owned = new Set(state.teams.flatMap((t) => t.players));
+    const fa = Object.entries(state.model.players).filter(([pid]) => !owned.has(pid) && !exclude.has(pid));
+    return ["GK", "DEF", "MID", "FWD"].flatMap((pos) => fa.filter(([, m]) => m.pos === pos).sort((a, b) => b[1].ros - a[1].ros).slice(0, 2).map(([pid]) => pid));
+  }
   function tcSide(team, give, get, roster) {
-    const before = tcValue(roster);
+    const fa = tcFreeAgents(new Set([...give, ...get]));
+    const before = tcValue([...roster, ...fa]);
     const raw = roster.filter((p) => !give.has(p)).concat([...get]);
     const bal = tcBalance(raw, roster.length, new Set(get));
-    const after = tcValue(bal.pids);
+    const after = tcValue([...bal.pids, ...fa]);
     return { team, before, after, bal, delta: after.per - before.per, deltaTot: after.total - before.total };
   }
 
