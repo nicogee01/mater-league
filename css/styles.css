@@ -2223,7 +2223,7 @@ html.has-install-bar body { padding-bottom: 92px; }
 .tc-chip button:hover { background: rgba(255,255,255,.2); }
 .tc-roster { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow-y: auto; border-top: 1px solid var(--line); }
 .tc-roster li { border-bottom: 1px solid var(--line); }
-.tc-roster label { display: grid; grid-template-columns: 20px 30px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 4px; cursor: pointer; }
+.tc-roster label { display: grid; grid-template-columns: 20px minmax(30px, auto) 34px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 4px; cursor: pointer; }
 .tc-roster label:hover { background: var(--shade); }
 .tc-roster input { width: 18px; height: 18px; accent-color: var(--accent); }
 .tc-roster .posb { font-size: 11px; text-align: center; }
@@ -2612,3 +2612,17 @@ html.has-install-bar body { padding-bottom: 92px; }
 .posb--FM { background: linear-gradient(90deg, var(--neg) 50%, #2e6b45 50%); }
 .posb--DM { background: linear-gradient(90deg, var(--blue) 50%, #2e6b45 50%); }
 .posb--DF { background: linear-gradient(90deg, var(--blue) 50%, var(--neg) 50%); }
+
+/* club picker: tap a crest */
+.tc-side__label { margin: 0 0 8px; font-family: var(--f-label); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.tc-side__label b { color: var(--ink); letter-spacing: .04em; }
+.tc-pick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.tc-pick__club { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; border-radius: 12px; border: 2px solid transparent; min-width: 0; text-align: center; }
+.tc-pick__club .crest { width: 40px; height: 40px; }
+.tc-pick__club span:last-child { font-size: 11px; font-weight: 600; line-height: 1.15; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--faint); }
+.tc-pick__club:hover { background: var(--shade); }
+.tc-pick__club:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tc-pick__club.is-on { border-color: var(--accent); background: var(--shade); }
+.tc-pick__club.is-on span:last-child { color: var(--ink); font-weight: 700; }
+.tc-pick__club:disabled { opacity: .3; cursor: not-allowed; }
+.tc-roster .pdb-photo { width: 32px; height: 32px; }

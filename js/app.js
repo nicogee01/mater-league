@@ -918,6 +918,8 @@
       if (cb) { const set = tc["g" + cb.dataset.tcgive]; cb.checked ? set.add(cb.value) : set.delete(cb.value); renderTrade(); }
     });
     root.addEventListener("click", (e) => {
+      const pick = e.target.closest("[data-tcpick]");
+      if (pick && !pick.disabled) { const k = pick.dataset.tcpick, id = +pick.dataset.id; if (tc[k] !== id) { tc[k] = id; tc["g" + k].clear(); tc.past = null; renderTrade(); } return; }
       const x = e.target.closest("[data-tcremove]");
       if (x) { tc["g" + x.dataset.side].delete(x.dataset.tcremove); renderTrade(); }
       if (e.target.closest("#tcReset")) { tc.ga.clear(); tc.gb.clear(); tc.past = null; renderTrade(); }
@@ -949,16 +951,19 @@
     const posTag = (pid) => { const p = P(pid), m = tcM(pid), ps = m && m.ps.length > 1 ? m.ps : null;
       return ps ? `<span class="posb posb--multi posb--${esc(ps.join(""))}" title="Can play ${esc(ps.join(" or "))}">${esc(ps.join("/"))}</span>` : `<span class="posb ${esc(p.p)}">${esc(p.p || "–")}</span>`; };
     const badge = (pid) => { const m = tcM(pid); return m ? injBadge(m) : ""; };
-    const opts = (k) => `<option value="">Choose a club</option>${T.map((t) => `<option value="${t.rosterId}"${tc[k] === t.rosterId ? " selected" : ""}${tc[k === "a" ? "b" : "a"] === t.rosterId ? " disabled" : ""}>${esc(t.name)}</option>`).join("")}`;
+    // pick a club by tapping its crest (the club already on the other side is greyed out)
+    const picker = (k) => `<div class="tc-pick" role="radiogroup" aria-label="${k === "a" ? "Club A" : "Club B"}">${T.map((t) => { const on = tc[k] === t.rosterId, off = tc[k === "a" ? "b" : "a"] === t.rosterId;
+      return `<button type="button" role="radio" aria-checked="${on}" class="tc-pick__club${on ? " is-on" : ""}" data-tcpick="${k}" data-id="${t.rosterId}"${off ? " disabled" : ""} title="${esc(t.name)}">${crest(t)}<span>${esc(t.name)}</span></button>`; }).join("")}</div>`;
     const panel = (k) => {
       const t = state.byRoster[tc[k]], give = tc["g" + k];
       const roster = t ? [...tcRoster(k)].sort((a, b) => tv(b) - tv(a) || ros(b) - ros(a)) : [];
       return `<div class="tc-side">
-        <label class="hub-field"><span>${k === "a" ? "Club A sends" : "Club B sends"}</span><select data-tcteam="${k}">${opts(k)}</select></label>
+        <p class="tc-side__label">${k === "a" ? "Club A sends" : "Club B sends"}${t ? ` · <b>${esc(t.name)}</b>` : ""}</p>${picker(k)}
         ${t ? `<div class="tc-sends">${give.size ? [...give].map((pid) => `<span class="tc-chip"><span class="pdb-photo" data-photo="${esc(pid)}"><span>${esc(initials(P(pid).n))}</span></span>${esc(surname(pid, P(pid).n))}<button type="button" data-tcremove="${esc(pid)}" data-side="${k}" aria-label="Remove ${esc(P(pid).n)}">×</button></span>`).join("") : `<span class="dim">Tick the players ${esc(t.name)} sends</span>`}</div>
         <ul class="tc-roster">${roster.map((pid) => { const p = P(pid), m = tcM(pid); return `<li><label>
           <input type="checkbox" data-tcgive="${k}" value="${esc(pid)}"${give.has(pid) ? " checked" : ""}>
           ${posTag(pid)}
+          <span class="pdb-photo" data-photo="${esc(pid)}"><span>${esc(initials(p.n))}</span></span>
           <span class="tc-name">${esc(p.n)}${badge(pid)}<small>${clubLogo(p.t)}${esc(p.c || "")}</small></span>
           <span class="tc-ros" title="Trade value: how much he'd add to the average club's best XI over the rest of the season">${m ? num(m.tv || 0, 0) : "–"}<small>VALUE</small></span></label></li>`; }).join("")}</ul>` : ""}
       </div>`;
