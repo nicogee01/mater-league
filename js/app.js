@@ -944,19 +944,23 @@
     const T = state.teams;
     const P = (pid) => state.players[pid] || { n: pid, p: "", c: "", t: "" };
     const ros = (pid) => (tcM(pid) ? tcM(pid).ros : 0);
+    const tv = (pid) => (tcM(pid) ? tcM(pid).tv || 0 : 0);
+    // position badge; a player Sleeper lists at two positions shows both (he can fill either line)
+    const posTag = (pid) => { const p = P(pid), m = tcM(pid), ps = m && m.ps.length > 1 ? m.ps : null;
+      return ps ? `<span class="posb posb--multi posb--${esc(ps.join(""))}" title="Can play ${esc(ps.join(" or "))}">${esc(ps.join("/"))}</span>` : `<span class="posb ${esc(p.p)}">${esc(p.p || "–")}</span>`; };
     const badge = (pid) => { const m = tcM(pid); return m ? injBadge(m) : ""; };
     const opts = (k) => `<option value="">Choose a club</option>${T.map((t) => `<option value="${t.rosterId}"${tc[k] === t.rosterId ? " selected" : ""}${tc[k === "a" ? "b" : "a"] === t.rosterId ? " disabled" : ""}>${esc(t.name)}</option>`).join("")}`;
     const panel = (k) => {
       const t = state.byRoster[tc[k]], give = tc["g" + k];
-      const roster = t ? [...tcRoster(k)].sort((a, b) => ros(b) - ros(a)) : [];
+      const roster = t ? [...tcRoster(k)].sort((a, b) => tv(b) - tv(a) || ros(b) - ros(a)) : [];
       return `<div class="tc-side">
         <label class="hub-field"><span>${k === "a" ? "Club A sends" : "Club B sends"}</span><select data-tcteam="${k}">${opts(k)}</select></label>
         ${t ? `<div class="tc-sends">${give.size ? [...give].map((pid) => `<span class="tc-chip"><span class="pdb-photo" data-photo="${esc(pid)}"><span>${esc(initials(P(pid).n))}</span></span>${esc(surname(pid, P(pid).n))}<button type="button" data-tcremove="${esc(pid)}" data-side="${k}" aria-label="Remove ${esc(P(pid).n)}">×</button></span>`).join("") : `<span class="dim">Tick the players ${esc(t.name)} sends</span>`}</div>
         <ul class="tc-roster">${roster.map((pid) => { const p = P(pid), m = tcM(pid); return `<li><label>
           <input type="checkbox" data-tcgive="${k}" value="${esc(pid)}"${give.has(pid) ? " checked" : ""}>
-          <span class="posb ${esc(p.p)}">${esc(p.p || "–")}</span>
+          ${posTag(pid)}
           <span class="tc-name">${esc(p.n)}${badge(pid)}<small>${clubLogo(p.t)}${esc(p.c || "")}</small></span>
-          <span class="tc-ros">${m ? num(m.ros, 0) : "–"}<small>ROS</small></span></label></li>`; }).join("")}</ul>` : ""}
+          <span class="tc-ros" title="Trade value: how much he'd add to the average club's best XI over the rest of the season">${m ? num(m.tv || 0, 0) : "–"}<small>VALUE</small></span></label></li>`; }).join("")}</ul>` : ""}
       </div>`;
     };
     let result = "";
@@ -983,8 +987,8 @@
       // the players in the deal, side by side
       const pl = (pid) => { const p = P(pid), m = tcM(pid); if (!m) return ""; return `<li>
         <span class="pdb-player" data-player="${esc(pid)}" data-name="${esc(p.n)}" role="button" tabindex="0"><span class="pdb-photo" data-photo="${esc(pid)}"><span>${esc(initials(p.n))}</span></span>
-        <span><b>${esc(p.n)}${injBadge(m)}</b><small><span class="posb ${esc(p.p)}">${esc(p.p)}</span>${clubLogo(p.t)}${esc(p.c)}${m.note ? ` · ${esc(m.note)}` : ""}</small></span></span>
-        <span class="tc-p__stats"><span><b>${num(m.rate * m.share, 1)}</b><small>exp/GW</small></span><span><b>${num(m.ros, 0)}</b><small>ROS</small></span><span><b>${num(m.floor, 0)}–${num(m.ceil, 0)}</b><small>floor–ceil</small></span><span><b>${m.prev != null ? num(m.prev, 1) : "–"}</b><small>last szn</small></span></span>
+        <span><b>${esc(p.n)}${injBadge(m)}</b><small>${posTag(pid)}${clubLogo(p.t)}${esc(p.c)}${m.note ? ` · ${esc(m.note)}` : ""}</small></span></span>
+        <span class="tc-p__stats"><span><b>${num(m.tv || 0, 0)}</b><small>value</small></span><span><b>${num(m.rate * m.share, 1)}</b><small>exp/GW</small></span><span><b>${num(m.ros, 0)}</b><small>ROS</small></span><span><b>${num(m.floor, 0)}–${num(m.ceil, 0)}</b><small>floor–ceil</small></span><span><b>${m.prev != null ? num(m.prev, 1) : "–"}</b><small>last szn</small></span></span>
         <span class="tc-p__fx">${m.next5.map(([gw, opp, home, d]) => `<span class="fx fx--${d}" title="GW${gw}">${esc(opp)}${home ? "" : "<i>a</i>"}</span>`).join("")}</span>
       </li>`; };
       result = `<section class="tc-result" aria-live="polite">
@@ -996,7 +1000,8 @@
         </div>
         <div class="tc-actions"><button type="button" class="gz-btn" id="tcShare">Copy link to this trade</button><button type="button" class="gz-btn gz-btn--ghost" id="tcReset">Clear players</button></div>
         <details class="pdb-guide tc-how"><summary>How it works</summary><div class="tc-how__body">
-          <p>Each club's value is its <b>best possible starting XI in every remaining gameweek</b>, added up. Each player's expected points for a week come from how good he is when he plays (this season and last, half on xG and xA), how often he plays, injuries (0 until his expected return), and how hard that week's opponent is.</p>
+          <p>Each club's value is its <b>best possible starting XI in every remaining gameweek</b>, added up. Each player's expected points for a week come from how good he is when he plays (this season and last, half on xG and xA), how often he plays, injuries (0 until his expected return), and that week's fixture: goals, assists and clean sheets come from how many goals his club should score and concede against that opponent, home or away, and his share of his club's goals and assists.</p>
+          <p><b>Value</b> next to each player is what he'd add to the average other club's best XI over the rest of the season. It's the fair way to compare positions: a player listed at two positions (shown as F/M or D/M) counts for whichever line needs him more.</p>
           <p>So it judges fit, not just names: a fourth good striker who wouldn't start adds little, a defender who walks into a weak back line adds a lot, and a 2-for-1 for a star works when the star plus the best free agent beats the two you gave up.</p>
           <p>Values update every night. Floor and ceiling show a bad and a great week for each player. Projections, not promises.</p>
         </div></details>

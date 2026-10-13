@@ -288,8 +288,40 @@ if (BACKTEST) {
   process.exit(0);
 }
 
+// ---------------- trade value: what a player adds to a real lineup ----------------
+// Raw points can't compare a midfielder with a defender: what matters is how much better a club's best XI gets.
+// For every club in the league (other than his own) we add him to its squad, plus the best two free agents at each
+// position, pick the best legal XI every remaining gameweek (same rules as the trade calculator: 1 GK, 3+ D, 3+ M,
+// 1+ F, FM / MD / FMD flex spots) and measure the gain. His trade value is the average gain over those clubs.
+// That prices position scarcity and flexibility directly: a forward/midfielder fills whichever line is weaker.
+const FORMS = [];
+for (let d = 3; d <= 5; d++) for (let m = 3; m <= 6; m++) for (let f = 1; f <= 3; f++) { const ed = d - 3, ef = f - 1; if (d + m + f === 10 && ed <= 2 && ef <= 2 && ed + ef <= 3) FORMS.push({ DEF: d, MID: m, FWD: f }); }
+const PS = { D: "DEF", M: "MID", F: "FWD", GK: "GK" };
+function xiTotal(pool, wk) {
+  const ps = pool.map((m) => ({ v: m.w[wk] || 0, ps: m.ps.map((q) => PS[q]).filter(Boolean) })).sort((a, b) => b.v - a.v);
+  let best = 0;
+  for (const form of FORMS) {
+    const room = { GK: 1, ...form }; let t = 0;
+    for (const p of ps) { const slot = p.ps.filter((q) => room[q] > 0).sort((a, b) => room[b] - room[a])[0]; if (slot) { room[slot]--; t += p.v; } }
+    if (t > best) best = t;
+  }
+  return best;
+}
+const seasonValue = (pool) => { let t = 0; const n = pool.length ? pool[0].w.length : 0; for (let w = 0; w < n; w++) t += xiTotal(pool, w); return t; };
+function tradeValues(model, rosters) {
+  const owner = {}; for (const r of rosters) for (const pid of r.players || []) owner[pid] = r.roster_id;
+  const fa = ["GK", "DEF", "MID", "FWD"].flatMap((pos) => Object.entries(model).filter(([pid, m]) => !owner[pid] && m.pos === pos).sort((a, b) => b[1].ros - a[1].ros).slice(0, 2).map(([pid]) => pid));
+  const clubs = rosters.map((r) => { const pids = [...(r.players || []), ...fa].filter((pid) => model[pid]); return { id: r.roster_id, pids, base: seasonValue(pids.map((pid) => model[pid])) }; });
+  for (const [pid, m] of Object.entries(model)) {
+    if (m.ros < 15) { m.tv = 0; continue; }
+    const gains = clubs.filter((c) => c.id !== owner[pid]).map((c) => (c.pids.includes(pid) ? 0 : seasonValue([...c.pids.filter((x) => x !== pid), pid].map((x) => model[x])) - c.base));
+    m.tv = round(mean(gains), 1);
+  }
+}
+
 const nextGw = lastScored + 1;
 const { baseline, teams, players: model } = buildModel(gamesBy(cur), gamesBy(prev), lastScored, nextGw, teamTable(cur), teamTable(prev));
+tradeValues(model, await get(`${API}/league/${LEAGUE_ID}/rosters`));
 await writeFile(OUT, JSON.stringify({ generated: new Date().toISOString(), season, lastScored, nextGw, baseline, teams, players: model }));
 const n = Object.keys(model).length;
 console.log(`data/model.json: ${n} players, next gameweek ${nextGw}, baselines ${JSON.stringify(baseline)}`);

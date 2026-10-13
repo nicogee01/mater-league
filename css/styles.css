@@ -2607,3 +2607,8 @@ html.has-install-bar body { padding-bottom: 92px; }
   .final-trophy::after { display: none; }
   .ticker__track { animation: none; }
 }
+/* players listed at two positions: split badge in both colours */
+.posb--multi { color: #fff; padding-inline: 4px; white-space: nowrap; }
+.posb--FM { background: linear-gradient(90deg, var(--neg) 50%, #2e6b45 50%); }
+.posb--DM { background: linear-gradient(90deg, var(--blue) 50%, #2e6b45 50%); }
+.posb--DF { background: linear-gradient(90deg, var(--blue) 50%, var(--neg) 50%); }
