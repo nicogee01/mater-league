@@ -14,10 +14,11 @@
   2. avail - chance he features in a given gameweek: how often he has played, times injury news.
              Injuries come from the official Fantasy Premier League data ("Expected back 7 Nov"),
              or from data/injury-overrides.csv when we know better ("unknown" -> mid-December).
-  3. fixtures - each remaining gameweek's opponent difficulty (FPL's 2-5 rating). Easier games
-             nudge the expectation up, harder ones down; defenders and keepers most (clean sheets).
+  3. fixtures - goals, assists and clean sheets are priced per fixture from club attack/defence
+             ratings (goals scored and conceded, this season leaning on last), home or away, and the
+             player's share of his club's goals and assists. Ghost points don't depend on the fixture.
   4. ros   - expected points for the rest of the season = sum over remaining gameweeks of
-             avail x rate x fixture factor.
+             avail x (ghost rate + that fixture's goal/assist/clean-sheet points).
   Plus a boom/bust profile (spread, floor, ceiling of his weekly scores) and a hot/cold flag
   (goals well above or below xG).
 */
@@ -67,7 +68,7 @@ function score(line) {
   const pre = Object.keys(line || {}).map((k) => k.match(/^pos_(gk|d|m|f)_/)).find(Boolean);
   const gv = pre ? scoring[`${pre[0]}g`] || 0 : 0, av = pre ? scoring[`${pre[0]}at`] || 0 : 0;
   const xpts = pts - gv * (line.g || 0) - av * (line.at || 0) + gv * (line.xg || 0) + av * (line.xa || 0);
-  return { pts, ghost, xpts, min: line.min || 0, g: line.g || 0, xg: line.xg || 0 };
+  return { pts, ghost, xpts, min: line.min || 0, g: line.g || 0, xg: line.xg || 0, at: line.at || 0, xa: line.xa || 0 };
 }
 // every game a player featured in, per season
 function gamesBy(weeks) {
@@ -76,6 +77,21 @@ function gamesBy(weeks) {
     for (const [pid, line] of Object.entries(wk || {})) {
       if (!line || !(line.min > 0)) continue;
       (out[pid] ||= []).push({ week: i + 1, ...score(line) });
+    }
+  });
+  return out;
+}
+
+// each club's goals for and against, gameweek by gameweek (Sleeper's TEAM_<id> lines), keyed by club abbreviation
+const abbrOfTeam = {};
+for (const p of Object.values(players)) if (p && p.team && p.team_abbr) abbrOfTeam[p.team] = p.team_abbr;
+function teamTable(weeks) {
+  const out = {};
+  weeks.forEach((wk, i) => {
+    for (const [k, l] of Object.entries(wk || {})) {
+      if (!k.startsWith("TEAM_") || !l || !l.gp) continue;
+      const abbr = abbrOfTeam[k.slice(5)];
+      if (abbr) (out[abbr] ||= {})[i + 1] = { gf: l.g || 0, ga: l.ga || 0 };
     }
   });
   return out;
@@ -133,7 +149,28 @@ const POS = { GK: "GK", D: "DEF", M: "MID", F: "FWD" };
 // seasons: their first six gameweeks vs the rest of the season; keepers had too few to fit)
 const NEWCOMER = { GK: 5.5, DEF: 3.75, MID: 4.75, FWD: 5.25 };
 const posOf = (p) => POS[(p.fantasy_positions || [])[0]] || null;
-function buildModel(curGames, prevGames, weeksPlayed, nextGw) {
+// Goals, assists and clean sheets come from the club: how many goals it should score in a given fixture, times the
+// player's share of them, plus the chance it keeps a clean sheet (needs 60 minutes). Fitted on 2025/26 (586 cases):
+// club ratings lean on last season for ~40 games; a player's share is pulled toward his position's typical share
+// for ~35 games, with last season's games counting 1.5 each. Blended 75/25 with the plain points-based estimate.
+const KT = 40, KS = 35, MPS = 1.5, BLEND = 0.75, HOME = 1.12, AWAY = 0.88;
+const PRE = { GK: "pos_gk_", DEF: "pos_d_", MID: "pos_m_", FWD: "pos_f_" };
+function buildModel(curGames, prevGames, weeksPlayed, nextGw, curTeams, prevTeams) {
+  // club attack / defence: goals scored and conceded per game, this season leaning on last season
+  const flat = (T, k) => Object.values(T).flatMap((t) => Object.values(t).map((x) => x[k]));
+  const lgPrev = mean(flat(prevTeams, "gf")) || 1.4, lg = mean(flat(curTeams, "gf")) || lgPrev;
+  const teams = {};
+  for (const abbr of eplClubs) {
+    const e = Object.values(curTeams[abbr] || {}), p = Object.values(prevTeams[abbr] || {});
+    const pf = p.length ? mean(p.map((x) => x.gf)) : 0.8 * lgPrev, pa = p.length ? mean(p.map((x) => x.ga)) : 1.25 * lgPrev;   // promoted: weaker
+    teams[abbr] = { att: (e.length * mean(e.map((x) => x.gf)) + KT * pf) / (e.length + KT), def: (e.length * mean(e.map((x) => x.ga)) + KT * pa) / (e.length + KT) };
+  }
+  // a position's typical share of its club's goals and assists (last season's regulars)
+  const typ = {};
+  for (const pos of Object.values(POS)) {
+    const regs = Object.entries(prevGames).filter(([pid, gs]) => gs.length >= 10 && players[pid] && posOf(players[pid]) === pos).map(([, gs]) => gs);
+    typ[pos] = { g: mean(regs.map((gs) => mean(gs.map((x) => x.g)) / lgPrev)), at: mean(regs.map((gs) => mean(gs.map((x) => x.at)) / lgPrev)) };
+  }
   // each position's typical regular: the median points per game of players with 3+ appearances
   const baseline = {}, ghostBase = {};
   for (const pos of Object.values(POS)) {
@@ -170,7 +207,24 @@ function buildModel(curGames, prevGames, weeksPlayed, nextGw) {
     const prior = newcomer ? NEWCOMER[pos] : baseline[pos], pg = prior * ghostBase[pos], pa = prior * (1 - ghostBase[pos]);
     const ghostRate = (wc * (wc ? curGhost(c) : 0) + wp * (wp ? mean(v.map((g) => g.ghost)) : 0) + KG * pg) / (wc + wp + KG);
     const gaRate = (wc * (wc ? curGA(c) : 0) + wp * (wp ? mean(v.map((g) => g.pts - g.ghost)) : 0) + KA * pa) / (wc + wp + KA);
-    const rate = ghostRate + gaRate;
+    // his share of the club's goals and assists: this season from his chances (75% xG/xA, 25% actual) over the club's
+    // goals in games he played; last season from actual goals (over his club's goals if he stayed, else a typical club's)
+    const T = teams[p.team_abbr] || { att: lg, def: lg };
+    const stayed = (p.team_changed_at || 0) < Date.UTC(season - 1, 6, 15);
+    const share2 = (k, xk) => {
+      const cg = c.reduce((s, g) => s + (((curTeams[p.team_abbr] || {})[g.week] || {}).gf || 0), 0);
+      const cs = cg ? ((1 - XM) * c.reduce((s, g) => s + g[k], 0) + XM * c.reduce((s, g) => s + g[xk], 0)) / cg : 0;
+      const pgf = stayed && prevTeams[p.team_abbr] ? mean(Object.values(prevTeams[p.team_abbr]).map((x) => x.gf)) : lgPrev;
+      const ps = v.length ? mean(v.map((g) => g[k])) / (pgf || lgPrev) : 0;
+      const wcs = cg ? c.length : 0, wps = Math.min(v.length, 30) * MPS;
+      return (wcs * cs + wps * ps + KS * typ[pos][k]) / (wcs + wps + KS);
+    };
+    const gS = share2("g", "xg"), aS = share2("at", "xa");
+    const sixty = c.length ? c : v, p60 = sixty.length ? sixty.filter((g) => g.min >= 60).length / sixty.length : 0.7;
+    const gv = scoring[PRE[pos] + "g"] || 0, av = scoring[PRE[pos] + "at"] || 0, cv = scoring[PRE[pos] + "cs"] || 0;
+    // goal / assist / clean-sheet points in a fixture: club's expected goals x his share, plus clean-sheet chance
+    const gaFix = (forG, against) => BLEND * (forG * (gS * gv + aS * av) + Math.exp(-against) * cv * p60) + (1 - BLEND) * gaRate;
+    const rate = ghostRate + gaFix(T.att, T.def);
     // how often he plays, from his recent gameweeks: the last four (fewer if he only arrived lately; weeks
     // before his first appearance don't count against him). No games this season: last season's rate.
     let share;
@@ -193,26 +247,26 @@ function buildModel(curGames, prevGames, weeksPlayed, nextGw) {
     if (fpl && fpl.status === "u") { back = SEASON_WEEKS + 1; note = fpl.news || "Unavailable"; }   // left the club / unavailable
     // rest of season, gameweek by gameweek
     const fx = (fixturesBy[p.team_abbr] || []).filter((f) => f.gw >= nextGw);
-    const tilt = pos === "GK" || pos === "DEF" ? 0.08 : 0.06;
     let ros = 0;
     const w = Array(Math.max(0, SEASON_WEEKS - nextGw + 1)).fill(0);   // expected points in each remaining gameweek (the trade calculator picks XIs from these)
     for (const f of fx) {
       const avail = back && f.gw < back ? 0 : share * (f.gw === nextGw ? nextChance : 1);
-      const e = avail * rate * (1 + tilt * (3 - f.d));
+      const O = teams[f.opp] || { att: lg, def: lg }, h = f.home ? HOME : AWAY;
+      const e = avail * (ghostRate + gaFix((T.att * O.def) / lg * h, (O.att * T.def) / lg * (f.home ? AWAY : HOME)));
       ros += e;
       if (f.gw - nextGw < w.length) w[f.gw - nextGw] += e;
     }
     const all = [...c, ...v].map((g) => g.pts);
     const goals = c.reduce((s, g) => s + g.g, 0), xg = c.reduce((s, g) => s + g.xg, 0);
     out[pid] = {
-      rate: round(rate), ghost: round(ghostRate), share: round(share), ros: round(ros, 1), w: w.map((x) => round(x, 1)), pos: posOf(p), ps: (p.fantasy_positions || []).filter((x) => x !== "DEF"), next5: fx.slice(0, 5).map((f) => [f.gw, f.opp, f.home ? 1 : 0, f.d]),
+      rate: round(rate), ghost: round(ghostRate), gs: round(gS, 3), as: round(aS, 3), share: round(share), ros: round(ros, 1), w: w.map((x) => round(x, 1)), pos: posOf(p), ps: (p.fantasy_positions || []).filter((x) => x !== "DEF"), next5: fx.slice(0, 5).map((f) => [f.gw, f.opp, f.home ? 1 : 0, f.d]),
       back: back && back <= SEASON_WEEKS ? back : back ? 99 : null, note: note.slice(0, 80), chance: nextChance < 1 ? nextChance : undefined,
       sd: round(Math.sqrt(mean(all.map((x) => (x - mean(all)) ** 2)))), floor: round(pct(all, 0.1), 1), ceil: round(pct(all, 0.9), 1),
       prev: v.length ? round(mean(v.map((g) => g.pts))) : null, prevGp: v.length || undefined,
       hot: c.length >= 3 && goals - xg >= 1.5 ? 1 : c.length >= 3 && xg - goals >= 1.5 ? -1 : undefined,
     };
   }
-  return { baseline, players: out };
+  return { baseline, teams: Object.fromEntries(Object.entries(teams).map(([k, t]) => [k, { att: round(t.att), def: round(t.def) }])), players: out };
 }
 
 if (BACKTEST) {
@@ -220,7 +274,7 @@ if (BACKTEST) {
   const split = +(process.env.SPLIT || 3);
   const train = gamesBy(cur.slice(0, split)), test = gamesBy(cur.map((w, i) => (i >= split ? w : {})));
   const prevG = gamesBy(prev);
-  const m = buildModel(train, prevG, split, split + 1).players;
+  const m = buildModel(train, prevG, split, split + 1, teamTable(cur.slice(0, split)), teamTable(prev)).players;
   const errs = { model: [], naive: [], lastSeason: [] };
   for (const [pid, gs] of Object.entries(test)) {
     if (!m[pid] || !train[pid] || gs.length < 1) continue;
@@ -235,7 +289,7 @@ if (BACKTEST) {
 }
 
 const nextGw = lastScored + 1;
-const { baseline, players: model } = buildModel(gamesBy(cur), gamesBy(prev), lastScored, nextGw);
-await writeFile(OUT, JSON.stringify({ generated: new Date().toISOString(), season, lastScored, nextGw, baseline, players: model }));
+const { baseline, teams, players: model } = buildModel(gamesBy(cur), gamesBy(prev), lastScored, nextGw, teamTable(cur), teamTable(prev));
+await writeFile(OUT, JSON.stringify({ generated: new Date().toISOString(), season, lastScored, nextGw, baseline, teams, players: model }));
 const n = Object.keys(model).length;
 console.log(`data/model.json: ${n} players, next gameweek ${nextGw}, baselines ${JSON.stringify(baseline)}`);
