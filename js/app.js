@@ -2834,7 +2834,9 @@
           s.article = art;
           s.headline = art.headline;
           s.report = art.body.join(" ");
-          s.mentions = (art.players || []).map((pid) => [pid, (state.players[pid] || {}).n]).filter((x) => x[1]);
+          // names to link: the ids the report lists, or else any player from either side that week it names
+          const named = art.players || (state.lineups || []).filter((r) => +r.week === week && [m.home, m.away].includes(rosterOf(r.manager)) && art.body.some((t) => t.includes(r.player))).map((r) => r.player_id);
+          s.mentions = [...new Set(named)].map((pid) => [pid, (state.players[pid] || {}).n]).filter((x) => x[1]);
           s.weight = weight + 500;
         }
         return s;
@@ -3055,10 +3057,11 @@
     // gazette.html: the paper (headlines + reports). awards.html: the two XIs + the weekly awards.
     const awardsPage = document.body.dataset.page === "awards";
     const written = wk.stories.filter((s) => s.article).length, latest = wk.week === data[data.length - 1].week;
-    const soon = latest && written < wk.stories.length ? `<aside class="gz-soon" role="status">
+    // each gameweek gets a full report on its biggest match (every derby, or the lead story); until it's in, say so
+    const soon = latest && !written ? `<aside class="gz-soon" role="status">
         <p class="gz-soon__tag">Coming soon</p>
         <h2 class="gz-soon__head">The Gameweek ${wk.week} Gazette is on its way</h2>
-        <p>${written ? `${written} of ${wk.stories.length} match reports are in; the rest are being written.` : "Full match reports are being written."} Until then, here are the quick takes from the scores.</p>
+        <p>The match report on the week's biggest game is being written. Until then, here are the quick takes from the scores.</p>
       </aside>` : "";
     const front = `${soon}
       <div class="gz-front">
