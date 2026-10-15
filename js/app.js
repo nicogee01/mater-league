@@ -2828,6 +2828,15 @@
         if (swap && swap.gain >= 5) lines.push(`${Lt.name} had ${swap.bench.name} (${gp(swap.bench.pts)}) on the bench while ${swap.starter.name} started and scored ${gp(swap.starter.pts)}${swap.gain > margin ? ": that swap alone would have won it" : ""}.`);
         const mentions = [star, swap && swap.bench, swap && swap.starter].filter(Boolean).map((p) => [p.pid, p.name]);
         const s = { week, match: m, H, A, W: Wt, L: Lt, ws, ls, margin, draw, type, weight, headline, derby, star, starClub, report: possessive(lines.join(" ")), mentions, hasXI };
+        // a match report written from the manager's notes (data/articles.js) takes over the story
+        const art = articleFor(week, m);
+        if (art) {
+          s.article = art;
+          s.headline = art.headline;
+          s.report = art.body.join(" ");
+          s.mentions = (art.players || []).map((pid) => [pid, (state.players[pid] || {}).n]).filter((x) => x[1]);
+          s.weight = weight + 500;
+        }
         return s;
       });
       seasonHigh = Math.max(seasonHigh, weekHigh);
@@ -2838,6 +2847,11 @@
     return all;
   }
   function pickLine(kind, pool, pick) { return pick("line-" + kind, pool); }
+  // data/articles.js: written match reports, keyed by gameweek and the two managers' usernames
+  function articleFor(week, m) {
+    return (window.MATER_ARTICLES || []).find((a) => +a.week === week &&
+      ((rosterOf(a.home) === m.home && rosterOf(a.away) === m.away) || (rosterOf(a.home) === m.away && rosterOf(a.away) === m.home))) || null;
+  }
 
   // awards: the always-on three plus the three most notable of the rest, each with a rotating title
   function buildAwards(week, games, sq, pick) {
@@ -3002,11 +3016,12 @@
   }
   function storyCard(s, lead) {
     const id = `gw${s.week}-${s.match.home}-${s.match.away}`;
-    return `<article class="gz-story${lead ? " gz-story--lead" : ""}${s.derby ? ` is-derby derby--${esc(s.derby.slug)}` : ""}" id="${id}">
+    return `<article class="gz-story${lead ? " gz-story--lead" : ""}${s.article ? " gz-story--report" : ""}${s.derby ? ` is-derby derby--${esc(s.derby.slug)}` : ""}" id="${id}">
       <p class="gz-story__tag"><span>${GZ_TAGS[s.type] || "Result"}</span>${s.derby ? `<em class="dt dt--${esc(s.derby.slug)}">${esc(s.derby.name)}</em>` : ""}</p>
       <h3 class="gz-story__head">${esc(s.headline)}</h3>
       <p class="gz-story__score">${crest(s.W)}<b>${club(s.W)}</b><span class="gz-count" data-to="${s.ws}">${num(s.ws, 2)}</span><i>–</i><span class="gz-count" data-to="${s.ls}">${num(s.ls, 2)}</span><b>${club(s.L)}</b>${crest(s.L)}</p>
-      <p class="gz-story__body">${linkNames(s.report, s.mentions)}</p>
+      ${s.article ? `<div class="gz-story__report">${s.article.body.map((para) => `<p>${linkNames(para, s.mentions)}</p>`).join("")}</div>
+      <p class="gz-story__byline">Match report · Gameweek ${s.week}</p>` : `<p class="gz-story__body">${linkNames(s.report, s.mentions)}</p>`}
       <div class="gz-share">
         <button type="button" class="gz-btn" data-share="${id}">Share to chat</button>
         <button type="button" class="gz-btn gz-btn--ghost" data-img="${id}">Save image</button>
@@ -3039,7 +3054,13 @@
     const xiNote = K.note(wk);
     // gazette.html: the paper (headlines + reports). awards.html: the two XIs + the weekly awards.
     const awardsPage = document.body.dataset.page === "awards";
-    const front = `
+    const written = wk.stories.filter((s) => s.article).length, latest = wk.week === data[data.length - 1].week;
+    const soon = latest && written < wk.stories.length ? `<aside class="gz-soon" role="status">
+        <p class="gz-soon__tag">Coming soon</p>
+        <h2 class="gz-soon__head">The Gameweek ${wk.week} Gazette is on its way</h2>
+        <p>${written ? `${written} of ${wk.stories.length} match reports are in; the rest are being written.` : "Full match reports are being written."} Until then, here are the quick takes from the scores.</p>
+      </aside>` : "";
+    const front = `${soon}
       <div class="gz-front">
         ${storyCard(lead, true)}
         <div class="gz-side">${rest.map((s) => storyCard(s, false)).join("")}</div>

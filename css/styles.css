@@ -2626,3 +2626,12 @@ html.has-install-bar body { padding-bottom: 92px; }
 .tc-pick__club.is-on span:last-child { color: var(--ink); font-weight: 700; }
 .tc-pick__club:disabled { opacity: .3; cursor: not-allowed; }
 .tc-roster .pdb-photo { width: 32px; height: 32px; }
+
+/* Gazette: written match reports and the "coming soon" post */
+.gz-story__report p { margin: 0 0 .85em; line-height: 1.6; }
+.gz-story__report p:first-child::first-letter { font-family: var(--f-display); float: left; font-size: 3.1em; line-height: .85; padding: 4px 8px 0 0; color: var(--accent); }
+.gz-story__byline { margin: 4px 0 12px; font-family: var(--f-label); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.gz-soon { margin: 0 0 var(--s5); padding: var(--s4) var(--s5); border-radius: 16px; border: 2px dashed var(--accent); background: var(--surface); }
+.gz-soon__tag { margin: 0 0 4px; font-family: var(--f-label); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.gz-soon__head { margin: 0 0 6px; font-family: var(--f-display); font-size: clamp(22px, 4vw, 30px); text-transform: uppercase; line-height: 1.05; }
+.gz-soon p:last-child { margin: 0; color: var(--faint); }
