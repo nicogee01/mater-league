@@ -7,7 +7,7 @@
   const SPORT = "clubsoccer:epl";
   const API = "https://api.sleeper.app/v1";
   const PLAYOFF_SPOTS = 6;
-  const PLAYER_CACHE_KEY = "nym-players-v2";
+  const PLAYER_CACHE_KEY = "nym-players-v3";
   const PLAYER_CACHE_TTL = 12 * 60 * 60 * 1000;
   const PHOTO_CACHE = "nym-photo-";
   const LORE = window.MATER_LEAGUE || {};
@@ -54,12 +54,14 @@
     const raw = await get(`/players/${SPORT}`);
     const p = {};
     for (const [id, x] of Object.entries(raw)) {
+      // primary position first: Sleeper's "position" (Saka is a midfielder who can also play forward)
+      const fp = x.fantasy_positions || [], prim = fp.includes(x.position) ? x.position : fp[0] || x.position || "";
       p[id] = {
         n: x.full_name || [x.first_name, x.last_name].filter(Boolean).join(" ") || "Unknown",
         l: x.last_name || x.full_name || "",
         c: x.team_abbr || "",
-        p: (x.fantasy_positions && x.fantasy_positions[0]) || x.position || "",
-        ps: x.fantasy_positions || [],
+        p: prim,
+        ps: fp.length ? [prim, ...fp.filter((q) => q !== prim)] : [],
         t: x.team || "",
         i: x.injury_status || "",
       };
@@ -691,7 +693,7 @@
     ["sv", "SV", "Saves", "gk", 0], ["pks", "PKS", "Penalties saved", "gk", 0],
     ["yc", "YC", "Yellow cards", "", 0], ["rc", "RC", "Red cards", "", 0], ["og", "OG", "Own goals", "", 0],
   ];
-  const pdb = { group: "all", mode: "avg", sort: "fpts", dir: -1, q: "", pos: "", club: "", owner: "", minGp: 1, limit: 100, built: false };
+  const pdb = { group: "all", mode: "avg", sort: "fpts", dir: -1, q: "", pos: "", multi: true, club: "", owner: "", minGp: 1, limit: 100, built: false };
   function pdbRows() {
     const owner = {};
     state.teams.forEach((t) => t.players.forEach((pid) => (owner[pid] = t)));
@@ -719,6 +721,7 @@
     const re = () => { pdb.limit = 100; renderPlayerDb(); };
     $("#pdbSearch").addEventListener("input", (e) => { pdb.q = e.target.value.trim().toLowerCase(); re(); });
     $("#pdbPos").addEventListener("change", (e) => { pdb.pos = e.target.value; re(); });
+    $("#pdbMulti").addEventListener("change", (e) => { pdb.multi = e.target.checked; re(); });
     $("#pdbClub").addEventListener("change", (e) => { pdb.club = e.target.value; re(); });
     $("#pdbOwner").addEventListener("change", (e) => { pdb.owner = e.target.value; re(); });
     $("#pdbGp").addEventListener("change", (e) => { pdb.minGp = +e.target.value; re(); });
@@ -742,6 +745,9 @@
     });
     renderPlayerDb();
   }
+  // position badge, primary position first; a player listed at two positions shows both (M/F)
+  const posBadge = (pl) => { const ps = (pl.ps || []).filter((q) => ["GK", "D", "M", "F"].includes(q));
+    return ps.length > 1 ? `<span class="posb posb--multi posb--${esc(ps.join(""))}" title="Can play ${esc(ps.join(" or "))}">${esc(ps.join("/"))}</span>` : `<span class="posb ${esc(pl.p)}">${esc(pl.p || "–")}</span>`; };
   // injury badge: out (with expected return gameweek) or a doubt (chance of playing)
   const injBadge = (m) => (!m ? "" : m.back ? `<span class="pdb-inj" title="${esc(m.note || "Injured")}">${m.back === 99 ? "OUT" : `GW${m.back}`}</span>`
     : m.chance != null ? `<span class="pdb-inj pdb-inj--doubt" title="${esc(m.note || "")}">${Math.round(m.chance * 100)}%</span>` : "");
@@ -773,7 +779,8 @@
     };
     let rows = pdbRows().filter((r) =>
       (!pdb.q || r.p.n.toLowerCase().includes(pdb.q)) &&
-      (!pdb.pos || playsIn(r.p, [{ GK: "GK", DEF: "D", MID: "M", FWD: "F" }[pdb.pos]])) &&
+      // a position filter takes players listed there first, plus (if ticked) those who can also play there
+      (!pdb.pos || (pdb.multi ? playsIn(r.p, [{ GK: "GK", DEF: "D", MID: "M", FWD: "F" }[pdb.pos]]) : r.p.p === { GK: "GK", DEF: "D", MID: "M", FWD: "F" }[pdb.pos])) &&
       (!pdb.club || r.p.c === pdb.club) &&
       (!pdb.owner || (pdb.owner === "fa" ? !r.owner : r.owner && String(r.owner.rosterId) === pdb.owner)) &&
       r.gp >= pdb.minGp &&
@@ -785,12 +792,13 @@
     const th = (k, label, title, cls = "") => `<th scope="col" class="${cls}${pdb.sort === k ? " is-sorted" : ""}" aria-sort="${pdb.sort === k ? (pdb.dir < 0 ? "descending" : "ascending") : "none"}"><button type="button" data-sort="${k}" title="${esc(title)}">${label}${pdb.sort === k ? (pdb.dir < 0 ? " ▾" : " ▴") : ""}</button></th>`;
     const fmt = (v, dp) => (v === 0 ? `<span class="pdb-zero">·</span>` : rate ? num(v, dp || 2) : num(v, dp));
     box.innerHTML = `<table class="pdb">
-      <thead><tr>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own"><span class="pdb-full">Fantasy club</span><span class="pdb-last">Club</span></th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", "PTS" + suf, "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", "GH PTS" + suf, "Ghost points: fantasy points without goals, assists and clean sheets", "pdb-c-ghost")}
+      <thead><tr><th scope="col" class="pdb-c-rk" title="Rank in this list, as sorted and filtered">RK</th>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own"><span class="pdb-full">Fantasy club</span><span class="pdb-last">Club</span></th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", "PTS" + suf, "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", "GH PTS" + suf, "Ghost points: fantasy points without goals, assists and clean sheets", "pdb-c-ghost")}
         ${cols.map(([k, l, t]) => th(k, l, t)).join("")}${outlook ? th("exp", "EXP/GW", "Expected points per gameweek") + th("ros", "ROS", "Expected points, rest of season") + th("floor", "FLOOR", "A bad week (10th percentile)") + th("ceil", "CEIL", "A great week (90th percentile)") + th("prev", "LAST SZN", "Points per game last season") + th("fdr", "NEXT 5", "Next five opponents (sort: easiest first)", "pdb-c-fx") : ""}</tr></thead>
-      <tbody>${shown.map((r) => `<tr>
+      <tbody>${shown.map((r, i) => `<tr>
+        <td class="pdb-c-rk">${i + 1}</td>
         <th scope="row" class="pdb-c-name"><span class="pdb-player" data-player="${esc(r.pid)}" data-name="${esc(r.p.n)}" role="button" tabindex="0">
           <span class="pdb-photo" data-photo="${esc(r.pid)}" aria-hidden="true"><span>${esc(initials(r.p.n))}</span></span>
-          <span><b><span class="pdb-full">${esc(r.p.n)}</span><span class="pdb-last">${esc(surname(r.pid, r.p.n))}</span>${injBadge(M(r))}</b><small><span class="posb ${esc(r.p.p)}">${esc(r.p.p || "–")}</span>${clubLogo(r.p.t)}${esc(r.p.c || "")}</small></span></span></th>
+          <span><b><span class="pdb-full">${esc(r.p.n)}</span><span class="pdb-last">${esc(surname(r.pid, r.p.n))}</span>${injBadge(M(r))}</b><small>${posBadge(r.p)}${clubLogo(r.p.t)}${esc(r.p.c || "")}</small></span></span></th>
         <td class="pdb-c-own">${r.owner ? `${crest(r.owner)}<span class="pdb-own-name">${club(r.owner)}</span>` : `<span class="fa-tag"><span class="pdb-full">Free agent</span><span class="pdb-last">FA</span></span>`}</td>
         <td>${r.gp}</td><td>${r.x.gs || 0}</td><td>${Math.round(val(r, "min"))}</td>
         <td class="pdb-c-pts">${num(val(r, "fpts"), avg ? 2 : 2)}</td>

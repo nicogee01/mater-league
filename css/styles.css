@@ -2610,8 +2610,11 @@ html.has-install-bar body { padding-bottom: 92px; }
 /* players listed at two positions: split badge in both colours */
 .posb--multi { color: #fff; padding-inline: 4px; white-space: nowrap; }
 .posb--FM { background: linear-gradient(90deg, var(--neg) 50%, #2e6b45 50%); }
+.posb--MF { background: linear-gradient(90deg, #2e6b45 50%, var(--neg) 50%); }
 .posb--DM { background: linear-gradient(90deg, var(--blue) 50%, #2e6b45 50%); }
+.posb--MD { background: linear-gradient(90deg, #2e6b45 50%, var(--blue) 50%); }
 .posb--DF { background: linear-gradient(90deg, var(--blue) 50%, var(--neg) 50%); }
+.posb--FD { background: linear-gradient(90deg, var(--neg) 50%, var(--blue) 50%); }
 
 /* club picker: tap a crest */
 .tc-side__label { margin: 0 0 8px; font-family: var(--f-label); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
@@ -2635,3 +2638,13 @@ html.has-install-bar body { padding-bottom: 92px; }
 .gz-soon__tag { margin: 0 0 4px; font-family: var(--f-label); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
 .gz-soon__head { margin: 0 0 6px; font-family: var(--f-display); font-size: clamp(22px, 4vw, 30px); text-transform: uppercase; line-height: 1.05; }
 .gz-soon p:last-child { margin: 0; color: var(--faint); }
+
+/* player stats: rank column and the multi-position toggle */
+.pdb .pdb-c-rk { width: 1%; text-align: center; font-family: var(--f-label); font-weight: 700; color: var(--faint); padding-inline: 6px; }
+.pdb-check { display: inline-flex; align-items: center; gap: 8px; align-self: end; min-height: 44px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pdb-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.pdb td.pdb-c-rk { position: sticky; left: 0; z-index: 1; background: var(--surface); width: 30px; min-width: 30px; max-width: 30px; padding-inline: 2px; }
+.pdb thead th.pdb-c-rk { position: sticky; left: 0; z-index: 3; width: 30px; min-width: 30px; max-width: 30px; padding-inline: 2px; color: #d5dbe6; }
+/* the pinned rank + player columns: a soft edge so columns scrolling underneath read as sliding under, not cut off */
+.pdb .pdb-c-name { left: 30px; box-shadow: 8px 0 8px -6px rgba(11, 31, 58, 0.28); clip-path: inset(0 -16px 0 0); }
+@media (max-width: 760px) { .pdb .pdb-c-name { max-width: 162px; } .pdb-player b { max-width: 120px; } }
