@@ -730,7 +730,7 @@
     const grp = (g) => PDB_COLS.filter(([, , , gs]) => gs.split(" ")[0] === g).map(([, l, t]) => [l, t]);
     const sections = [
       ["Basics", [["GP", "Games played"], ["GS", "Games started"], ["MIN", "Minutes (MIN/G per game)"],
-        ["PTS", "Fantasy points, this league's scoring"], ["GH PTS", "Ghost points: fantasy points without goals, assists and clean sheets"]]],
+        ["PTS", "Fantasy points, this league's scoring"], ["GH PTS", "Ghost points: fantasy points without goals, assists, clean sheets, own goals and yellow cards"]]],
       ["Attack", grp("att")], ["Defence", grp("def")], ["Goalkeeping", grp("gk")], ["Discipline", grp("")],
       ["Outlook", [["EXP/GW", "Expected points per gameweek: how good he is when he plays × how often he plays"], ["ROS", "Expected points for the rest of the season, after injuries and fixtures"],
         ["FLOOR / CEIL", "A bad week and a great week for him (10th and 90th percentile scores)"], ["LAST SZN", "Points per game last season"], ["NEXT 5", "Next five opponents; green = easier, red = harder"]]],
@@ -792,7 +792,7 @@
     const th = (k, label, title, cls = "") => `<th scope="col" class="${cls}${pdb.sort === k ? " is-sorted" : ""}" aria-sort="${pdb.sort === k ? (pdb.dir < 0 ? "descending" : "ascending") : "none"}"><button type="button" data-sort="${k}" title="${esc(title)}">${label}${pdb.sort === k ? (pdb.dir < 0 ? " ▾" : " ▴") : ""}</button></th>`;
     const fmt = (v, dp) => (v === 0 ? `<span class="pdb-zero">·</span>` : rate ? num(v, dp || 2) : num(v, dp));
     box.innerHTML = `<table class="pdb">
-      <thead><tr><th scope="col" class="pdb-c-rk" title="Rank in this list, as sorted and filtered">RK</th>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own"><span class="pdb-full">Fantasy club</span><span class="pdb-last">Club</span></th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", "PTS" + suf, "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", "GH PTS" + suf, "Ghost points: fantasy points without goals, assists and clean sheets", "pdb-c-ghost")}
+      <thead><tr><th scope="col" class="pdb-c-rk" title="Rank in this list, as sorted and filtered">RK</th>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own"><span class="pdb-full">Fantasy club</span><span class="pdb-last">Club</span></th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", "PTS" + suf, "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", "GH PTS" + suf, "Ghost points: fantasy points without goals, assists, clean sheets, own goals and yellow cards", "pdb-c-ghost")}
         ${cols.map(([k, l, t]) => th(k, l, t)).join("")}${outlook ? th("exp", "EXP/GW", "Expected points per gameweek") + th("ros", "ROS", "Expected points, rest of season") + th("floor", "FLOOR", "A bad week (10th percentile)") + th("ceil", "CEIL", "A great week (90th percentile)") + th("prev", "LAST SZN", "Points per game last season") + th("fdr", "NEXT 5", "Next five opponents (sort: easiest first)", "pdb-c-fx") : ""}</tr></thead>
       <tbody>${shown.map((r, i) => `<tr>
         <td class="pdb-c-rk">${i + 1}</td>
@@ -3777,8 +3777,8 @@
             if (scoring[k] === undefined) continue;
             const pts = Number(v) * Number(scoring[k]);
             t.fpts += pts;
-            // ghost points: everything except goals, assists and clean sheets
-            if (!/_(g|at|cs|cs90)$/.test(k)) t.ghost += pts;
+            // ghost points: everything except goals, assists, clean sheets, own goals and yellow cards
+            if (!/_(g|at|cs|cs90|og|yc|yc2)$/.test(k)) t.ghost += pts;
             continue;
           }
           if (typeof v === "number") t[k] = (t[k] || 0) + v;
