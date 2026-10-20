@@ -2696,7 +2696,7 @@ html.has-install-bar body { padding-bottom: 92px; }
 .prs-g b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .prs-g span:last-child { font: 18px var(--f-display); }
 .prs-g.is-w { color: var(--ink); } .prs-g.is-w b { font-weight: 700; }
-.prs--ballot { margin: 0 0 var(--s5); }
+.prs--ballot { margin: var(--s5) 0; }
 .prs--ballot .prs-head h2 { font-size: 22px; }
 .prs-more { margin-top: var(--s3); }
 .prs-more summary { cursor: pointer; font: 700 13px var(--f-label); letter-spacing: .06em; text-transform: uppercase; }
@@ -2705,4 +2705,17 @@ html.has-install-bar body { padding-bottom: 92px; }
 @media (max-width: 560px) {
   .prs-toggle { display: grid; grid-template-columns: 1fr 1fr; width: 100%; border-radius: 14px; box-sizing: border-box; }
   .prs-toggle button { text-align: center; border-radius: 10px; padding: 10px 6px; font-size: 12px; }
+}
+
+/* the round's gameweeks: one row, swipe left to right */
+.prs-weeks { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); grid-template-columns: none; overflow-x: auto; padding-bottom: 6px; }
+@media (max-width: 560px) {
+  /* phones: crests instead of club names, like the rest of the site */
+  .prs-club > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }  /* still read out by screen readers */
+  .prs-table { min-width: 0; }
+  .prs-table th, .prs-table td { padding: 8px 6px; }
+  .prs-weeks { grid-auto-columns: 142px; }
+  .prs-g { grid-template-columns: 24px 1fr; }
+  .prs-g b { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .prs-g span:last-child { text-align: right; }
 }

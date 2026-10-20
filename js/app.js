@@ -4076,7 +4076,7 @@
         ${st.from > 1 ? `<th scope="col"${hasPR ? "" : ` class="prs-sep"`}>Table<small>at ${startLbl}</small></th>` : ""}<th scope="col">Table<small>now · season record</small></th></tr></thead>
       <tbody>${span.map((x) => { const id = x.t.rosterId, a = start[id], b = now[id], r = lastRank[id];
         return `<tr><td class="prs-rk">${x.pos}</td>
-          <th scope="row"><span class="prs-club">${crest(x.t)}<span><b>${club(x.t)}</b><small>${esc(x.t.manager)}</small></span></span></th>
+          <th scope="row"><span class="prs-club" title="${esc(x.t.name)}">${crest(x.t)}<span><b>${club(x.t)}</b><small>${esc(x.t.manager)}</small></span></span></th>
           <td><b class="prs-big">${rec(x)}</b><span class="prs-pills">${pills(x.g)}</span></td>
           <td>${(x.pf / x.g.length).toFixed(1)}</td>
           ${hasPR ? `<td class="prs-sep">${r ? `${ordinal(r)} ${mv(r, x.pos)}` : "–"}</td>` : ""}
@@ -4084,13 +4084,13 @@
           <td>${ordinal(b.pos)}${st.from > 1 ? ` ${mv(a.pos, b.pos)}` : ""} <small>${rec(b)}</small></td></tr>`; }).join("")}</tbody></table></div>
       <p class="chart-note"># = rank over Gameweeks ${st.from}–${played} only: wins, then points scored.${hasPR ? ` The arrow by the power rank compares the GW${st.last} vote with this stretch;` : ""}${st.from > 1 ? ` the arrow on the table shows the move since ${startLbl === "start" ? "the start" : `Gameweek ${st.from - 1}`}.` : ""}</p>`;
     const g1 = (m, id) => { const t = state.byRoster[id], me = id === m.home ? m.homePts : m.awayPts, op = id === m.home ? m.awayPts : m.homePts;
-      return `<span class="prs-g${me > op ? " is-w" : ""}">${crest(t)}<b>${club(t)}</b><span>${num(me, 2)}</span></span>`; };
+      return `<span class="prs-g${me > op ? " is-w" : ""}" title="${esc(t.name)}">${crest(t)}<b>${club(t)}</b><span>${num(me, 2)}</span></span>`; };
     const weeks = Array.from({ length: n }, (_, i) => st.from + i).map((w) => {
       const g = state.results.filter((m) => m.week === w);
       if (g.length) return `<section class="prs-week"><h3>Gameweek ${w}</h3><ul class="prs-games">${g.map((m) => `<li>${g1(m, m.home)}${g1(m, m.away)}</li>`).join("")}</ul></section>`;
       const f = (state.fixtures || []).filter((m) => m.week === w);
       if (!f.length) return "";
-      const up = (id) => { const t = state.byRoster[id]; return `<span class="prs-g">${crest(t)}<b>${club(t)}</b><span>–</span></span>`; };
+      const up = (id) => { const t = state.byRoster[id]; return `<span class="prs-g" title="${esc(t.name)}">${crest(t)}<b>${club(t)}</b><span>–</span></span>`; };
       return `<section class="prs-week prs-week--soon"><h3>Gameweek ${w} <small>to come</small></h3><ul class="prs-games">${f.map((m) => `<li>${up(m.home)}${up(m.away)}</li>`).join("")}</ul></section>`;
     }).join("");
     return compact
