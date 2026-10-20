@@ -35,7 +35,7 @@ jobs:
           if git diff --quiet; then echo "Nothing new."; exit 0; fi
           git config user.name "mater-league-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/matchups.csv data/fixtures.csv
-          git commit -m "Log gameweek scores from Sleeper"
+          git add data/matchups.csv data/fixtures.csv data/lineups.csv
+          git commit -m "Log gameweek scores from Sleeper (and any stat corrections)"
           git pull --rebase
           git push
