@@ -86,5 +86,17 @@ window.MATER_ARTICLES = [
       "It's a fourth straight defeat for Insigne Himself, the very skid Manzambi Magic just climbed out of. Three Chelsea players can carry a lot, but not past a full eleven."
     ],
     "players": ["7590", "4270", "1909", "1806", "14900", "1716", "1781", "1091", "1922", "2520", "3981", "2413", "10130", "1097", "1993", "1786", "14935", "3224"]
+  },
+  {
+    "week": 7,
+    "home": "nicog01",
+    "away": "treyclif3",
+    "headline": "The Perfect Start Is Over: Manzambi Magic Hand Pep's Their First Defeat",
+    "body": [
+      "Six games, six wins, and then Manzambi Magic. Pep's Retirement Fund arrived as the league's only unbeaten side and left on the wrong end of a 136.25–86.75 hammering, their first defeat of the season. For Manzambi Magic it's a second win in a row and their best score of the year, and the side that lost four straight a fortnight ago suddenly looks like it has found something.",
+      "Man of the match is, fittingly, Johan Manzambi: 18.5 points with a goal and a clean sheet in only his second start. The defence did the rest. Zion Suzuki, projected for 2.47, kept a clean sheet for 16.75, Maxim De Cuyper added 16.5 for his fourth big week out of five, Tarik Muharemovic set one up for 16.25, and Adrien Truffert kept a clean sheet for 11.75. Jérémy Doku, Iliman Ndiaye, Nicolas Jackson and Igor Thiago all chipped in double figures or close to it, and Jack Rudoni's −0.5 was the only blot. Their best possible lineup was 140.75, so only 4.5 points were left on the bench. Very little went wrong.",
+      "Pep's Retirement Fund had Alex Iwobi, who scored and kept a clean sheet for 24.5, and Lewis Hall's 12.25, and not much else. Gianluigi Donnarumma finished on −1.75. The two players they lean on most went missing together: Bruno Fernandes, projected for 10.69, managed 4, and Kai Havertz, projected for 10.88, managed 2.5. Pascal Groß added 2.5 and Nordi Mukiele 4. Even their best possible lineup, 103.75, would have lost by 32.5.",
+      "Pep's are still 6–1 and still top of the pile, but the aura has gone. Manzambi Magic are 3–4 and on the move."
+    ]
   }
 ];
