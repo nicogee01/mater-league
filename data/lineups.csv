@@ -1012,7 +1012,7 @@ week,manager,slot,player_id,player,pts,proj,min
 7,GlenM22,DEF,1107,Ezri Konsa,11.25,3.78,90
 7,GlenM22,MID,3213,Kiernan Dewsbury-Hall,5,6.83,90
 7,GlenM22,MID,1766,Harvey Barnes,6,6.21,90
-7,GlenM22,MID,2160,Mohammed Kudus,10,7.2,47
+7,GlenM22,MID,2160,Mohammed Kudus,15.5,7.2,87
 7,GlenM22,FWD,4077,Thierno Barry,8.5,6.35,90
 7,GlenM22,FWD,4382,Bradley Barcola,10,9.06,90
 7,GlenM22,FWD,4049,Evanilson,26,5.48,79
@@ -1035,7 +1035,7 @@ week,manager,slot,player_id,player,pts,proj,min
 7,officialmaje,DEF,2417,Ben White,6.25,5.17,66
 7,officialmaje,MID,1863,Alexis Mac Allister,8,5.33,90
 7,officialmaje,MID,10495,Enzo Le Fée,4,6.58,90
-7,officialmaje,MID,1795,Sandro Tonali,4.5,5,47
+7,officialmaje,MID,1795,Sandro Tonali,7,5,90
 7,officialmaje,FWD,2520,Pedro Neto,35,8.74,89
 7,officialmaje,FWD,1721,Erling Haaland,28.5,10.35,90
 7,officialmaje,FWD,1923,Noni Madueke,9.5,,45
@@ -1044,7 +1044,7 @@ week,manager,slot,player_id,player,pts,proj,min
 7,officialmaje,BN,1274,Oliver McBurnie,1.5,8.13,90
 7,officialmaje,BN,1710,Oscar Bobb,11,5.79,78
 7,officialmaje,BN,3653,Jaidon Anthony,3,7.68,77
-7,officialmaje,BN,6940,Omar Marmoush,1.5,8.56,47
+7,officialmaje,BN,6940,Omar Marmoush,15,8.56,87
 7,officialmaje,BN,4901,Viktor Gyökeres,2,,24
 7,officialmaje,BN,6910,Abdukodir Khusanov,-1,,14
 7,officialmaje,BN,1012,Anthony Elanga,0,,0
@@ -1087,7 +1087,7 @@ week,manager,slot,player_id,player,pts,proj,min
 7,BottomCap,BN,1957,Yoane Wissa,2.5,5.47,90
 7,BottomCap,BN,3392,Leif Davis,-0.75,0.2,90
 7,BottomCap,BN,1940,Keane Lewis-Potter,16,5.07,77
-7,BottomCap,BN,1836,Dominic Solanke,-1,7.01,47
+7,BottomCap,BN,1836,Dominic Solanke,9,7.01,90
 7,BottomCap,BN,1269,William Osula,-0.5,,34
 7,BottomCap,BN,2413,Jurriën Timber,3.25,,24
 7,BottomCap,BN,1217,Marcus Rashford,0,,0
@@ -1098,7 +1098,7 @@ week,manager,slot,player_id,player,pts,proj,min
 7,KingAbes,DEF,14938,Semi Ajayi,1.5,1.38,90
 7,KingAbes,DEF,1865,Dominik Szoboszlai,0.5,7.49,32
 7,KingAbes,DEF,1275,Jayden Bogle,5.25,3.77,90
-7,KingAbes,DEF,14896,Bobby Thomas,3,2.47,47
+7,KingAbes,DEF,14896,Bobby Thomas,3.75,2.47,90
 7,KingAbes,MID,1714,Jack Grealish,6,7.54,85
 7,KingAbes,MID,4864,Florian Wirtz,25,8.56,90
 7,KingAbes,MID,1571,Diego Gómez,14.5,7.01,90
@@ -1120,14 +1120,14 @@ week,manager,slot,player_id,player,pts,proj,min
 7,austinclifton,GK,2053,Bart Verbruggen,10.25,5.73,90
 7,austinclifton,DEF,1829,Milos Kerkez,5,2.44,90
 7,austinclifton,DEF,9599,Luka Vuskovic,26.25,7.51,90
-7,austinclifton,DEF,1512,Micky van de Ven,3.5,4.05,47
+7,austinclifton,DEF,1512,Micky van de Ven,4.25,4.05,90
 7,austinclifton,MID,1120,Emiliano Buendía,7.5,9.23,72
 7,austinclifton,MID,1830,Marcus Tavernier,19,7.64,79
 7,austinclifton,MID,2403,Declan Rice,15,7.78,90
-7,austinclifton,MID,1500,James Maddison,13,7.47,47
+7,austinclifton,MID,1500,James Maddison,13,7.47,69
 7,austinclifton,FWD,1994,Dominic Calvert-Lewin,17.5,7.72,90
 7,austinclifton,FWD,1963,Bryan Mbeumo,12.5,7.74,90
-7,austinclifton,FWD,14909,Brandon Thomas-Asante,1.5,5.33,47
+7,austinclifton,FWD,14909,Brandon Thomas-Asante,12.5,5.33,78
 7,austinclifton,BN,4870,Granit Xhaka,11.5,4.91,90
 7,austinclifton,BN,1911,Djordje Petrovic,10,5.42,90
 7,austinclifton,BN,1060,Dara O'Shea,3,0.36,90
@@ -1148,7 +1148,7 @@ week,manager,slot,player_id,player,pts,proj,min
 7,nicog01,MID,1716,Jérémy Doku,10.5,9.68,77
 7,nicog01,MID,3778,Iliman Ndiaye,9,7.96,90
 7,nicog01,MID,1909,Nicolas Jackson,11,7.83,90
-7,nicog01,MID,14900,Jack Rudoni,-0.5,6.37,47
+7,nicog01,MID,14900,Jack Rudoni,11,6.37,87
 7,nicog01,FWD,3667,Igor Thiago,10.5,7.87,90
 7,nicog01,FWD,2410,Bukayo Saka,6.5,11.8,90
 7,nicog01,BN,1008,Neco Williams,6.25,3.15,90
@@ -1166,7 +1166,7 @@ week,manager,slot,player_id,player,pts,proj,min
 7,treyclif3,GK,4374,Gianluigi Donnarumma,-1.75,4.53,90
 7,treyclif3,DEF,1789,Lewis Hall,12.25,4.14,90
 7,treyclif3,DEF,4884,Nordi Mukiele,4,4.48,90
-7,treyclif3,DEF,2047,Jan Paul van Hecke,5.5,6.4,47
+7,treyclif3,DEF,2047,Jan Paul van Hecke,12.25,6.4,90
 7,treyclif3,MID,2051,Pascal Groß,2.5,6.8,71
 7,treyclif3,MID,7571,Anton Stach,10,9.46,90
 7,treyclif3,MID,1213,Bruno Fernandes,4,10.69,90
@@ -1182,5 +1182,5 @@ week,manager,slot,player_id,player,pts,proj,min
 7,treyclif3,BN,1991,Jarrad Branthwaite,-0.75,2.48,90
 7,treyclif3,BN,1882,Enzo Fernández,8,,40
 7,treyclif3,BN,1838,Alex Scott,0,,0
-7,treyclif3,BN,5354,Mathys Tel,0,,0
+7,treyclif3,BN,5354,Mathys Tel,-0.5,,3
 7,treyclif3,BN,9438,Estêvão,0,,0

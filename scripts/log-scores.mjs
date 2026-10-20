@@ -13,6 +13,9 @@
   week-by-week W/L record before anything is written; if a single thing disagrees, nothing is.
   Only one gameweek at a time can be derived this way (that's why it runs every half hour).
 
+  Player points: the lineup snapshot can be taken while a match is still going, so every run also refreshes the
+  points and minutes of every recorded player (data/lineups.csv) in every scored week from Sleeper's stats.
+
   Stat corrections: Sleeper sometimes corrects a player's stats days after a gameweek, which changes that
   club's score for an already-logged week. Left alone, the change would land in the next derived week instead.
   So every run first re-scores each logged week from its recorded starting XI (data/lineups.csv) with Sleeper's
@@ -98,10 +101,18 @@ if (all.length && all.length <= 12) {
   const subsets = [...Array(1 << all.length).keys()].sort((x, y) => bits(y) - bits(x));
   const m = subsets.find((k) => passes(all.filter((_, i) => k & (1 << i))));
   const pick = m === undefined ? [] : all.filter((_, i) => m & (1 << i));
-  for (const f of pick) { fixes.push(f); for (const y of f.pts) if (Math.abs(y.now - +y.x[5]) > 0.001) luFixes.push(y); }
+  for (const f of pick) fixes.push(f);
   const skipped = all.filter((f) => !pick.includes(f));
   if (skipped.length) console.log(`Not applied (Sleeper's league totals don't reflect them): ${skipped.map((f) => `GW${f.w} ${f.who} ${f.from.toFixed(2)} -> ${f.to.toFixed(2)}`).join(", ")}`);
 } else if (all.length) console.log(`Warning: ${all.length} possible stat corrections; too many to check, none applied.`);
+// every recorded player (XI and bench) in a scored week: points and minutes from Sleeper's current stats
+for (const x of lu) {
+  const w = +x[0], st = statWeeks[w];
+  if (!st || w > scored) continue;
+  const l = st[x[3]], now = money(scoreLine(l)), min = String((l && l.min) || 0);
+  if (Math.abs(now - +x[5]) > 0.001 || (x[7] !== undefined && x[7] !== min)) luFixes.push({ x, now, min });
+}
+if (luFixes.length) console.log(`Player points refreshed from Sleeper: ${luFixes.length} lineup row(s), e.g. ${luFixes.slice(0, 3).map(({ x, now }) => `GW${x[0]} ${x[4]} ${x[5]} -> ${now}`).join(", ")}`);
 function bits(m) { let n = 0; for (; m; m >>= 1) n += m & 1; return n; }
 for (const f of fixes) {
   const [h, a] = [+f.r[3], +f.r[4]];
@@ -110,18 +121,18 @@ for (const f of fixes) {
   if (Math.sign(+f.r[3] - +f.r[4]) !== before) { console.error(`Not writing anything: a stat correction would change the result of GW${f.w} ${f.r[1]} v ${f.r[2]}. Check it by hand.`); process.exit(1); }
   console.log(`Stat correction (confirmed by Sleeper's season totals): GW${f.w} ${f.who} ${f.from.toFixed(2)} -> ${f.to.toFixed(2)}`);
 }
-const corrected = fixes.length > 0;
+const corrected = fixes.length > 0 || luFixes.length > 0;
 const writeCorrections = async () => {
   if (!corrected) return;
-  await writeFile(MATCHUPS, [head, ...rows.map((r) => r.join(","))].join("\n") + "\n");
+  if (fixes.length) await writeFile(MATCHUPS, [head, ...rows.map((r) => r.join(","))].join("\n") + "\n");
   if (luFixes.length) {
-    for (const { x, now } of luFixes) x[5] = String(now);
+    for (const { x, now, min } of luFixes) { x[5] = String(now); if (x[7] !== undefined) x[7] = min; }
     await writeFile(LINEUPS, [luHead, ...lu.map((x) => x.join(","))].join("\n") + "\n");
   }
 };
 
 if (scored <= logged) {
-  if (corrected && !DRY) { await writeCorrections(); console.log(`Nothing new to log (Sleeper has scored GW${scored}), but stat corrections were written. Next: node scripts/check-matchups.mjs`); }
+  if (corrected && !DRY) { await writeCorrections(); console.log(`Nothing new to log (Sleeper has scored GW${scored}), but corrections were written.${fixes.length ? " Next: node scripts/check-matchups.mjs" : ""}`); }
   else console.log(`Nothing new: Sleeper has scored GW${scored}, matchups.csv has GW${logged}.${corrected ? " (dry run: corrections not written)" : ""}`);
   process.exit(0);
 }
