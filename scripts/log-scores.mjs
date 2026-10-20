@@ -17,7 +17,9 @@
   club's score for an already-logged week. Left alone, the change would land in the next derived week instead.
   So every run first re-scores each logged week from its recorded starting XI (data/lineups.csv) with Sleeper's
   current stats; where a club's XI now adds up differently (by up to 10 points, and only if all 11 starters
-  are recorded) the logged score and the players' points are corrected, as long as the result doesn't flip.
+  are recorded) the logged score and the players' points are corrected, but only when Sleeper's own season
+  totals confirm it: with the corrections applied, every club's points for and points against must match
+  Sleeper's (player stats sometimes move without the league's scores following). A result is never flipped.
 
     node scripts/log-scores.mjs --dry-run  # also shows any corrections it would make
 */
@@ -48,33 +50,65 @@ const luText = await readFile(LINEUPS, "utf8").catch(() => "");
 const luHead = luText.split(/\r?\n/)[0];
 const lu = rowsOf(luText);   // week,manager,slot,player_id,player,pts,proj,min
 const fixes = [], luFixes = [];
-const luWeeks = [...new Set(lu.map((r) => +r[0]))].filter((w) => w <= logged);
+const pending = scored > logged ? logged + 1 : null;   // the gameweek about to be derived, if any
+const luWeeks = [...new Set(lu.map((r) => +r[0]))].filter((w) => w <= logged || w === pending);
 const statWeeks = Object.fromEntries(await Promise.all(luWeeks.map(async (w) => [w, await get(`/stats/clubsoccer:epl/regular/${league.season}/${w}`).catch(() => null)])));
+// a club's recorded XI for a week, re-scored with Sleeper's current stats (null without all 11 starters)
+const xiNow = (w, who) => {
+  const st = statWeeks[w], xi = lu.filter((x) => +x[0] === w && x[1].toLowerCase() === who.toLowerCase() && x[2] !== "BN");
+  if (!st || xi.length !== 11) return null;
+  const pts = xi.map((x) => ({ x, now: money(scoreLine(st[x[3]])) }));
+  return { total: money(pts.reduce((t, y) => t + y.now, 0)), pts };
+};
+// candidates: logged scores whose XI now adds up differently
+const cands = {};
 for (const r of rows) {
-  const w = +r[0], st = statWeeks[w];
-  if (!st) continue;
+  const w = +r[0];
   for (const [mi, pi] of [[1, 3], [2, 4]]) {
-    const xi = lu.filter((x) => +x[0] === w && x[1].toLowerCase() === r[mi].toLowerCase() && x[2] !== "BN");
-    if (xi.length !== 11) continue;
-    let total = 0;
-    for (const x of xi) {
-      const now = money(scoreLine(st[x[3]]));
-      total += now;
-      if (Math.abs(now - +x[5]) > 0.001) luFixes.push({ x, now });
-    }
-    total = money(total);
-    const d = money(total - +r[pi]);
+    const re = xiNow(w, r[mi]);
+    if (!re) continue;
+    const d = money(re.total - +r[pi]);
     if (Math.abs(d) < 0.001) continue;
-    if (Math.abs(d) > 10) { console.log(`Warning: GW${w} ${r[mi]}'s XI adds up to ${total.toFixed(2)} but ${(+r[pi]).toFixed(2)} is logged; too big a gap for a stat correction, left alone.`); continue; }
-    fixes.push({ r, w, who: r[mi], from: +r[pi], to: total, pi });
+    if (Math.abs(d) > 10) { console.log(`Warning: GW${w} ${r[mi]}'s XI adds up to ${re.total.toFixed(2)} but ${(+r[pi]).toFixed(2)} is logged; too big a gap for a stat correction, left alone.`); continue; }
+    (cands[r[mi].toLowerCase()] ||= []).push({ r, w, who: r[mi], from: +r[pi], to: re.total, d, pi, pts: re.pts });
   }
 }
+// Sleeper's league totals have the final say: a set of corrections is accepted only if, once applied (and the
+// pending gameweek derived from them), every club's points for AND points against match Sleeper's season
+// totals. Player stats sometimes move without the league's scores following; those corrections never pass.
+const nameById = Object.fromEntries(users.map((u) => [u.user_id, u.display_name]));
+const ppf = {}, ppa = {};
+for (const r of rosters) { const s = r.settings || {}, u = (nameById[r.owner_id] || "").toLowerCase(); ppf[u] = money((s.fpts || 0) + (s.fpts_decimal || 0) / 100); ppa[u] = money((s.fpts_against || 0) + (s.fpts_against_decimal || 0) / 100); }
+const fixW = pending ? rowsOf(await readFile(FIXTURES, "utf8")).filter((r) => +r[0] === pending) : [];
+const all = Object.values(cands).flat();
+const passes = (sub) => {
+  const pf = {}, pa = {};
+  const add = (u, v, o) => { u = u.toLowerCase(); o = o.toLowerCase(); pf[u] = money((pf[u] || 0) + v); pa[o] = money((pa[o] || 0) + v); };
+  for (const r of rows) {
+    const h = (sub.find((f) => f.r === r && f.pi === 3) || {}).to ?? +r[3], aw = (sub.find((f) => f.r === r && f.pi === 4) || {}).to ?? +r[4];
+    add(r[1], h, r[2]); add(r[2], aw, r[1]);
+  }
+  if (pending) for (const [, h, aw] of fixW) {
+    const dh = money(ppf[h.toLowerCase()] - (pf[h.toLowerCase()] || 0)), da = money(ppf[aw.toLowerCase()] - (pf[aw.toLowerCase()] || 0));
+    add(h, dh, aw); add(aw, da, h);
+  }
+  return Object.keys(ppf).every((u) => Math.abs((pf[u] || 0) - ppf[u]) < 0.005 && Math.abs((pa[u] || 0) - ppa[u]) < 0.005);
+};
+if (all.length && all.length <= 12) {
+  const subsets = [...Array(1 << all.length).keys()].sort((x, y) => bits(y) - bits(x));
+  const m = subsets.find((k) => passes(all.filter((_, i) => k & (1 << i))));
+  const pick = m === undefined ? [] : all.filter((_, i) => m & (1 << i));
+  for (const f of pick) { fixes.push(f); for (const y of f.pts) if (Math.abs(y.now - +y.x[5]) > 0.001) luFixes.push(y); }
+  const skipped = all.filter((f) => !pick.includes(f));
+  if (skipped.length) console.log(`Not applied (Sleeper's league totals don't reflect them): ${skipped.map((f) => `GW${f.w} ${f.who} ${f.from.toFixed(2)} -> ${f.to.toFixed(2)}`).join(", ")}`);
+} else if (all.length) console.log(`Warning: ${all.length} possible stat corrections; too many to check, none applied.`);
+function bits(m) { let n = 0; for (; m; m >>= 1) n += m & 1; return n; }
 for (const f of fixes) {
   const [h, a] = [+f.r[3], +f.r[4]];
   const before = Math.sign(h - a);
   f.r[f.pi] = f.to.toFixed(2);
   if (Math.sign(+f.r[3] - +f.r[4]) !== before) { console.error(`Not writing anything: a stat correction would change the result of GW${f.w} ${f.r[1]} v ${f.r[2]}. Check it by hand.`); process.exit(1); }
-  console.log(`Stat correction: GW${f.w} ${f.who} ${f.from.toFixed(2)} -> ${f.to.toFixed(2)}`);
+  console.log(`Stat correction (confirmed by Sleeper's season totals): GW${f.w} ${f.who} ${f.from.toFixed(2)} -> ${f.to.toFixed(2)}`);
 }
 const corrected = fixes.length > 0;
 const writeCorrections = async () => {
