@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=175" />
+  <link rel="stylesheet" href="css/styles.css?v=178" />
 </head>
 <body data-page="power">
   <main id="main">
@@ -30,6 +30,8 @@
     </header>
 
     <section class="section section--page" aria-label="Power rankings">
+      <div class="prs-toggle" id="prView" role="tablist" aria-label="What to show" hidden></div>
+      <div class="prs" id="prSince" hidden></div>
       <div class="pr-bar reveal">
         <p class="pr-round" id="prRound">Loading…</p>
         <label class="hub-field hub-field--inline"><span>Round</span><select id="prArchive"></select></label>
@@ -71,6 +73,7 @@
               <li><b>Anything else that matters.</b> Tough fixtures ahead, rotation risk, form that looks too good to last.</li>
             </ul>
           </aside>
+          <div class="prs prs--ballot" id="prBallotSince"></div>
           <p class="pr-saved" id="prSavedNote"></p>
           <ol class="pr-list" id="prList"></ol>
           <p class="visually-hidden" id="prStatus" aria-live="polite"></p>
@@ -95,10 +98,10 @@
     </section>
   </main>
 
-  <script src="js/layout.js?v=175"></script>
-  <script src="data/league.js?v=175"></script>
-  <script src="data/articles.js?v=175"></script>
-  <script src="js/motion.js?v=175"></script>
-  <script src="js/app.js?v=175"></script>
+  <script src="js/layout.js?v=178"></script>
+  <script src="data/league.js?v=178"></script>
+  <script src="data/articles.js?v=178"></script>
+  <script src="js/motion.js?v=178"></script>
+  <script src="js/app.js?v=178"></script>
 </body>
 </html>

@@ -4030,6 +4030,94 @@
     }));
   }
 
+  // ---- "since the last rankings": how the clubs have done over a round's five gameweeks ----
+  // Between rounds it covers the gameweeks since the last vote (and the fixtures still to come); while a vote
+  // is open it covers the five gameweeks being voted on. Ranked by wins over the stretch, then points scored.
+  function prStretch() {
+    if (pr.scored > pr.week) return { from: pr.week + 1, to: prNextRound(pr.week) || 38, last: pr.week, lastRes: pr.results, voting: false };
+    const prev = prRoundAtOrBefore(pr.week - 1);
+    return { from: (prev || 0) + 1, to: pr.week, last: prev, lastRes: pr.prev, voting: true };
+  }
+  function prTableAt(week) {
+    const rows = state.teams.map((t) => { const g = t.games.filter((x) => x.week <= week);
+      return { id: t.rosterId, w: g.filter((x) => x.res === "W").length, l: g.filter((x) => x.res === "L").length, d: g.filter((x) => x.res === "D").length, pf: g.reduce((a, x) => a + x.score, 0) }; });
+    rows.sort((a, b) => b.w - a.w || b.d - a.d || b.pf - a.pf);
+    return Object.fromEntries(rows.map((r, i) => [r.id, { ...r, pos: i + 1 }]));
+  }
+  function prSinceHTML(compact) {
+    const st = prStretch(), played = Math.min(pr.scored, st.to), n = st.to - st.from + 1, done = Math.max(0, played - st.from + 1);
+    const lastRank = {};
+    if (st.lastRes && st.lastRes.revealed && st.lastRes.teams) st.lastRes.teams.forEach((x, i) => { const t = teamByManager(x.manager); if (t) lastRank[t.rosterId] = i + 1; });
+    const hasPR = Object.keys(lastRank).length > 0;
+    const start = prTableAt(st.from - 1), now = prTableAt(played);
+    const span = state.teams.map((t) => { const g = t.games.filter((x) => x.week >= st.from && x.week <= played).sort((a, b) => a.week - b.week);
+      return { t, g, w: g.filter((x) => x.res === "W").length, l: g.filter((x) => x.res === "L").length, d: g.filter((x) => x.res === "D").length, pf: g.reduce((a, x) => a + x.score, 0) }; })
+      .sort((a, b) => b.w - a.w || b.d - a.d || b.pf - a.pf);
+    span.forEach((x, i) => (x.pos = i + 1));
+    const rec = (r) => `${r.w}–${r.l}${r.d ? `–${r.d}` : ""}`;
+    const mv = (from, to) => { const d = from - to; return d > 0 ? `<em class="prs-up" title="Up ${d}">▲${d}</em>` : d < 0 ? `<em class="prs-down" title="Down ${-d}">▼${-d}</em>` : `<em class="prs-flat">–</em>`; };
+    const pills = (g) => g.map((x) => `<i class="prs-pill prs-pill--${x.res}" title="GW${x.week}: ${num(x.score, 2)}–${num(x.oppScore, 2)}">${x.res}</i>`).join("");
+    const head = `<div class="prs-head"><h2>Gameweeks ${st.from}–${st.to}</h2><p>${st.voting ? `The five gameweeks this vote is about` : `${done} of ${n} played · next vote after Gameweek ${st.to}`}</p></div>
+      <div class="prs-progress" aria-hidden="true">${Array.from({ length: n }, (_, i) => `<i class="${st.from + i <= played ? "is-done" : ""}"></i>`).join("")}</div>`;
+    if (!done) return `${head}<p class="pending-note">Gameweek ${st.from} hasn't been played yet. Check back once it's scored.</p>`;
+    const by = (id) => span.find((x) => x.t.rosterId === id);
+    const best = span[0];
+    const lastFirst = hasPR ? by(+Object.keys(lastRank).find((k) => lastRank[k] === 1)) : null;
+    const lastLast = hasPR ? by(+Object.keys(lastRank).find((k) => lastRank[k] === state.teams.length)) : null;
+    const callouts = compact ? "" : `<div class="prs-callouts">
+        <div class="prs-callout"><small>Form team of the stretch</small><b>${club(best.t)}</b> · ${rec(best)}, ${(best.pf / best.g.length).toFixed(1)} pts/GW</div>
+        ${lastLast ? `<div class="prs-callout"><small>Ranked last at GW${st.last}</small><b>${club(lastLast.t)}</b> · ${rec(lastLast)} since, ${ordinal(lastLast.pos)} in this stretch</div>` : ""}
+        ${lastFirst ? `<div class="prs-callout"><small>Ranked first at GW${st.last}</small><b>${club(lastFirst.t)}</b> · ${rec(lastFirst)} since, ${ordinal(lastFirst.pos)} in this stretch</div>` : ""}
+      </div>`;
+    const startLbl = st.from > 1 ? `GW${st.from - 1}` : "start";
+    const table = `<div class="prs-wrap"><table class="prs-table">
+      <thead><tr><th scope="col">#</th><th scope="col">Club</th><th scope="col">GW${st.from}–${played}<small>record · results</small></th><th scope="col">Scoring<small>pts per GW</small></th>
+        ${hasPR ? `<th scope="col" class="prs-sep">Power rank<small>at GW${st.last} · vs this stretch</small></th>` : ""}
+        ${st.from > 1 ? `<th scope="col"${hasPR ? "" : ` class="prs-sep"`}>Table<small>at ${startLbl}</small></th>` : ""}<th scope="col">Table<small>now · season record</small></th></tr></thead>
+      <tbody>${span.map((x) => { const id = x.t.rosterId, a = start[id], b = now[id], r = lastRank[id];
+        return `<tr><td class="prs-rk">${x.pos}</td>
+          <th scope="row"><span class="prs-club">${crest(x.t)}<span><b>${club(x.t)}</b><small>${esc(x.t.manager)}</small></span></span></th>
+          <td><b class="prs-big">${rec(x)}</b><span class="prs-pills">${pills(x.g)}</span></td>
+          <td>${(x.pf / x.g.length).toFixed(1)}</td>
+          ${hasPR ? `<td class="prs-sep">${r ? `${ordinal(r)} ${mv(r, x.pos)}` : "–"}</td>` : ""}
+          ${st.from > 1 ? `<td${hasPR ? "" : ` class="prs-sep"`}>${ordinal(a.pos)} <small>${rec(a)}</small></td>` : ""}
+          <td>${ordinal(b.pos)}${st.from > 1 ? ` ${mv(a.pos, b.pos)}` : ""} <small>${rec(b)}</small></td></tr>`; }).join("")}</tbody></table></div>
+      <p class="chart-note"># = rank over Gameweeks ${st.from}–${played} only: wins, then points scored.${hasPR ? ` The arrow by the power rank compares the GW${st.last} vote with this stretch;` : ""}${st.from > 1 ? ` the arrow on the table shows the move since ${startLbl === "start" ? "the start" : `Gameweek ${st.from - 1}`}.` : ""}</p>`;
+    const g1 = (m, id) => { const t = state.byRoster[id], me = id === m.home ? m.homePts : m.awayPts, op = id === m.home ? m.awayPts : m.homePts;
+      return `<span class="prs-g${me > op ? " is-w" : ""}">${crest(t)}<b>${club(t)}</b><span>${num(me, 2)}</span></span>`; };
+    const weeks = Array.from({ length: n }, (_, i) => st.from + i).map((w) => {
+      const g = state.results.filter((m) => m.week === w);
+      if (g.length) return `<section class="prs-week"><h3>Gameweek ${w}</h3><ul class="prs-games">${g.map((m) => `<li>${g1(m, m.home)}${g1(m, m.away)}</li>`).join("")}</ul></section>`;
+      const f = (state.fixtures || []).filter((m) => m.week === w);
+      if (!f.length) return "";
+      const up = (id) => { const t = state.byRoster[id]; return `<span class="prs-g">${crest(t)}<b>${club(t)}</b><span>–</span></span>`; };
+      return `<section class="prs-week prs-week--soon"><h3>Gameweek ${w} <small>to come</small></h3><ul class="prs-games">${f.map((m) => `<li>${up(m.home)}${up(m.away)}</li>`).join("")}</ul></section>`;
+    }).join("");
+    return compact
+      ? `${head}${table}<details class="prs-more"><summary>Results in Gameweeks ${st.from}–${st.to}</summary><div class="prs-weeks">${weeks}</div></details>`
+      : `${head}${callouts}${table}<div class="prs-weeks">${weeks}</div>`;
+  }
+  // the switch between the last vote's rankings and the stretch since
+  function prSetView(v) {
+    pr.view = v;
+    const since = v === "since";
+    $("#prSince").hidden = !since;
+    $("#prResults").hidden = since;
+    $(".pr-bar").hidden = since;
+    $$("#prView [data-view]").forEach((b) => { const on = b.dataset.view === v; b.classList.toggle("is-on", on); b.setAttribute("aria-selected", String(on)); });
+    if (since) $("#prSince").innerHTML = prSinceHTML(false);
+  }
+  function prInitView() {
+    const st = prStretch(), el = $("#prView");
+    if (!el || pr.scored < PR_ROUNDS[0]) return;
+    el.innerHTML = `<button type="button" role="tab" data-view="rank">Gameweek ${pr.week} rankings</button><button type="button" role="tab" data-view="since">${st.voting ? `This round's form` : "Since the last rankings"}</button>`;
+    el.hidden = false;
+    el.onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) prSetView(b.dataset.view); };
+    // between rounds (or while a vote is still open) the stretch comes first; once a vote is revealed, the rankings
+    const revealed = pr.results && pr.results.revealed;
+    prSetView(pr.view || (revealed && pr.scored === pr.week ? "rank" : "since"));
+  }
+
   async function loadPRResults() {
     try {
       const [cur, prev, rounds] = await Promise.all([
@@ -4054,6 +4142,7 @@
     const weeks = [...new Set([pr.week, ...(pr.rounds || []).map((r) => r.week)])].sort((a, b) => b - a);
     sel.innerHTML = weeks.map((w) => `<option value="${w}"${w === pr.viewing ? " selected" : ""}>Gameweek ${w}${w === pr.week ? " (current)" : ""}</option>`).join("");
     renderPRResults();
+    prInitView();
   }
 
   // ---- ballot: step 1, who are you ----
@@ -4106,6 +4195,7 @@
   function renderBallot(saved) {
     const me = teamByManager(pr.voter);
     $("#prMe").innerHTML = `${crest(me)}<span>Voting as <b>${club(me)}</b></span>`;
+    if ($("#prBallotSince")) $("#prBallotSince").innerHTML = prSinceHTML(true);
     $("#prSavedNote").textContent = saved ? `You already voted this round (${new Date(saved.submitted_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}). Submitting again replaces it.` : "";
     const med = weekMedians();
     $("#prList").innerHTML = pr.order.map((id) => {
@@ -4341,7 +4431,7 @@
       const [league, users, rosters, sportState, matchRows, cupRows, emblems, lineupRows, fixtureRows] = await Promise.all([
         get(`/league/${LEAGUE_ID}`), get(`/league/${LEAGUE_ID}/users`), get(`/league/${LEAGUE_ID}/rosters`), get(`/state/${SPORT}`).catch(() => ({})),
         getCSV("data/matchups.csv"), getCSV("data/cup.csv"), loadEmblems(), $("#muList") || $("#gzRoot") || $("#homeNews") || $("#clubGrid") || $("#derbies") ? getCSV("data/lineups.csv") : [],
-        $("#muList") ? getCSV("data/fixtures.csv") : [],
+        $("#muList") || $("#prResults") ? getCSV("data/fixtures.csv") : [],
       ]);
       state.lineups = lineupRows;
       state.league = league;
