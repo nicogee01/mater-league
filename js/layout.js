@@ -11,16 +11,17 @@
     { id: "gazette", href: "gazette.html", label: "Gazette", long: "The Gazette", group: "This week" },
     { id: "awards", href: "awards.html", label: "Awards", long: "Weekly Awards", group: "This week" },
     { id: "power", href: "power.html", label: "Power Rankings", group: "This week" },
-    { id: "cup", href: "cup.html", label: "McQueen Cup", long: "The McQueen Cup", group: "Competitions" },
-    { id: "victory-road", href: "victory-road.html", label: "Victory Road", group: "Competitions" },
+    { id: "players", href: "players.html", label: "Player stats", group: "Stats" },
+    { id: "opponents", href: "opponents.html", label: "Points allowed", long: "Points Allowed", group: "Stats" },
+    { id: "analytics", href: "analytics.html", label: "Analytics", group: "Stats" },
+    { id: "records", href: "records.html", label: "Records", long: "Hall of Records", group: "Stats" },
     { id: "clubs", href: "clubs.html", label: "Clubs", group: "Clubs & players" },
     { id: "h2h", href: "h2h.html", label: "H2H", long: "Head-to-Head", group: "Clubs & players" },
     { id: "transfers", href: "transfers.html", label: "Transfers", group: "Clubs & players" },
     { id: "draft", href: "draft.html", label: "Draft", long: "Draft board", group: "Clubs & players" },
-    { id: "trade", href: "trade.html", label: "Trade Calculator (WIP)", group: "Stats" },
-    { id: "players", href: "players.html", label: "Player stats", group: "Stats" },
-    { id: "analytics", href: "analytics.html", label: "Analytics", group: "Stats" },
-    { id: "records", href: "records.html", label: "Records", long: "Hall of Records", group: "Stats" },
+    { id: "cup", href: "cup.html", label: "McQueen Cup", long: "The McQueen Cup", group: "Competitions" },
+    { id: "victory-road", href: "victory-road.html", label: "Victory Road", group: "Competitions" },
+    { id: "trade", href: "trade.html", label: "Trade Calculator", group: "Work in progress" },
   ];
   const current = document.body.dataset.page || "home";
   const link = (p, long) => `<a href="${p.href}"${p.id === current ? ' class="is-active" aria-current="page"' : ""}>${long ? p.long || p.label : p.label}</a>`;

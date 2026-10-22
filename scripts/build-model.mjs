@@ -60,7 +60,7 @@ function score(line) {
     if (!k.startsWith("pos_") || scoring[k] === undefined || typeof v !== "number") continue;
     const p = v * scoring[k];
     pts += p;
-    if (!/_(g|at|cs|cs90|og|yc|yc2)$/.test(k)) ghost += p;
+    if (!/_(g|at|cs|cs90|og|yc|yc2|rc)$/.test(k)) ghost += p;
     if (/_g$/.test(k) && v) goalPts = scoring[k];
     if (/_at$/.test(k) && v) astPts = scoring[k];
   }
@@ -176,7 +176,7 @@ function buildModel(curGames, prevGames, weeksPlayed, nextGw, curTeams, prevTeam
   for (const pos of Object.values(POS)) {
     const rates = Object.entries(curGames).filter(([pid, gs]) => gs.length >= 3 && players[pid] && posOf(players[pid]) === pos).map(([, gs]) => mean(gs.map((g) => g.pts)));
     baseline[pos] = pct(rates, 0.5) || 4;
-    // how much of a typical regular's points are ghost points (everything but goals, assists, clean sheets, own goals and yellow cards)
+    // how much of a typical regular's points are ghost points (everything but goals, assists, clean sheets, own goals and cards (yellow or red))
     const regs = Object.entries(curGames).filter(([pid, gs]) => gs.length >= 3 && players[pid] && posOf(players[pid]) === pos);
     const gshare = mean(regs.map(([, gs]) => mean(gs.map((g) => g.ghost)))) / (mean(regs.map(([, gs]) => mean(gs.map((g) => g.pts)))) || 1);
     ghostBase[pos] = Math.min(0.9, Math.max(0.3, gshare || 0.6));
@@ -192,7 +192,7 @@ function buildModel(curGames, prevGames, weeksPlayed, nextGw, curTeams, prevTeam
     // toward a typical level: his position's regular for established players (3 games' worth), or, for players
     // new to the league, the newcomer level measured from the 2024 and 2025 seasons (9 games' worth).
     // Points are split in two and each part is estimated on its own:
-    //  - ghost points (everything but goals, assists, clean sheets, own goals and yellow cards) are steady, so they need few games
+    //  - ghost points (everything but goals, assists, clean sheets, own goals and cards (yellow or red)) are steady, so they need few games
     //    to trust (KG pretend games at a typical level);
     //  - goal / assist / clean-sheet points are swingy, so this season's come mostly from his chances
     //    (xG and xA, weight XM) and they're pulled toward a typical level for much longer (KA pretend games).

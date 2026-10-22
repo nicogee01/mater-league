@@ -730,7 +730,7 @@
     const grp = (g) => PDB_COLS.filter(([, , , gs]) => gs.split(" ")[0] === g).map(([, l, t]) => [l, t]);
     const sections = [
       ["Basics", [["GP", "Games played"], ["GS", "Games started"], ["MIN", "Minutes (MIN/G per game)"],
-        ["PTS", "Fantasy points, this league's scoring"], ["GH PTS", "Ghost points: fantasy points without goals, assists, clean sheets, own goals and yellow cards"]]],
+        ["PTS", "Fantasy points, this league's scoring"], ["GH PTS", "Ghost points: fantasy points without goals, assists, clean sheets, own goals and cards (yellow or red)"]]],
       ["Attack", grp("att")], ["Defence", grp("def")], ["Goalkeeping", grp("gk")], ["Discipline", grp("")],
       ["Outlook", [["EXP/GW", "Expected points per gameweek: how good he is when he plays × how often he plays"], ["ROS", "Expected points for the rest of the season, after injuries and fixtures"],
         ["FLOOR / CEIL", "A bad week and a great week for him (10th and 90th percentile scores)"], ["LAST SZN", "Points per game last season"], ["NEXT 5", "Next five opponents; green = easier, red = harder"]]],
@@ -792,7 +792,7 @@
     const th = (k, label, title, cls = "") => `<th scope="col" class="${cls}${pdb.sort === k ? " is-sorted" : ""}" aria-sort="${pdb.sort === k ? (pdb.dir < 0 ? "descending" : "ascending") : "none"}"><button type="button" data-sort="${k}" title="${esc(title)}">${label}${pdb.sort === k ? (pdb.dir < 0 ? " ▾" : " ▴") : ""}</button></th>`;
     const fmt = (v, dp) => (v === 0 ? `<span class="pdb-zero">·</span>` : rate ? num(v, dp || 2) : num(v, dp));
     box.innerHTML = `<table class="pdb">
-      <thead><tr><th scope="col" class="pdb-c-rk" title="Rank in this list, as sorted and filtered">RK</th>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own"><span class="pdb-full">Fantasy club</span><span class="pdb-last">Club</span></th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", "PTS" + suf, "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", "GH PTS" + suf, "Ghost points: fantasy points without goals, assists, clean sheets, own goals and yellow cards", "pdb-c-ghost")}
+      <thead><tr><th scope="col" class="pdb-c-rk" title="Rank in this list, as sorted and filtered">RK</th>${th("name", "Player", "Player", "pdb-c-name")}<th scope="col" class="pdb-c-own"><span class="pdb-full">Fantasy club</span><span class="pdb-last">Club</span></th>${th("gp", "GP", "Games played")}${th("gs", "GS", "Games started")}${th("min", avg ? "MIN/G" : "MIN", "Minutes")}${th("fpts", "PTS" + suf, "Fantasy points (this league's scoring)", "pdb-c-pts")}${th("ghost", "GH PTS" + suf, "Ghost points: fantasy points without goals, assists, clean sheets, own goals and cards (yellow or red)", "pdb-c-ghost")}
         ${cols.map(([k, l, t]) => th(k, l, t)).join("")}${outlook ? th("exp", "EXP/GW", "Expected points per gameweek") + th("ros", "ROS", "Expected points, rest of season") + th("floor", "FLOOR", "A bad week (10th percentile)") + th("ceil", "CEIL", "A great week (90th percentile)") + th("prev", "LAST SZN", "Points per game last season") + th("fdr", "NEXT 5", "Next five opponents (sort: easiest first)", "pdb-c-fx") : ""}</tr></thead>
       <tbody>${shown.map((r, i) => `<tr>
         <td class="pdb-c-rk">${i + 1}</td>
@@ -807,6 +807,125 @@
         ${outlook ? outlookCells(M(r)) : ""}
       </tr>`).join("")}</tbody></table>`;
     loadPhotos(shown.map((r) => r.pid), box);
+  }
+
+  // ---------- POINTS ALLOWED (opponents.html) ----------
+  // For every Premier League club: the fantasy points it has given up to opposing goalkeepers, defenders,
+  // midfielders and forwards. Only players who played 70+ minutes count, each under his primary position only
+  // (Saka counts as a midfielder, never as a forward). A player's club is his current one.
+  const OPP_POS = [["GK", "Goalkeepers", "GK"], ["D", "Defenders", "DEF"], ["M", "Midfielders", "MID"], ["F", "Forwards", "FWD"]];
+  const opp = { data: null, club: null, sort: null, metric: "pts", cache: {} };
+  // ghost points: everything but goals, assists, clean sheets, own goals and cards (yellow or red) (as on Player stats)
+  const ghostPts = (line) => { const sc = state.league.scoring_settings || {}; let p = 0; for (const [k, v] of Object.entries(line || {})) if (k.startsWith("pos_") && sc[k] !== undefined && typeof v === "number" && !/_(g|at|cs|cs90|og|yc|yc2|rc)$/.test(k)) p += v * sc[k]; return Math.round(p * 100) / 100; };
+  async function initOpponents() {
+    const root = $("#oppRoot");
+    if (!root || opp.ready || !Object.keys(state.players || {}).length) return;
+    opp.ready = true;
+    let games = [], weeks = [];
+    try {
+      [games, weeks] = await Promise.all([fetch(`https://api.sleeper.app/schedule/${SPORT}/regular/${state.league.season}`).then((r) => (r.ok ? r.json() : [])), loadWeeklyStats()]);
+    } catch (_) {}
+    if (!games.length || !weeks.length) { root.innerHTML = `<p class="pending-note">Couldn't load the match data. Try refreshing.</p>`; return; }
+    const clubs = {};   // Sleeper team id -> { id, abbr, name }
+    for (const g of games) for (const side of [g.home, g.away]) if (side && side.team) clubs[side.team] = { id: side.team, abbr: side.abbr, name: side.name };
+    const oppOf = {};   // week|team -> opponent team
+    for (const g of games) if (g.home && g.away && g.status === "complete") { oppOf[`${g.week}|${g.home.team}`] = g.away.team; oppOf[`${g.week}|${g.away.team}`] = g.home.team; }
+    const rows = [];    // one per player-game: { opp, pos, pts, pid, week }
+    for (const { week, stats } of weeks) for (const [pid, l] of Object.entries(stats || {})) {
+      const p = state.players[pid];
+      if (!p || !l || (l.min || 0) < 70 || !["GK", "D", "M", "F"].includes(p.p)) continue;
+      const o = oppOf[`${week}|${p.t}`];
+      if (o) rows.push({ opp: o, pos: p.p, pts: scorePts(l), ghost: ghostPts(l), pid, week });
+    }
+    const next = {};    // the next fixture for every club
+    for (const g of games.filter((x) => x.status !== "complete").sort((a, b) => a.week - b.week || String(a.date).localeCompare(String(b.date)))) {
+      if (g.home && !next[g.home.team]) next[g.home.team] = { week: g.week, opp: g.away.team, home: true };
+      if (g.away && !next[g.away.team]) next[g.away.team] = { week: g.week, opp: g.home.team, home: false };
+    }
+    opp.rows = rows; opp.clubs = clubs; opp.next = next;
+    opp.data = oppSummary();
+    const list = opp.data.list;
+    const h = location.hash.slice(1).toUpperCase();
+    opp.club = (list.find((c) => c.abbr === h) || [...list].sort((a, b) => a.name.localeCompare(b.name))[0]).id;
+    root.addEventListener("click", (e) => {
+      const c = e.target.closest("[data-oppclub]");
+      if (c) { opp.club = c.dataset.oppclub; history.replaceState(null, "", `#${opp.data.clubs[opp.club].abbr}`); renderOpponents(); if (c.closest(".opp-heat")) $("#oppPanel").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" }); return; }
+      const m = e.target.closest("[data-oppmetric]");
+      if (m) { opp.metric = m.dataset.oppmetric; opp.data = oppSummary(); renderOpponents(); return; }
+      const s = e.target.closest("[data-oppsort]");
+      if (s) { opp.sort = opp.sort === s.dataset.oppsort ? null : s.dataset.oppsort; renderOpponents(); }
+    });
+    renderOpponents();
+  }
+  // per club and position: average points (or ghost points) given up, the 3 best games against them, and ranks
+  function oppSummary() {
+    const f = opp.metric;
+    if (opp.cache[f]) return opp.cache[f];
+    const rows = opp.rows, agg = {};
+    for (const r of rows) { const a = ((agg[r.opp] ||= {})[r.pos] ||= { sum: 0, n: 0, games: new Set(), top: [] }); a.sum += r[f]; a.n++; a.games.add(r.week); a.top.push(r); }
+    const league = Object.fromEntries(OPP_POS.map(([k]) => { const rs = rows.filter((r) => r.pos === k); return [k, rs.length ? rs.reduce((t, r) => t + r[f], 0) / rs.length : 0]; }));
+    const list = Object.values(opp.clubs).filter((c) => agg[c.id]).map((c) => ({ ...c, pos: Object.fromEntries(OPP_POS.map(([k]) => { const a = agg[c.id][k]; return [k, a ? { avg: a.sum / a.n, n: a.n, games: a.games.size, top: [...a.top].sort((x, y) => y[f] - x[f]).slice(0, 3) } : null]; })) }));
+    // rank per position: 1 = gives up the most
+    for (const [k] of OPP_POS) [...list].filter((c) => c.pos[k]).sort((a, b) => b.pos[k].avg - a.pos[k].avg).forEach((c, i) => (c.pos[k].rank = i + 1));
+    return (opp.cache[f] = { list, league, clubs: opp.clubs, next: opp.next, n: list.length, metric: f });
+  }
+  function renderOpponents() {
+    const root = $("#oppRoot"), d = opp.data;
+    if (!root || !d) return;
+    const logo = (id, size = 28) => `<img class="opp-logo" src="https://sleepercdn.com/images/team_logos/clubsoccer/${esc(id)}.png" alt="" width="${size}" height="${size}" loading="lazy" onerror="this.style.visibility='hidden'">`;
+    const c = d.list.find((x) => x.id === opp.club) || d.list[0];
+    const sorted = [...d.list].sort((a, b) => a.name.localeCompare(b.name));
+    const ghost = d.metric === "ghost", unit = ghost ? "ghost pts" : "pts";
+    const metricSw = `<div class="opp-bar"><div class="filters" role="group" aria-label="Which points">
+        <button type="button" class="chip${ghost ? "" : " is-active"}" data-oppmetric="pts" aria-pressed="${!ghost}">Fantasy points</button>
+        <button type="button" class="chip${ghost ? " is-active" : ""}" data-oppmetric="ghost" aria-pressed="${ghost}">Ghost points</button></div>
+        <p class="chart-note">${ghost ? "Ghost points: everything except goals, assists, clean sheets, own goals and cards, so saves, key passes, tackles, shots and the rest." : "All fantasy points, this league's scoring."} Players with 70+ minutes, primary position only.</p></div>`;
+    const picker = `<div class="opp-pick" role="radiogroup" aria-label="Premier League club">${sorted.map((x) => `<button type="button" role="radio" aria-checked="${x.id === c.id}" class="opp-pick__club${x.id === c.id ? " is-on" : ""}" data-oppclub="${esc(x.id)}" title="${esc(x.name)}">${logo(x.id, 30)}<span>${esc(x.abbr)}</span></button>`).join("")}</div>`;
+    const nx = d.next[c.id];
+    const tone = (rank) => (rank <= Math.ceil(d.n / 4) ? "is-soft" : rank > d.n - Math.ceil(d.n / 4) ? "is-tough" : "");
+    const verdict = (rank) => (rank <= Math.ceil(d.n / 4) ? "Generous" : rank > d.n - Math.ceil(d.n / 4) ? "Stingy" : "Middling");
+    const card = ([k, label]) => {
+      const x = c.pos[k];
+      if (!x) return `<div class="opp-card"><p class="opp-card__pos">${label}</p><p class="dim">No ${label.toLowerCase()} have played 70+ minutes against them yet.</p></div>`;
+      const vals = d.list.filter((y) => y.pos[k]).map((y) => ({ y, v: y.pos[k].avg }));
+      const hi = vals.reduce((a, b) => (b.v > a.v ? b : a)), lo = vals.reduce((a, b) => (b.v < a.v ? b : a));
+      const diff = x.avg - d.league[k];
+      // a strip from the stingiest club to the most generous, with this club and the league average marked
+      const pct = (v) => (hi.v === lo.v ? 50 : ((v - lo.v) / (hi.v - lo.v)) * 100);
+      return `<div class="opp-card ${tone(x.rank)}">
+        <p class="opp-card__pos">${label}<span class="opp-card__tag">${verdict(x.rank)}</span></p>
+        <p class="opp-card__big">${num(x.avg, 2)}<small>${unit} per player-game</small></p>
+        <p class="opp-card__vs ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : "−"}${num(Math.abs(diff), 2)} vs league average (${num(d.league[k], 2)}) · <b>${ordinal(x.rank)}</b> most of ${d.n}</p>
+        <div class="opp-strip" role="img" aria-label="Range across clubs: ${num(lo.v, 2)} to ${num(hi.v, 2)}">
+          <span class="opp-strip__track"></span>
+          <span class="opp-strip__avg" style="left:${pct(d.league[k])}%" title="League average ${num(d.league[k], 2)}"></span>
+          <span class="opp-strip__me" style="left:${pct(x.avg)}%"></span>
+        </div>
+        <p class="opp-card__range"><span>Low · ${esc(lo.y.abbr)} ${num(lo.v, 2)}</span><span>High · ${esc(hi.y.abbr)} ${num(hi.v, 2)}</span></p>
+        <p class="opp-card__n">${x.n} player-game${x.n === 1 ? "" : "s"} over ${x.games} match${x.games === 1 ? "" : "es"}</p>
+        ${x.top.length ? `<ol class="opp-top">${x.top.map((r) => { const pl = state.players[r.pid] || { n: r.pid }; return `<li data-player="${esc(r.pid)}" data-name="${esc(pl.n)}" role="button" tabindex="0"><span class="pdb-photo" data-photo="${esc(r.pid)}"><span>${esc(initials(pl.n))}</span></span><span class="opp-top__name">${esc(surname(r.pid, pl.n))}<small>GW${r.week}</small></span><b>${gp(r[d.metric])}</b></li>`; }).join("")}</ol>` : ""}
+      </div>`;
+    };
+    const panel = `<section class="opp-panel" id="oppPanel" aria-live="polite">
+        <div class="opp-panel__head">${logo(c.id, 56)}<div><h2>${esc(c.name)}</h2>
+          <p>${ghost ? "Ghost points" : "Points"} they've given up per player who played 70+ minutes against them${nx ? ` · Next: GW${nx.week} ${nx.home ? "vs" : "at"} ${esc(d.clubs[nx.opp] ? d.clubs[nx.opp].name : "?")}` : ""}</p></div></div>
+        <div class="opp-cards">${OPP_POS.map(card).join("")}</div>
+      </section>`;
+    // every club at a glance: green = gives up a lot (good to start against), red = gives up little
+    const cols = OPP_POS;
+    const heatRows = [...d.list].sort((a, b) => (opp.sort ? (b.pos[opp.sort] ? b.pos[opp.sort].avg : -1) - (a.pos[opp.sort] ? a.pos[opp.sort].avg : -1) : a.name.localeCompare(b.name)));
+    const heat = `<section class="opp-heat-wrap" aria-labelledby="oppHeatTitle">
+        <h2 class="subhead" id="oppHeatTitle">Every club</h2>
+        <p class="chart-note">${ghost ? "Ghost points" : "Points"} per player-game given up, by position. Green = among the most generous (good to start your players against), red = among the stingiest. Tap a column to sort, a club to open it.</p>
+        <div class="table-scroll"><table class="opp-heat">
+          <thead><tr><th scope="col">Club</th>${cols.map(([k, , short]) => `<th scope="col"><button type="button" data-oppsort="${k}" aria-pressed="${opp.sort === k}">${short}${opp.sort === k ? " ▾" : ""}</button></th>`).join("")}</tr></thead>
+          <tbody>${heatRows.map((x) => `<tr class="${x.id === c.id ? "is-on" : ""}"><th scope="row"><button type="button" data-oppclub="${esc(x.id)}">${logo(x.id, 22)}<span>${esc(x.name)}</span></button></th>
+            ${cols.map(([k]) => { const v = x.pos[k]; return v ? `<td class="${tone(v.rank)}" title="${ordinal(v.rank)} most of ${d.n} · ${v.n} player-games">${num(v.avg, 2)}</td>` : `<td class="dim">–</td>`; }).join("")}</tr>`).join("")}
+            <tr class="opp-heat__avg"><th scope="row">League average</th>${cols.map(([k]) => `<td>${num(d.league[k], 2)}</td>`).join("")}</tr></tbody>
+        </table></div>
+      </section>`;
+    root.innerHTML = metricSw + picker + panel + heat;
+    loadPhotos($$("[data-photo]", root).map((e) => e.dataset.photo), root);
   }
 
   // ---------- TRADE CALCULATOR (trade.html) ----------
@@ -3777,8 +3896,8 @@
             if (scoring[k] === undefined) continue;
             const pts = Number(v) * Number(scoring[k]);
             t.fpts += pts;
-            // ghost points: everything except goals, assists, clean sheets, own goals and yellow cards
-            if (!/_(g|at|cs|cs90|og|yc|yc2)$/.test(k)) t.ghost += pts;
+            // ghost points: everything except goals, assists, clean sheets, own goals and cards (yellow or red)
+            if (!/_(g|at|cs|cs90|og|yc|yc2|rc)$/.test(k)) t.ghost += pts;
             continue;
           }
           if (typeof v === "number") t[k] = (t[k] || 0) + v;
@@ -4498,6 +4617,7 @@
       renderClubs();   // again, now star men (season points) are known
       initDraft();
       initTrade();
+      initOpponents();
       if ($("#derbies")) loadPhotos($$("#derbies [data-photo]").map((e) => e.dataset.photo), $("#derbies"));
       renderMarket();
       renderHomeSnap();
