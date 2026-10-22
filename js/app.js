@@ -896,7 +896,7 @@
         <div class="filters" role="group" aria-label="Which matches">
         <button type="button" class="chip${d.span === "last4" ? "" : " is-active"}" data-oppspan="season" aria-pressed="${d.span !== "last4"}">Season</button>
         <button type="button" class="chip${d.span === "last4" ? " is-active" : ""}" data-oppspan="last4" aria-pressed="${d.span === "last4"}">Last 4 matches</button></div>
-        <p class="chart-note">${ghost ? "Ghost points: everything except goals, assists, clean sheets, own goals and cards, so saves, key passes, tackles, shots and the rest." : "All fantasy points, this league's scoring."} Players with 70+ minutes, primary position only.${d.span === "last4" ? " Last 4: each club's four most recent matches only, so you see current form." : ""}</p></div>`;
+        <p class="chart-note">${ghost ? "Ghost points (no goals, assists, clean sheets, own goals or cards)" : "Fantasy points"} per player-game · 70+ minutes · primary position only${d.span === "last4" ? " · each club's last 4 matches" : ""}</p></div>`;
     const picker = `<div class="opp-pick" role="radiogroup" aria-label="Premier League club">${sorted.map((x) => `<button type="button" role="radio" aria-checked="${x.id === c.id}" class="opp-pick__club${x.id === c.id ? " is-on" : ""}" data-oppclub="${esc(x.id)}" title="${esc(x.name)}">${logo(x.id, 30)}<span>${esc(x.abbr)}</span></button>`).join("")}</div>`;
     const nx = d.next[c.id];
     const tone = (rank) => (rank <= Math.ceil(d.n / 4) ? "is-soft" : rank > d.n - Math.ceil(d.n / 4) ? "is-tough" : "");
@@ -924,8 +924,8 @@
       </div>`;
     };
     const panel = `<section class="opp-panel" id="oppPanel" aria-live="polite">
-        <div class="opp-panel__head">${logo(c.id, 56)}<div><h2>${esc(c.name)}</h2>
-          <p>${ghost ? "Ghost points" : "Points"} they've given up per player who played 70+ minutes against them${d.span === "last4" ? " in their last 4 matches" : ""}${nx ? ` · Next: GW${nx.week} ${nx.home ? "vs" : "at"} ${d.clubs[nx.opp] ? `<a href="#${esc(d.clubs[nx.opp].abbr)}">${esc(d.clubs[nx.opp].name)}</a>` : "?"}` : ""}</p></div></div>
+        <div class="opp-panel__head">${logo(c.id, 56)}<h2>${esc(c.name)}</h2></div>
+        ${nx && d.clubs[nx.opp] ? `<a class="opp-next" href="#${esc(d.clubs[nx.opp].abbr)}">${logo(nx.opp, 34)}<span><span class="opp-next__k">Next up · GW${nx.week} · ${nx.home ? "home" : "away"}</span><b>${esc(d.clubs[nx.opp].name)}</b></span><span class="opp-next__go">Their numbers →</span></a>` : ""}
         <div class="opp-cards">${OPP_POS.map(card).join("")}</div>
       </section>`;
     // every club at a glance: green = gives up a lot (good to start against), red = gives up little

@@ -2782,3 +2782,14 @@ a.fx:hover, a.fx:focus-visible { outline: 2px solid var(--ink); outline-offset: 
 .opp-card.is-focus { box-shadow: 0 0 0 3px var(--accent); }
 @media (max-width: 560px) { .opp-heat thead th:first-child, .opp-heat tbody th { width: 1%; padding-right: 4px; } .opp-heat td, .opp-heat thead th { font-size: 16px; } .opp-heat thead th { font-size: 12px; } }
 @media (max-width: 560px) { .opp-cards { grid-auto-flow: column; grid-auto-columns: 84%; grid-template-columns: none; overflow-x: auto; padding-bottom: 8px; } }
+
+/* Points Allowed: next-up banner under the club name */
+.opp-next { display: flex; align-items: center; gap: 12px; margin: 0 0 var(--s4); padding: 10px 14px; min-height: 48px; border-radius: 12px; background: var(--band); color: #fbf7ee; text-decoration: none; }
+.opp-next:hover { filter: brightness(1.12); }
+.opp-next:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.opp-next .opp-logo { flex: none; }
+.opp-next__k { display: block; font: 700 11px/1.3 var(--f-label); letter-spacing: .1em; text-transform: uppercase; color: #d5dbe6; }
+.opp-next b { display: block; font-size: 16px; line-height: 1.2; }
+.opp-next__go { margin-left: auto; font: 700 12px var(--f-label); letter-spacing: .08em; text-transform: uppercase; color: #e6c47a; white-space: nowrap; }
+.opp-panel__head { margin-bottom: var(--s3); }
+@media (max-width: 400px) { .opp-next__go { font-size: 11px; } }
