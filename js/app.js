@@ -751,9 +751,11 @@
   // injury badge: out (with expected return gameweek) or a doubt (chance of playing)
   const injBadge = (m) => (!m ? "" : m.back ? `<span class="pdb-inj" title="${esc(m.note || "Injured")}">${m.back === 99 ? "OUT" : `GW${m.back}`}</span>`
     : m.chance != null ? `<span class="pdb-inj pdb-inj--doubt" title="${esc(m.note || "")}">${Math.round(m.chance * 100)}%</span>` : "");
-  function outlookCells(m) {
+  // an upcoming opponent, linking to what that club gives up to the player's position (opponents.html)
+  const oppHref = (abbr, pos) => `opponents.html#${encodeURIComponent(abbr)}${["GK", "D", "M", "F"].includes(pos) ? `-${pos}` : ""}`;
+  function outlookCells(m, pos) {
     if (!m) return `<td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td class="pdb-c-fx">–</td>`;
-    const fx = m.next5.map(([gw, opp, home, d]) => `<span class="fx fx--${d}" title="GW${gw}: ${home ? "vs" : "at"} ${esc(CLUB_NAME[opp] || opp)} (difficulty ${d})">${esc(opp)}${home ? "" : "<i>a</i>"}</span>`).join("");
+    const fx = m.next5.map(([gw, opp, home, d]) => `<a class="fx fx--${d}" href="${oppHref(opp, pos)}" title="GW${gw}: ${home ? "vs" : "at"} ${esc(CLUB_NAME[opp] || opp)} (difficulty ${d}). Tap for what they give up">${esc(opp)}${home ? "" : "<i>a</i>"}</a>`).join("");
     return `<td>${num(m.rate * m.share, 2)}</td><td><b>${num(m.ros, 0)}</b></td><td>${num(m.floor, 1)}</td><td>${num(m.ceil, 1)}</td><td>${m.prev != null ? num(m.prev, 2) : "–"}</td><td class="pdb-c-fx">${fx || "–"}</td>`;
   }
   function renderPlayerDb() {
@@ -804,7 +806,7 @@
         <td class="pdb-c-pts">${num(val(r, "fpts"), avg ? 2 : 2)}</td>
         <td class="pdb-c-ghost">${num(val(r, "ghost"), 2)}</td>
         ${cols.map(([k, , , , dp]) => `<td>${fmt(val(r, k), dp)}</td>`).join("")}
-        ${outlook ? outlookCells(M(r)) : ""}
+        ${outlook ? outlookCells(M(r), r.p.p) : ""}
       </tr>`).join("")}</tbody></table>`;
     loadPhotos(shown.map((r) => r.pid), box);
   }
@@ -845,11 +847,16 @@
     opp.rows = rows; opp.clubs = clubs; opp.next = next;
     opp.data = oppSummary();
     const list = opp.data.list;
-    const h = location.hash.slice(1).toUpperCase();
-    opp.club = (list.find((c) => c.abbr === h) || [...list].sort((a, b) => a.name.localeCompare(b.name))[0]).id;
+    const fromHash = () => {
+      const [abbr, pos] = decodeURIComponent(location.hash.slice(1)).toUpperCase().split("-");
+      const c = list.find((x) => x.abbr === abbr);
+      return { club: (c || [...list].sort((a, b) => a.name.localeCompare(b.name))[0]).id, pos: c && ["GK", "D", "M", "F"].includes(pos) ? pos : null };
+    };
+    ({ club: opp.club, pos: opp.focus } = fromHash());
+    window.addEventListener("hashchange", () => { ({ club: opp.club, pos: opp.focus } = fromHash()); renderOpponents(); });
     root.addEventListener("click", (e) => {
       const c = e.target.closest("[data-oppclub]");
-      if (c) { opp.club = c.dataset.oppclub; history.replaceState(null, "", `#${opp.data.clubs[opp.club].abbr}`); renderOpponents(); if (c.closest(".opp-heat")) $("#oppPanel").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" }); return; }
+      if (c) { opp.club = c.dataset.oppclub; opp.focus = null; history.replaceState(null, "", `#${opp.data.clubs[opp.club].abbr}`); renderOpponents(); if (c.closest(".opp-heat")) $("#oppPanel").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" }); return; }
       const m = e.target.closest("[data-oppmetric]");
       if (m) { opp.metric = m.dataset.oppmetric; opp.data = oppSummary(); renderOpponents(); return; }
       const s = e.target.closest("[data-oppsort]");
@@ -892,7 +899,7 @@
       const diff = x.avg - d.league[k];
       // a strip from the stingiest club to the most generous, with this club and the league average marked
       const pct = (v) => (hi.v === lo.v ? 50 : ((v - lo.v) / (hi.v - lo.v)) * 100);
-      return `<div class="opp-card ${tone(x.rank)}">
+      return `<div class="opp-card ${tone(x.rank)}${opp.focus === k ? " is-focus" : ""}" id="opp-${k}">
         <p class="opp-card__pos">${label}<span class="opp-card__tag">${verdict(x.rank)}</span></p>
         <p class="opp-card__big">${num(x.avg, 2)}<small>${unit} per player-game</small></p>
         <p class="opp-card__vs ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : "−"}${num(Math.abs(diff), 2)} vs league average (${num(d.league[k], 2)}) · <b>${ordinal(x.rank)}</b> most of ${d.n}</p>
@@ -908,7 +915,7 @@
     };
     const panel = `<section class="opp-panel" id="oppPanel" aria-live="polite">
         <div class="opp-panel__head">${logo(c.id, 56)}<div><h2>${esc(c.name)}</h2>
-          <p>${ghost ? "Ghost points" : "Points"} they've given up per player who played 70+ minutes against them${nx ? ` · Next: GW${nx.week} ${nx.home ? "vs" : "at"} ${esc(d.clubs[nx.opp] ? d.clubs[nx.opp].name : "?")}` : ""}</p></div></div>
+          <p>${ghost ? "Ghost points" : "Points"} they've given up per player who played 70+ minutes against them${nx ? ` · Next: GW${nx.week} ${nx.home ? "vs" : "at"} ${d.clubs[nx.opp] ? `<a href="#${esc(d.clubs[nx.opp].abbr)}">${esc(d.clubs[nx.opp].name)}</a>` : "?"}` : ""}</p></div></div>
         <div class="opp-cards">${OPP_POS.map(card).join("")}</div>
       </section>`;
     // every club at a glance: green = gives up a lot (good to start against), red = gives up little
@@ -926,6 +933,8 @@
       </section>`;
     root.innerHTML = metricSw + picker + panel + heat;
     loadPhotos($$("[data-photo]", root).map((e) => e.dataset.photo), root);
+    // arriving from a player's fixture: bring that position's card into view
+    if (opp.focus && $(`#opp-${opp.focus}`)) { const el = $(`#opp-${opp.focus}`); requestAnimationFrame(() => el.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "center" })); opp.focus = null; }
   }
 
   // ---------- TRADE CALCULATOR (trade.html) ----------
@@ -1121,7 +1130,7 @@
         <span class="pdb-player" data-player="${esc(pid)}" data-name="${esc(p.n)}" role="button" tabindex="0"><span class="pdb-photo" data-photo="${esc(pid)}"><span>${esc(initials(p.n))}</span></span>
         <span><b>${esc(p.n)}${injBadge(m)}</b><small>${posTag(pid)}${clubLogo(p.t)}${esc(p.c)}${m.note ? ` · ${esc(m.note)}` : ""}</small></span></span>
         <span class="tc-p__stats"><span><b>${num(m.tv || 0, 0)}</b><small>value</small></span><span><b>${num(m.rate * m.share, 1)}</b><small>exp/GW</small></span><span><b>${num(m.ros, 0)}</b><small>ROS</small></span><span><b>${num(m.floor, 0)}–${num(m.ceil, 0)}</b><small>floor–ceil</small></span><span><b>${m.prev != null ? num(m.prev, 1) : "–"}</b><small>last szn</small></span></span>
-        <span class="tc-p__fx">${m.next5.map(([gw, opp, home, d]) => `<span class="fx fx--${d}" title="GW${gw}">${esc(opp)}${home ? "" : "<i>a</i>"}</span>`).join("")}</span>
+        <span class="tc-p__fx">${m.next5.map(([gw, opp, home, d]) => `<a class="fx fx--${d}" href="${oppHref(opp, p.p)}" title="GW${gw}: tap for what they give up">${esc(opp)}${home ? "" : "<i>a</i>"}</a>`).join("")}</span>
       </li>`; };
       result = `<section class="tc-result" aria-live="polite">
         <h2 class="subhead">${esc(headline)}</h2>

@@ -2774,3 +2774,9 @@ html.has-install-bar body { padding-bottom: 92px; }
 .opp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 var(--s4); }
 .opp-bar .chart-note { margin: 0; }
 @media (max-width: 560px) { .opp-pick { grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); gap: 4px; } }
+
+/* upcoming opponents link to Points Allowed */
+a.fx { text-decoration: none; color: inherit; cursor: pointer; }
+a.fx:hover, a.fx:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.opp-panel__head a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.opp-card.is-focus { box-shadow: 0 0 0 3px var(--accent); }
