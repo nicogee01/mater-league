@@ -816,7 +816,7 @@
   // midfielders and forwards. Only players who played 70+ minutes count, each under his primary position only
   // (Saka counts as a midfielder, never as a forward). A player's club is his current one.
   const OPP_POS = [["GK", "Goalkeepers", "GK"], ["D", "Defenders", "DEF"], ["M", "Midfielders", "MID"], ["F", "Forwards", "FWD"]];
-  const opp = { data: null, club: null, sort: null, metric: "pts", cache: {} };
+  const opp = { data: null, club: null, sort: null, metric: "pts", span: "season", cache: {} };
   // ghost points: everything but goals, assists, clean sheets, own goals and cards (yellow or red) (as on Player stats)
   const ghostPts = (line) => { const sc = state.league.scoring_settings || {}; let p = 0; for (const [k, v] of Object.entries(line || {})) if (k.startsWith("pos_") && sc[k] !== undefined && typeof v === "number" && !/_(g|at|cs|cs90|og|yc|yc2|rc)$/.test(k)) p += v * sc[k]; return Math.round(p * 100) / 100; };
   async function initOpponents() {
@@ -844,6 +844,10 @@
       if (g.home && !next[g.home.team]) next[g.home.team] = { week: g.week, opp: g.away.team, home: true };
       if (g.away && !next[g.away.team]) next[g.away.team] = { week: g.week, opp: g.home.team, home: false };
     }
+    // each club's last four completed matches (form view)
+    const played = {};
+    for (const g of games) if (g.status === "complete" && g.home && g.away) for (const t of [g.home.team, g.away.team]) (played[t] ||= []).push(g.week);
+    opp.recent = Object.fromEntries(Object.entries(played).map(([t, ws]) => [t, new Set([...ws].sort((a, b) => b - a).slice(0, 4))]));
     opp.rows = rows; opp.clubs = clubs; opp.next = next;
     opp.data = oppSummary();
     const list = opp.data.list;
@@ -859,6 +863,8 @@
       if (c) { opp.club = c.dataset.oppclub; opp.focus = null; history.replaceState(null, "", `#${opp.data.clubs[opp.club].abbr}`); renderOpponents(); if (c.closest(".opp-heat")) $("#oppPanel").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" }); return; }
       const m = e.target.closest("[data-oppmetric]");
       if (m) { opp.metric = m.dataset.oppmetric; opp.data = oppSummary(); renderOpponents(); return; }
+      const sp = e.target.closest("[data-oppspan]");
+      if (sp) { opp.span = sp.dataset.oppspan; opp.data = oppSummary(); renderOpponents(); return; }
       const s = e.target.closest("[data-oppsort]");
       if (s) { opp.sort = opp.sort === s.dataset.oppsort ? null : s.dataset.oppsort; renderOpponents(); }
     });
@@ -866,15 +872,16 @@
   }
   // per club and position: average points (or ghost points) given up, the 3 best games against them, and ranks
   function oppSummary() {
-    const f = opp.metric;
-    if (opp.cache[f]) return opp.cache[f];
-    const rows = opp.rows, agg = {};
+    const f = opp.metric, key = `${f}|${opp.span}`;
+    if (opp.cache[key]) return opp.cache[key];
+    // last 4: only each opponent's four most recent matches
+    const rows = opp.span === "last4" ? opp.rows.filter((r) => opp.recent[r.opp] && opp.recent[r.opp].has(r.week)) : opp.rows, agg = {};
     for (const r of rows) { const a = ((agg[r.opp] ||= {})[r.pos] ||= { sum: 0, n: 0, games: new Set(), top: [] }); a.sum += r[f]; a.n++; a.games.add(r.week); a.top.push(r); }
     const league = Object.fromEntries(OPP_POS.map(([k]) => { const rs = rows.filter((r) => r.pos === k); return [k, rs.length ? rs.reduce((t, r) => t + r[f], 0) / rs.length : 0]; }));
     const list = Object.values(opp.clubs).filter((c) => agg[c.id]).map((c) => ({ ...c, pos: Object.fromEntries(OPP_POS.map(([k]) => { const a = agg[c.id][k]; return [k, a ? { avg: a.sum / a.n, n: a.n, games: a.games.size, top: [...a.top].sort((x, y) => y[f] - x[f]).slice(0, 3) } : null]; })) }));
     // rank per position: 1 = gives up the most
     for (const [k] of OPP_POS) [...list].filter((c) => c.pos[k]).sort((a, b) => b.pos[k].avg - a.pos[k].avg).forEach((c, i) => (c.pos[k].rank = i + 1));
-    return (opp.cache[f] = { list, league, clubs: opp.clubs, next: opp.next, n: list.length, metric: f });
+    return (opp.cache[key] = { list, league, clubs: opp.clubs, next: opp.next, n: list.length, metric: f, span: opp.span });
   }
   function renderOpponents() {
     const root = $("#oppRoot"), d = opp.data;
@@ -886,7 +893,10 @@
     const metricSw = `<div class="opp-bar"><div class="filters" role="group" aria-label="Which points">
         <button type="button" class="chip${ghost ? "" : " is-active"}" data-oppmetric="pts" aria-pressed="${!ghost}">Fantasy points</button>
         <button type="button" class="chip${ghost ? " is-active" : ""}" data-oppmetric="ghost" aria-pressed="${ghost}">Ghost points</button></div>
-        <p class="chart-note">${ghost ? "Ghost points: everything except goals, assists, clean sheets, own goals and cards, so saves, key passes, tackles, shots and the rest." : "All fantasy points, this league's scoring."} Players with 70+ minutes, primary position only.</p></div>`;
+        <div class="filters" role="group" aria-label="Which matches">
+        <button type="button" class="chip${d.span === "last4" ? "" : " is-active"}" data-oppspan="season" aria-pressed="${d.span !== "last4"}">Season</button>
+        <button type="button" class="chip${d.span === "last4" ? " is-active" : ""}" data-oppspan="last4" aria-pressed="${d.span === "last4"}">Last 4 matches</button></div>
+        <p class="chart-note">${ghost ? "Ghost points: everything except goals, assists, clean sheets, own goals and cards, so saves, key passes, tackles, shots and the rest." : "All fantasy points, this league's scoring."} Players with 70+ minutes, primary position only.${d.span === "last4" ? " Last 4: each club's four most recent matches only, so you see current form." : ""}</p></div>`;
     const picker = `<div class="opp-pick" role="radiogroup" aria-label="Premier League club">${sorted.map((x) => `<button type="button" role="radio" aria-checked="${x.id === c.id}" class="opp-pick__club${x.id === c.id ? " is-on" : ""}" data-oppclub="${esc(x.id)}" title="${esc(x.name)}">${logo(x.id, 30)}<span>${esc(x.abbr)}</span></button>`).join("")}</div>`;
     const nx = d.next[c.id];
     const tone = (rank) => (rank <= Math.ceil(d.n / 4) ? "is-soft" : rank > d.n - Math.ceil(d.n / 4) ? "is-tough" : "");
@@ -915,7 +925,7 @@
     };
     const panel = `<section class="opp-panel" id="oppPanel" aria-live="polite">
         <div class="opp-panel__head">${logo(c.id, 56)}<div><h2>${esc(c.name)}</h2>
-          <p>${ghost ? "Ghost points" : "Points"} they've given up per player who played 70+ minutes against them${nx ? ` · Next: GW${nx.week} ${nx.home ? "vs" : "at"} ${d.clubs[nx.opp] ? `<a href="#${esc(d.clubs[nx.opp].abbr)}">${esc(d.clubs[nx.opp].name)}</a>` : "?"}` : ""}</p></div></div>
+          <p>${ghost ? "Ghost points" : "Points"} they've given up per player who played 70+ minutes against them${d.span === "last4" ? " in their last 4 matches" : ""}${nx ? ` · Next: GW${nx.week} ${nx.home ? "vs" : "at"} ${d.clubs[nx.opp] ? `<a href="#${esc(d.clubs[nx.opp].abbr)}">${esc(d.clubs[nx.opp].name)}</a>` : "?"}` : ""}</p></div></div>
         <div class="opp-cards">${OPP_POS.map(card).join("")}</div>
       </section>`;
     // every club at a glance: green = gives up a lot (good to start against), red = gives up little
