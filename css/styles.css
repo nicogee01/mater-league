@@ -2780,3 +2780,4 @@ a.fx { text-decoration: none; color: inherit; cursor: pointer; }
 a.fx:hover, a.fx:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 .opp-panel__head a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .opp-card.is-focus { box-shadow: 0 0 0 3px var(--accent); }
+@media (max-width: 560px) { .opp-heat thead th:first-child, .opp-heat tbody th { width: 1%; padding-right: 4px; } .opp-heat td, .opp-heat thead th { font-size: 16px; } .opp-heat thead th { font-size: 12px; } }
