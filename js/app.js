@@ -944,7 +944,7 @@
     root.innerHTML = metricSw + picker + panel + heat;
     loadPhotos($$("[data-photo]", root).map((e) => e.dataset.photo), root);
     // arriving from a player's fixture: bring that position's card into view
-    if (opp.focus && $(`#opp-${opp.focus}`)) { const el = $(`#opp-${opp.focus}`); requestAnimationFrame(() => el.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "center" })); opp.focus = null; }
+    if (opp.focus && $(`#opp-${opp.focus}`)) { const el = $(`#opp-${opp.focus}`); requestAnimationFrame(() => el.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "center", inline: "start" })); opp.focus = null; }
   }
 
   // ---------- TRADE CALCULATOR (trade.html) ----------
