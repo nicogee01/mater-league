@@ -2793,3 +2793,17 @@ a.fx:hover, a.fx:focus-visible { outline: 2px solid var(--ink); outline-offset: 
 .opp-next__go { margin-left: auto; font: 700 12px var(--f-label); letter-spacing: .08em; text-transform: uppercase; color: #e6c47a; white-space: nowrap; }
 .opp-panel__head { margin-bottom: var(--s3); }
 @media (max-width: 400px) { .opp-next__go { font-size: 11px; } }
+
+/* player card: seasons, colour-coded cells, weekly position rank */
+.pd__seasons { margin: 0 0 var(--s3); }
+.pd__table td[data-heat="pos"] { background: rgba(46, 107, 69, var(--heat)); }
+.pd__table td[data-heat="neg"] { background: rgba(200, 16, 46, var(--heat)); }
+.pd__table td[data-heat] { color: var(--ink); }
+.pd__rank { white-space: nowrap; font-weight: 700; }
+.pd__rank small { font-weight: 500; color: var(--faint); margin-left: 1px; }
+.pd__rank--top { color: #fff; background: #2e6b45; }
+.pd__rank--top small { color: rgba(255, 255, 255, 0.8); }
+.pd__rank--good { background: rgba(46, 107, 69, 0.22); }
+.pd__rank--low { background: rgba(200, 16, 46, 0.14); }
+:root[data-theme="dark"] .pd__table td[data-heat] { color: #fbf7ee; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pd__table td[data-heat] { color: #fbf7ee; } }
