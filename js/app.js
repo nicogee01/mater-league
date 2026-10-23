@@ -2671,12 +2671,7 @@
     return { rank: 1 + list.filter((x) => x > r.pts).length, of: list.length, pos };
   }
   const PD_POSN = { GK: "goalkeepers", D: "defenders", M: "midfielders", F: "forwards" };
-  // colour scale: green for good, red for bad, stronger the bigger it is (relative to this player's best)
-  const pdHeat = (v, max, minNeg) => {
-    if (!v) return "";
-    if (v > 0) return ` style="--heat:${(0.1 + 0.5 * Math.min(1, v / (max || v))).toFixed(2)}" data-heat="pos"`;
-    return ` style="--heat:${(0.1 + 0.5 * Math.min(1, v / (minNeg || v))).toFixed(2)}" data-heat="neg"`;
-  };
+  const pdHeat = () => "";   // colour-coding switched off (user preference)
   function renderPlayerTable() {
     const box = $("#pdTable");
     if (!box || !pd.rows) return;
@@ -2700,8 +2695,7 @@
     const rankCell = (r) => {
       const k = pdRank(r);
       if (!k) return `<td>–</td>`;
-      const q = k.rank / k.of, tone = q <= 0.1 ? "top" : q <= 0.25 ? "good" : q > 0.75 ? "low" : "";
-      return `<td class="pd__rank${tone ? ` pd__rank--${tone}` : ""}" title="${ordinal(k.rank)} of ${k.of} ${PD_POSN[k.pos] || "players"} that gameweek">${k.rank}</td>`;
+      return `<td class="pd__rank" title="${ordinal(k.rank)} of ${k.of} ${PD_POSN[k.pos] || "players"} that gameweek">${k.rank}</td>`;
     };
     box.innerHTML = `<table class="data-table pd__table">
       <caption class="visually-hidden">${pts ? "Fantasy points by stat" : "Stats"} per gameweek</caption>
@@ -2756,7 +2750,7 @@
           <button type="button" class="chip" data-mode="pts" aria-pressed="false">Fantasy points</button>
         </div>
       </div>
-      ${pd.rows.length ? `<div class="table-scroll" id="pdTable"></div><p class="chart-note">Rank: where that score finished among every ${PD_POSN[(state.players[pid] || {}).p] || "player"} who played that gameweek (primary position only). Green = his best games, red = cost him points.</p>` : `<p class="pending-note">No Premier League minutes recorded in ${label(+season)}.</p>`}`;
+      ${pd.rows.length ? `<div class="table-scroll" id="pdTable"></div><p class="chart-note">Rank: where that score finished among every ${PD_POSN[(state.players[pid] || {}).p] || "player"} who played that gameweek (primary position only).</p>` : `<p class="pending-note">No Premier League minutes recorded in ${label(+season)}.</p>`}`;
     renderPlayerTable();
   }
   async function openPlayer(pid, fallbackName) {
