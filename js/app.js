@@ -2740,7 +2740,7 @@
       </div>
       <div class="pd__tiles">
         <div class="stat-tile"><span class="stat-tile__label">Season points</span><b class="stat-tile__v">${num(total)}</b></div>
-        <div class="stat-tile"><span class="stat-tile__label">Per game</span><b class="stat-tile__v">${played.length ? num(total / played.length) : "–"}</b></div>
+        <div class="stat-tile"><span class="stat-tile__label">Per game</span><b class="stat-tile__v">${played.length ? num(total / played.length) : "–"}</b>${played.length ? `<span class="stat-tile__sub" title="Ghost points: everything except goals, assists, clean sheets, own goals and cards">Ghost <b>${num(played.reduce((g, r) => g + ghostPts(r.line), 0) / played.length)}</b> per game</span>` : ""}</div>
         <div class="stat-tile"><span class="stat-tile__label">Games played</span><b class="stat-tile__v">${played.length}</b></div>
       </div>
       <div class="pd__bar">

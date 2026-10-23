@@ -2807,3 +2807,5 @@ a.fx:hover, a.fx:focus-visible { outline: 2px solid var(--ink); outline-offset: 
 .pd__rank--low { background: rgba(200, 16, 46, 0.14); }
 :root[data-theme="dark"] .pd__table td[data-heat] { color: #fbf7ee; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pd__table td[data-heat] { color: #fbf7ee; } }
+.stat-tile__sub { display: block; margin-top: 4px; font-size: 13px; color: var(--faint); }
+.stat-tile__sub b { color: var(--ink); font-family: var(--f-display); font-size: 16px; font-weight: 400; }
