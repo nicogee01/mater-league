@@ -2701,7 +2701,7 @@
       const k = pdRank(r);
       if (!k) return `<td>–</td>`;
       const q = k.rank / k.of, tone = q <= 0.1 ? "top" : q <= 0.25 ? "good" : q > 0.75 ? "low" : "";
-      return `<td class="pd__rank${tone ? ` pd__rank--${tone}` : ""}" title="${ordinal(k.rank)} of ${k.of} ${PD_POSN[k.pos] || "players"} that gameweek">${ordinal(k.rank)}<small>/${k.of}</small></td>`;
+      return `<td class="pd__rank${tone ? ` pd__rank--${tone}` : ""}" title="${ordinal(k.rank)} of ${k.of} ${PD_POSN[k.pos] || "players"} that gameweek">${k.rank}</td>`;
     };
     box.innerHTML = `<table class="data-table pd__table">
       <caption class="visually-hidden">${pts ? "Fantasy points by stat" : "Stats"} per gameweek</caption>
