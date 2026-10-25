@@ -4330,6 +4330,15 @@
     prInitView();
   }
 
+  // a fresh ballot starts from the last revealed power rankings (minus the voter); clubs it didn't rank, and the
+  // very first round, fall back to table order
+  function prDefaultOrder() {
+    const prev = pr.prev && pr.prev.revealed && pr.prev.teams ? pr.prev.teams : [];
+    const at = {};
+    prev.forEach((x, i) => { const t = teamByManager(x.manager); if (t) at[t.rosterId] = i; });
+    return state.teams.filter((t) => t.manager.toLowerCase() !== pr.voter)
+      .sort((a, b) => (at[a.rosterId] ?? 99) - (at[b.rosterId] ?? 99) || a.pos - b.pos).map((t) => t.rosterId);
+  }
   // ---- ballot: step 1, who are you ----
   function prStep(n) {
     $$(".pr-step").forEach((s) => (s.hidden = +s.dataset.step !== n));
@@ -4363,7 +4372,7 @@
       } catch (_) {}
       const others = state.teams.filter((t) => t.manager.toLowerCase() !== pr.voter);
       const saved = res.ballot;
-      pr.order = saved ? saved.rankings.map((m) => rosterOf(m)).filter(Boolean) : others.map((t) => t.rosterId);
+      pr.order = saved ? saved.rankings.map((m) => rosterOf(m)).filter(Boolean) : prDefaultOrder();
       pr.notes = {};
       if (saved) for (const [m, n] of Object.entries(saved.notes || {})) { const id = rosterOf(m); if (id) pr.notes[id] = n; }
       renderBallot(saved);
@@ -4381,7 +4390,9 @@
     const me = teamByManager(pr.voter);
     $("#prMe").innerHTML = `${crest(me)}<span>Voting as <b>${club(me)}</b></span>`;
     if ($("#prBallotSince")) $("#prBallotSince").innerHTML = prSinceHTML(true);
-    $("#prSavedNote").textContent = saved ? `You already voted this round (${new Date(saved.submitted_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}). Submitting again replaces it.` : "";
+    const prevWk = pr.prev && pr.prev.revealed ? prRoundAtOrBefore(pr.week - 1) : null;
+    $("#prSavedNote").textContent = saved ? `You already voted this round (${new Date(saved.submitted_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}). Submitting again replaces it.`
+      : prevWk ? `Starting order: the Gameweek ${prevWk} power rankings. Move clubs up or down from there.` : "Starting order: the league table.";
     const med = weekMedians();
     $("#prList").innerHTML = pr.order.map((id) => {
       const t = state.byRoster[id], c = prContext(t, med);
