@@ -98,5 +98,17 @@ window.MATER_ARTICLES = [
       "Pep's Retirement Fund had Alex Iwobi, who scored and kept a clean sheet for 24.5, and Lewis Hall's 12.25, and not much else. Gianluigi Donnarumma finished on −1.75. The two players they lean on most went missing together: Bruno Fernandes, projected for 10.69, managed 4, and Kai Havertz, projected for 10.88, managed 2.5. Pascal Groß added 2.5 and Nordi Mukiele 4. Even their best possible lineup, 103.75, would have lost by 32.5.",
       "Pep's are still 6–1 and still top of the pile, but the aura has gone. Manzambi Magic are 3–4 and on the move."
     ]
+  },
+  {
+    "week": 8,
+    "home": "treyclif3",
+    "away": "officialmaje",
+    "headline": "Gunners Fire Up the Guppys: a Record 77.75-Point Rout of Pep's",
+    "body": [
+      "Three weeks ago the Arsenal back line let Up the Guppys down in their derby. This week it handed them the biggest win in Mater League history. Up the Guppys beat Pep's Retirement Fund 151.25–73.50, a margin of 77.75 that breaks the record of 72.50 Wonkeeland's Finest set in Gameweek 4, and it's the week's highest score by a distance. Pep's won the first meeting 79.75–76 on opening weekend. Nobody will remember that one now.",
+      "Man of the match is Gabriel Magalhães: a goal and a clean sheet for 27 points. Ben White set one up and kept a clean sheet for 24.75, David Raya kept another for 15.25, and Viktor Gyökeres and Noni Madueke added 18 more. Arsenal players alone scored 85. Erling Haaland chipped in a goal for 15.5, Antonee Robinson 14.25, Jérémy Jacquet 12 and Enzo Le Fée 11.5, and every one of the five defenders kept a clean sheet. Scary thought: Oscar Bobb scored 23 on the bench. The best possible lineup was 171.75, which would have beaten the all-time high of 166.50.",
+      "For Pep's Retirement Fund, the 6–0 start is fading fast. This is a second straight defeat, and the worst yet. Senne Lammens failed to score in goal, Harry Maguire finished on −2.25, Liam Delap managed 2 in 89 minutes, Enzo Fernández 4 against a projection of 8.07, and Pascal Groß scored an own goal. Rayan's goal and clean sheet were worth 21 and Daniel Muñoz added 14.5, but Jan Paul van Hecke (20.5) and Mathys Tel (19.5) both scored big on the bench. Even their best possible lineup, 115.75, would have lost by 35.5.",
+      "Up the Guppys have scored 291 points in two weeks and are back to 4–4. Pep's have scored 160.25 in the same fortnight and dropped to second, level with Wonkeeland's Finest at 6–2 but 108.25 points behind them on scoring."
+    ]
   }
 ];
