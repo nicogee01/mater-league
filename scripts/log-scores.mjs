@@ -114,30 +114,37 @@ for (const x of lu) {
 }
 if (luFixes.length) console.log(`Player points refreshed from Sleeper: ${luFixes.length} lineup row(s), e.g. ${luFixes.slice(0, 3).map(({ x, now }) => `GW${x[0]} ${x[4]} ${x[5]} -> ${now}`).join(", ")}`);
 function bits(m) { let n = 0; for (; m; m >>= 1) n += m & 1; return n; }
-// best possible lineups: Sleeper's max-points total moves with a correction too. Where a club's logged best
-// lineups plus its corrections add up to Sleeper's max points exactly, the same change goes on that week's best.
 const ppts = {};
 for (const r of rosters) { const s2 = r.settings || {}; ppts[(nameById[r.owner_id] || "").toLowerCase()] = money((s2.ppts || 0) + (s2.ppts_decimal || 0) / 100); }
-const bestSum = {};
-for (const r of rows) { bestSum[r[1].toLowerCase()] = money((bestSum[r[1].toLowerCase()] || 0) + +r[5]); bestSum[r[2].toLowerCase()] = money((bestSum[r[2].toLowerCase()] || 0) + +r[6]); }
-const byClub = {};
-for (const f of fixes) (byClub[f.who.toLowerCase()] ||= []).push(f);
-for (const [who, list] of Object.entries(byClub)) {
-  const d = money(list.reduce((t, f) => t + f.d, 0));
-  if (pending || Math.abs(money(bestSum[who] + d) - ppts[who]) >= 0.005) continue;   // with a week pending, its best absorbs it
-  for (const f of list) { const bi = f.pi + 2; f.bestFrom = +f.r[bi]; f.r[bi] = money(+f.r[bi] + f.d).toFixed(2); }
-}
 for (const f of fixes) {
   const [h, a] = [+f.r[3], +f.r[4]];
   const before = Math.sign(h - a);
   f.r[f.pi] = f.to.toFixed(2);
   if (Math.sign(+f.r[3] - +f.r[4]) !== before) { console.error(`Not writing anything: a stat correction would change the result of GW${f.w} ${f.r[1]} v ${f.r[2]}. Check it by hand.`); process.exit(1); }
-  console.log(`Stat correction (confirmed by Sleeper's season totals): GW${f.w} ${f.who} ${f.from.toFixed(2)} -> ${f.to.toFixed(2)}${f.bestFrom != null ? ` (best lineup ${f.bestFrom.toFixed(2)} -> ${f.r[f.pi + 2]})` : ""}`);
+  console.log(`Stat correction (confirmed by Sleeper's season totals): GW${f.w} ${f.who} ${f.from.toFixed(2)} -> ${f.to.toFixed(2)}`);
 }
-const corrected = fixes.length > 0 || luFixes.length > 0;
+// best possible lineups: Sleeper's max-points total moves with corrections too, including bench players' (which
+// don't change the score). When no gameweek is pending, a club's logged best lineups must add up to Sleeper's max
+// points; any small gap goes on its latest corrected week (or else its latest week), never below that week's score.
+let bestFixed = 0;
+if (!pending) for (const u of Object.keys(ppts)) {
+  const mine = rows.filter((r) => r[1].toLowerCase() === u || r[2].toLowerCase() === u);
+  if (!mine.length) continue;
+  const bi = (r) => (r[1].toLowerCase() === u ? 5 : 6);
+  const gap = money(ppts[u] - mine.reduce((t, r) => t + +r[bi(r)], 0));
+  if (Math.abs(gap) < 0.005) continue;
+  if (Math.abs(gap) > 15) { console.log(`Warning: ${u}'s best lineups are ${gap} off Sleeper's max points; too big to be a correction, left alone.`); continue; }
+  const fixedWeeks = fixes.filter((f) => f.who.toLowerCase() === u).map((f) => f.w);
+  const wk = fixedWeeks.length ? Math.max(...fixedWeeks) : Math.max(...mine.map((r) => +r[0]));
+  const r = mine.find((x) => +x[0] === wk), i = bi(r), nb = money(+r[i] + gap);
+  if (nb < +r[i - 2]) { console.log(`Warning: GW${wk} ${u}'s best lineup would fall below its score; left alone.`); continue; }
+  console.log(`Best lineup corrected to match Sleeper's max points: GW${wk} ${u} ${(+r[i]).toFixed(2)} -> ${nb.toFixed(2)}`);
+  r[i] = nb.toFixed(2); bestFixed++;
+}
+const corrected = fixes.length > 0 || luFixes.length > 0 || bestFixed > 0;
 const writeCorrections = async () => {
   if (!corrected) return;
-  if (fixes.length) await writeFile(MATCHUPS, [head, ...rows.map((r) => r.join(","))].join("\n") + "\n");
+  if (fixes.length || bestFixed) await writeFile(MATCHUPS, [head, ...rows.map((r) => r.join(","))].join("\n") + "\n");
   if (luFixes.length) {
     for (const { x, now, min } of luFixes) { x[5] = String(now); if (x[7] !== undefined) x[7] = min; }
     await writeFile(LINEUPS, [luHead, ...lu.map((x) => x.join(","))].join("\n") + "\n");
@@ -145,7 +152,7 @@ const writeCorrections = async () => {
 };
 
 if (scored <= logged) {
-  if (corrected && !DRY) { await writeCorrections(); console.log(`Nothing new to log (Sleeper has scored GW${scored}), but corrections were written.${fixes.length ? " Next: node scripts/check-matchups.mjs" : ""}`); }
+  if (corrected && !DRY) { await writeCorrections(); console.log(`Nothing new to log (Sleeper has scored GW${scored}), but corrections were written.${fixes.length || bestFixed ? " Next: node scripts/check-matchups.mjs" : ""}`); }
   else console.log(`Nothing new: Sleeper has scored GW${scored}, matchups.csv has GW${logged}.${corrected ? " (dry run: corrections not written)" : ""}`);
   process.exit(0);
 }
