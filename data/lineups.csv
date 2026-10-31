@@ -1364,9 +1364,9 @@ week,manager,slot,player_id,player,pts,proj,min
 8,officialmaje,BN,1012,Anthony Elanga,1.5,,13
 8,officialmaje,BN,4130,Ferdi Kadioglu,0,1.5,6
 9,austinclifton,GK,1911,Djordje Petrovic,12.25,4.48,90
-9,austinclifton,DEF,1719,Josko Gvardiol,8.5,5.32,79
-9,austinclifton,DEF,9599,Luka Vuskovic,11.75,3.99,90
-9,austinclifton,DEF,1512,Micky van de Ven,16.25,3.62,86
+9,austinclifton,DEF,1719,Josko Gvardiol,9.5,5.32,79
+9,austinclifton,DEF,9599,Luka Vuskovic,12.75,3.99,90
+9,austinclifton,DEF,1512,Micky van de Ven,16.25,3.62,90
 9,austinclifton,MID,1830,Marcus Tavernier,7,7.62,90
 9,austinclifton,MID,1011,Morgan Gibbs-White,2.5,7.1,90
 9,austinclifton,MID,4870,Granit Xhaka,10,4.95,90
@@ -1375,55 +1375,55 @@ week,manager,slot,player_id,player,pts,proj,min
 9,austinclifton,BN,2053,Bart Verbruggen,23,1.85,90
 9,austinclifton,BN,9697,Mike Penders,12,3.57,90
 9,austinclifton,BN,1060,Dara O'Shea,5.25,4.67,90
-9,austinclifton,BN,11182,Robin Roefs,-0.5,5.01,90
+9,austinclifton,BN,11182,Robin Roefs,0.5,5.01,90
 9,austinclifton,BN,1834,Dango Ouattara,4.5,7.5,72
-9,austinclifton,BN,1494,Pedro Porro,3,,40
+9,austinclifton,BN,1494,Pedro Porro,3,,45
 9,austinclifton,BN,10118,Junior Kroupi,13,,22
-9,austinclifton,BN,1511,Dejan Kulusevski,0,,9
+9,austinclifton,BN,1511,Dejan Kulusevski,3,,13
 9,austinclifton,BN,1829,Milos Kerkez,0,3.34,0
 9,austinclifton,BN,1854,Ryan Gravenberch,0,6.43,0
 9,austinclifton,BN,2403,Declan Rice,0,7.66,0
 9,austinclifton,BN,3022,Sávio,0,,0
 9,austinclifton,BN,5240,Xavi Simons,0,,0
+9,nicog01,GK,7993,Zion Suzuki,3.25,4.27,90
 9,nicog01,DEF,4270,Maxim De Cuyper,18.75,3.68,72
-9,nicog01,DEF,10755,Tarik Muharemovic,7.25,3.38,90
-9,nicog01,DEF,8738,Adrien Truffert,9.5,4.89,90
+9,nicog01,DEF,10755,Tarik Muharemovic,9.5,3.38,90
+9,nicog01,DEF,8738,Adrien Truffert,9.75,4.89,90
 9,nicog01,MID,1716,Jérémy Doku,24,9.83,90
-9,nicog01,MID,1806,Elliot Anderson,13,7.16,90
+9,nicog01,MID,1806,Elliot Anderson,12,7.16,90
 9,nicog01,MID,14900,Jack Rudoni,20,6.57,90
 9,nicog01,MID,3778,Iliman Ndiaye,6,8.14,79
+9,nicog01,MID,7590,Johan Manzambi,10.5,8.16,66
 9,nicog01,FWD,3667,Igor Thiago,12,8.12,90
+9,nicog01,FWD,1909,Nicolas Jackson,16.5,8.32,90
 9,nicog01,BN,1258,James McAtee,8,6.66,90
 9,nicog01,BN,1008,Neco Williams,2,3.94,90
+9,nicog01,BN,2770,Gonzalo García,0.5,7.39,87
 9,nicog01,BN,11474,Mamadou Sangaré,7,6.9,62
+9,nicog01,BN,4369,Ibrahim Mbaye,1.5,,24
 9,nicog01,BN,2075,Jack Hinshelwood,0,,18
 9,nicog01,BN,1781,Bruno Guimarães,0,8.86,0
-9,nicog01,BN,1909,Nicolas Jackson,0,8.32,0
 9,nicog01,BN,2410,Bukayo Saka,0,,0
-9,nicog01,BN,2770,Gonzalo García,0,7.39,0
 9,nicog01,BN,3649,Yankuba Minteh,0,,0
-9,nicog01,BN,4369,Ibrahim Mbaye,0,,0
 9,nicog01,BN,5098,El Hadji Malick Diouf,0,,0
 9,nicog01,BN,5448,Matias Fernandez-Pardo,0,,0
-9,nicog01,BN,7590,Johan Manzambi,0,8.16,0
 9,nicog01,BN,7733,Hugo Ekitiké,0,,0
-9,nicog01,BN,7993,Zion Suzuki,0,4.25,0
 9,treyclif3,GK,4374,Gianluigi Donnarumma,2.25,4.49,90
 9,treyclif3,DEF,6960,Michael Kayode,7.5,4.49,90
-9,treyclif3,DEF,2047,Jan Paul van Hecke,30.5,5.65,86
-9,treyclif3,MID,13386,Rayan,7,8.15,88
+9,treyclif3,DEF,2047,Jan Paul van Hecke,30.5,5.65,90
+9,treyclif3,MID,13386,Rayan,6.5,8.15,88
 9,treyclif3,MID,1213,Bruno Fernandes,8.5,10.35,90
 9,treyclif3,MID,1882,Enzo Fernández,4,8.08,64
 9,treyclif3,MID,2051,Pascal Groß,2.5,6.62,90
 9,treyclif3,FWD,9438,Estêvão,15.5,8.49,87
-9,treyclif3,FWD,5354,Mathys Tel,13,7.01,86
+9,treyclif3,FWD,5354,Mathys Tel,15.5,7.01,88
 9,treyclif3,FWD,6940,Omar Marmoush,9,8.8,77
 9,treyclif3,BN,1206,Harry Maguire,0.25,3.15,90
-9,treyclif3,BN,2186,Adam Wharton,5.5,5.7,86
+9,treyclif3,BN,2186,Adam Wharton,5.5,5.7,88
+9,treyclif3,BN,1654,Alex Iwobi,10.5,7.11,75
 9,treyclif3,BN,3644,Liam Delap,-1,4.79,65
 9,treyclif3,BN,2164,Daniel Muñoz,4.25,,45
 9,treyclif3,BN,7571,Anton Stach,2,,25
-9,treyclif3,BN,1654,Alex Iwobi,0,7.12,0
 9,treyclif3,BN,1789,Lewis Hall,0,4.42,0
 9,treyclif3,BN,1838,Alex Scott,0,,0
 9,treyclif3,BN,1989,James Garner,0,6.01,0
@@ -1431,7 +1431,7 @@ week,manager,slot,player_id,player,pts,proj,min
 9,treyclif3,BN,2421,Kai Havertz,0,10.88,0
 9,treyclif3,BN,4884,Nordi Mukiele,0,,0
 9,GlenM22,DEF,2183,Marc Guéhi,0,,0
-9,GlenM22,MID,2160,Mohammed Kudus,15.5,7.06,86
+9,GlenM22,MID,2160,Mohammed Kudus,17.5,7.06,90
 9,GlenM22,FWD,4049,Evanilson,14.5,5.52,76
 9,GlenM22,BN,1886,Moisés Caicedo,2,4.94,87
 9,GlenM22,BN,1235,Amad Diallo,6.5,,77
@@ -1451,17 +1451,17 @@ week,manager,slot,player_id,player,pts,proj,min
 9,GlenM22,BN,4382,Bradley Barcola,0,10.38,0
 9,GlenM22,BN,4867,Piero Hincapié,0,,0
 9,GlenM22,BN,16100,Lukás Hornícek,0,3.55,0
-9,officialmaje,DEF,6910,Abdukodir Khusanov,7.5,3.33,90
+9,officialmaje,DEF,6910,Abdukodir Khusanov,7.75,3.33,90
 9,officialmaje,MID,2520,Pedro Neto,7,7.76,87
 9,officialmaje,MID,10495,Enzo Le Fée,14.5,6.69,90
-9,officialmaje,MID,1795,Sandro Tonali,5,4.83,86
+9,officialmaje,MID,1795,Sandro Tonali,7,4.83,90
+9,officialmaje,MID,1114,John McGinn,4,6.97,87
 9,officialmaje,FWD,1721,Erling Haaland,5,10.39,90
 9,officialmaje,FWD,1994,Dominic Calvert-Lewin,3.5,7.4,90
+9,officialmaje,FWD,1710,Oscar Bobb,10,6.01,79
+9,officialmaje,BN,1663,Antonee Robinson,6.75,4.35,90
+9,officialmaje,BN,1673,Timothy Castagne,4.25,2.98,87
 9,officialmaje,BN,1012,Anthony Elanga,0,,0
-9,officialmaje,BN,1114,John McGinn,0,6.97,0
-9,officialmaje,BN,1663,Antonee Robinson,0,4.54,0
-9,officialmaje,BN,1673,Timothy Castagne,0,3.16,0
-9,officialmaje,BN,1710,Oscar Bobb,0,6.02,0
 9,officialmaje,BN,1863,Alexis Mac Allister,0,6.13,0
 9,officialmaje,BN,1923,Noni Madueke,0,8.2,0
 9,officialmaje,BN,2399,David Raya,0,6.07,0
@@ -1477,6 +1477,7 @@ week,manager,slot,player_id,player,pts,proj,min
 9,nictrn,DEF,1707,Matheus Nunes,6.75,4.51,90
 9,nictrn,MID,3672,Yasin Ayari,20.5,5.94,90
 9,nictrn,MID,2046,Julio Enciso,27.5,5.46,89
+9,nictrn,MID,1649,Josh King,2.5,6.3,79
 9,nictrn,FWD,3041,Yéremy Pino,1.5,6.98,60
 9,nictrn,BN,1274,Oliver McBurnie,24.5,7.67,90
 9,nictrn,BN,2079,Lewis Dunk,8,0.34,90
@@ -1485,7 +1486,6 @@ week,manager,slot,player_id,player,pts,proj,min
 9,nictrn,BN,3790,Mats Wieffer,1.5,,26
 9,nictrn,BN,1118,Youri Tielemans,0,,0
 9,nictrn,BN,1500,James Maddison,0,,0
-9,nictrn,BN,1649,Josh King,0,6.31,0
 9,nictrn,BN,1823,Antoine Semenyo,0,,0
 9,nictrn,BN,1919,Reece James,0,,0
 9,nictrn,BN,2074,João Pedro,0,,0
@@ -1495,16 +1495,16 @@ week,manager,slot,player_id,player,pts,proj,min
 9,nictrn,BN,5226,Benjamin Sesko,0,,0
 9,nictrn,BN,7117,Nico González,0,4.01,0
 9,BottomCap,GK,1873,Caoimhín Kelleher,10,5.65,90
-9,BottomCap,DEF,1827,James Hill,13.5,6.15,90
+9,BottomCap,DEF,1827,James Hill,16.5,6.15,90
 9,BottomCap,DEF,3224,James Justin,3.5,3.91,84
 9,BottomCap,DEF,3392,Leif Davis,0,4.44,90
 9,BottomCap,MID,1940,Keane Lewis-Potter,5,5.09,90
 9,BottomCap,MID,1922,Cole Palmer,26,8.46,89
 9,BottomCap,MID,1091,Morgan Rogers,20,7.62,90
-9,BottomCap,FWD,14935,Mohamed Belloumi,7.5,9.53,90
+9,BottomCap,FWD,14935,Mohamed Belloumi,6.5,9.53,90
 9,BottomCap,FWD,1836,Dominic Solanke,7.5,7.06,66
 9,BottomCap,BN,1705,Rúben Dias,1.25,3.36,90
-9,BottomCap,BN,10130,Charalampos Kostoulas,4.5,17.11,72
+9,BottomCap,BN,10130,Charalampos Kostoulas,4,17.11,72
 9,BottomCap,BN,1712,Phil Foden,0,,11
 9,BottomCap,BN,1097,Emiliano Martínez,0,,0
 9,BottomCap,BN,1217,Marcus Rashford,0,,0
