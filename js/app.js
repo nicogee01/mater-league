@@ -4394,26 +4394,72 @@
     $("#prSavedNote").textContent = saved ? `You already voted this round (${new Date(saved.submitted_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}). Submitting again replaces it.`
       : prevWk ? `Starting order: the Gameweek ${prevWk} power rankings. Move clubs up or down from there.` : "Starting order: the league table.";
     const med = weekMedians();
+    // every stat carries the club's rank among all clubs (ties share a rank, shown with "=")
+    const N = state.teams.length;
+    const ranker = (val) => { const all = state.teams.map((o) => val(o)).filter((v) => v != null);
+      return (t) => { const v = val(t); if (v == null) return ""; const r = 1 + all.filter((x) => x > v).length, tie = all.filter((x) => x === v).length > 1;
+        return `<em class="pr-stat__rk${r === 1 ? " is-top" : r === N ? " is-low" : ""}" title="${tie ? "Joint " : ""}${ordinal(r)} of ${N}">${tie ? "=" : ""}${ordinal(r)}</em>`; }; };
+    const ctx = Object.fromEntries(state.teams.map((t) => [t.rosterId, prContext(t, med)]));
+    const sRk = {
+      rec: ranker((t) => N - t.pos), pf: ranker((t) => t.pf), avg: ranker((t) => ctx[t.rosterId].avg), best: ranker((t) => ctx[t.rosterId].best),
+      ap: ranker((t) => (t.allPlay ? t.allPlay.w - t.allPlay.l : null)), hl: ranker((t) => ctx[t.rosterId].hardLuck),
+    };
+    // the stretch since the last power rankings (the five gameweeks this vote is about)
+    const st = prStretch(), played = Math.min(pr.scored, st.to);
+    const since = {};
+    if (st.from > 1 && played >= st.from) {
+      const byWk = {};
+      state.teams.forEach((t) => t.games.forEach((g) => { if (g.week >= st.from && g.week <= played) (byWk[g.week] ||= []).push({ id: t.rosterId, s: g.score }); }));
+      state.teams.forEach((t) => {
+        const g = t.games.filter((x) => x.week >= st.from && x.week <= played).sort((a, b) => a.week - b.week);
+        const ap = { w: 0, l: 0 };
+        g.forEach((x) => byWk[x.week].forEach((o) => { if (o.id !== t.rosterId) { if (o.s < x.score) ap.w++; else if (o.s > x.score) ap.l++; } }));
+        since[t.rosterId] = { g, w: g.filter((x) => x.res === "W").length, l: g.filter((x) => x.res === "L").length, d: g.filter((x) => x.res === "D").length,
+          pf: g.reduce((a, x) => a + x.score, 0), best: g.length ? Math.max(...g.map((x) => x.score)) : null, ap,
+          hl: g.filter((x) => x.res === "L" && x.score > med[x.week]).length };
+        since[t.rosterId].avg = g.length ? since[t.rosterId].pf / g.length : null;
+      });
+    }
+    const S = (t) => since[t.rosterId];
+    const hasSince = Object.keys(since).length > 0;
+    const xRk = hasSince ? {
+      rec: ranker((t) => S(t).w * 1e4 + S(t).d * 1e3 + S(t).pf / 100), pf: ranker((t) => S(t).pf), avg: ranker((t) => S(t).avg),
+      best: ranker((t) => S(t).best), ap: ranker((t) => S(t).ap.w - S(t).ap.l), hl: ranker((t) => S(t).hl),
+    } : null;
+    const lastLbl = hasSince ? (pr.prev && pr.prev.revealed ? `Since the GW${st.last} rankings` : `Gameweeks ${st.from}–${played}`) : "";
     $("#prList").innerHTML = pr.order.map((id) => {
-      const t = state.byRoster[id], c = prContext(t, med);
+      const t = state.byRoster[id], c = ctx[id];
       const form = t.record.slice(-5).split("").map((r) => `<i class="${r}">${r === "T" ? "D" : r}</i>`).join("");
-      const stat = (v, l, cls = "") => `<span class="pr-stat ${cls}"><b>${v}</b><small>${l}</small></span>`;
+      const stat = (v, l, cls = "", rk = "") => `<span class="pr-stat ${cls}"><b>${v}</b>${rk}<small>${l}</small></span>`;
+      const s = since[id];
+      const sinceRow = s ? `<div class="pr-card__block pr-card__block--since"><p class="pr-card__lbl">${lastLbl} <small>GW${st.from}–${played}</small></p>
+          <div class="pr-card__stats">
+            ${stat(`${s.w}-${s.d}-${s.l}`, "Record", "", xRk.rec(t))}
+            ${stat(num(s.pf), "Points for", "", xRk.pf(t))}
+            ${stat(num(s.avg), "Avg / week", "", xRk.avg(t))}
+            ${stat(s.best != null ? num(s.best) : "–", "Best week", "", xRk.best(t))}
+            ${stat(`${s.ap.w}-${s.ap.l}`, "All-Play", "", xRk.ap(t))}
+            ${stat(s.hl, "Hard-luck losses", s.hl ? "is-flag" : "", xRk.hl(t))}
+            ${miniSpark(s.g)}
+          </div></div>` : "";
       return `<li class="pr-card" data-id="${id}">
         <span class="pr-card__rank" aria-hidden="true"></span>
         <span class="pr-card__handle" aria-hidden="true" title="Drag to reorder"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.3"/><circle cx="11" cy="4" r="1.3"/><circle cx="5" cy="8" r="1.3"/><circle cx="11" cy="8" r="1.3"/><circle cx="5" cy="12" r="1.3"/><circle cx="11" cy="12" r="1.3"/></svg></span>
         <div class="pr-card__main">
           <div class="pr-card__id">${crest(t)}<span><b>${club(t)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)} in the table${t.streak ? ` · ${esc(t.streak)} streak` : ""}</small></span>
             <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></div>
+          ${sinceRow}
+          <div class="pr-card__block"><p class="pr-card__lbl">Season</p>
           <div class="pr-card__stats">
-            ${stat(`${t.w}-${t.d}-${t.l}`, "Record")}
-            ${stat(num(t.pf), "Points for")}
-            ${stat(num(c.avg), "Avg / week")}
-            ${stat(c.best != null ? num(c.best) : "–", "Best week")}
-            ${stat(t.allPlay ? `${t.allPlay.w}-${t.allPlay.l}` : "–", "All-Play")}
-            ${stat(c.hardLuck, "Hard-luck losses", c.hardLuck ? "is-flag" : "")}
+            ${stat(`${t.w}-${t.d}-${t.l}`, "Record", "", sRk.rec(t))}
+            ${stat(num(t.pf), "Points for", "", sRk.pf(t))}
+            ${stat(num(c.avg), "Avg / week", "", sRk.avg(t))}
+            ${stat(c.best != null ? num(c.best) : "–", "Best week", "", sRk.best(t))}
+            ${stat(t.allPlay ? `${t.allPlay.w}-${t.allPlay.l}` : "–", "All-Play", "", sRk.ap(t))}
+            ${stat(c.hardLuck, "Hard-luck losses", c.hardLuck ? "is-flag" : "", sRk.hl(t))}
             ${stat(num(t.pa), "Points against")}
             ${miniSpark(t.games)}
-          </div>
+          </div></div>
           <label class="pr-card__note"><span class="visually-hidden">Note on ${esc(t.name)} (optional)</span>
             <textarea rows="2" maxlength="280" placeholder="Hot take on ${esc(t.name)} (optional)" data-id="${id}">${esc(pr.notes[id] || "")}</textarea></label>
         </div>
