@@ -4415,7 +4415,7 @@
         const ap = { w: 0, l: 0 };
         g.forEach((x) => byWk[x.week].forEach((o) => { if (o.id !== t.rosterId) { if (o.s < x.score) ap.w++; else if (o.s > x.score) ap.l++; } }));
         since[t.rosterId] = { g, w: g.filter((x) => x.res === "W").length, l: g.filter((x) => x.res === "L").length, d: g.filter((x) => x.res === "D").length,
-          pf: g.reduce((a, x) => a + x.score, 0), best: g.length ? Math.max(...g.map((x) => x.score)) : null, ap,
+          pf: g.reduce((a, x) => a + x.score, 0), pa: g.reduce((a, x) => a + x.oppScore, 0), best: g.length ? Math.max(...g.map((x) => x.score)) : null, ap,
           hl: g.filter((x) => x.res === "L" && x.score > med[x.week]).length };
         since[t.rosterId].avg = g.length ? since[t.rosterId].pf / g.length : null;
       });
@@ -4440,6 +4440,7 @@
             ${stat(s.best != null ? num(s.best) : "–", "Best week", "", xRk.best(t))}
             ${stat(`${s.ap.w}-${s.ap.l}`, "All-Play", "", xRk.ap(t))}
             ${stat(s.hl, "Hard-luck losses", s.hl ? "is-flag" : "", xRk.hl(t))}
+            ${stat(num(s.pa), "Points against")}
             ${miniSpark(s.g)}
           </div></div>` : "";
       return `<li class="pr-card" data-id="${id}">
