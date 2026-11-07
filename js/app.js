@@ -4402,7 +4402,7 @@
     const ctx = Object.fromEntries(state.teams.map((t) => [t.rosterId, prContext(t, med)]));
     const sRk = {
       rec: ranker((t) => N - t.pos), pf: ranker((t) => t.pf), avg: ranker((t) => ctx[t.rosterId].avg), best: ranker((t) => ctx[t.rosterId].best),
-      ap: ranker((t) => (t.allPlay ? t.allPlay.w - t.allPlay.l : null)), hl: ranker((t) => ctx[t.rosterId].hardLuck),
+      ap: ranker((t) => (t.allPlay ? t.allPlay.w - t.allPlay.l : null)), hl: ranker((t) => ctx[t.rosterId].hardLuck), pa: ranker((t) => t.pa),
     };
     // the stretch since the last power rankings (the five gameweeks this vote is about)
     const st = prStretch(), played = Math.min(pr.scored, st.to);
@@ -4424,13 +4424,15 @@
     const hasSince = Object.keys(since).length > 0;
     const xRk = hasSince ? {
       rec: ranker((t) => S(t).w * 1e4 + S(t).d * 1e3 + S(t).pf / 100), pf: ranker((t) => S(t).pf), avg: ranker((t) => S(t).avg),
-      best: ranker((t) => S(t).best), ap: ranker((t) => S(t).ap.w - S(t).ap.l), hl: ranker((t) => S(t).hl),
+      best: ranker((t) => S(t).best), ap: ranker((t) => S(t).ap.w - S(t).ap.l), hl: ranker((t) => S(t).hl), pa: ranker((t) => S(t).pa),
     } : null;
     const lastLbl = hasSince ? (pr.prev && pr.prev.revealed ? `Since the GW${st.last} rankings` : `Gameweeks ${st.from}–${played}`) : "";
     $("#prList").innerHTML = pr.order.map((id) => {
       const t = state.byRoster[id], c = ctx[id];
       const form = t.record.slice(-5).split("").map((r) => `<i class="${r}">${r === "T" ? "D" : r}</i>`).join("");
-      const stat = (v, l, cls = "", rk = "") => `<span class="pr-stat ${cls}"><b>${v}</b>${rk}<small>${l}</small></span>`;
+      const stat = (v, l, cls = "", rk = "", tip = "") => `<span class="pr-stat ${cls}"${tip ? ` title="${tip}"` : ""}><b>${v}</b>${rk}<small>${l}</small></span>`;
+      const HL = "Losses where the club still outscored that gameweek's median (the middle of all eight scores)";
+      const PA = "Points scored against them. 1st = the most, i.e. the toughest opponents";
       const s = since[id];
       const sinceRow = s ? `<div class="pr-card__block pr-card__block--since"><p class="pr-card__lbl">${lastLbl} <small>GW${st.from}–${played}</small></p>
           <div class="pr-card__stats">
@@ -4439,8 +4441,8 @@
             ${stat(num(s.avg), "Avg / week", "", xRk.avg(t))}
             ${stat(s.best != null ? num(s.best) : "–", "Best week", "", xRk.best(t))}
             ${stat(`${s.ap.w}-${s.ap.l}`, "All-Play", "", xRk.ap(t))}
-            ${stat(s.hl, "Hard-luck losses", s.hl ? "is-flag" : "", xRk.hl(t))}
-            ${stat(num(s.pa), "Points against")}
+            ${stat(s.hl, "Hard-luck losses", s.hl ? "is-flag" : "", xRk.hl(t), HL)}
+            ${stat(num(s.pa), "Points against", "", xRk.pa(t), PA)}
             ${miniSpark(s.g)}
           </div></div>` : "";
       return `<li class="pr-card" data-id="${id}">
@@ -4457,8 +4459,8 @@
             ${stat(num(c.avg), "Avg / week", "", sRk.avg(t))}
             ${stat(c.best != null ? num(c.best) : "–", "Best week", "", sRk.best(t))}
             ${stat(t.allPlay ? `${t.allPlay.w}-${t.allPlay.l}` : "–", "All-Play", "", sRk.ap(t))}
-            ${stat(c.hardLuck, "Hard-luck losses", c.hardLuck ? "is-flag" : "", sRk.hl(t))}
-            ${stat(num(t.pa), "Points against")}
+            ${stat(c.hardLuck, "Hard-luck losses", c.hardLuck ? "is-flag" : "", sRk.hl(t), HL)}
+            ${stat(num(t.pa), "Points against", "", sRk.pa(t), PA)}
             ${miniSpark(t.games)}
           </div></div>
           <label class="pr-card__note"><span class="visually-hidden">Note on ${esc(t.name)} (optional)</span>
