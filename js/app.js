@@ -4402,7 +4402,7 @@
         return `<em class="pr-stat__rk${r === 1 ? " is-top" : r === N ? " is-low" : ""}" title="${tie ? "Joint " : ""}${ordinal(r)} of ${N}">${tie ? "=" : ""}${ordinal(r)}</em>`; }; };
     const ctx = Object.fromEntries(state.teams.map((t) => [t.rosterId, prContext(t, med)]));
     const sRk = {
-      rec: ranker((t) => N - t.pos), pf: ranker((t) => t.pf), avg: ranker((t) => ctx[t.rosterId].avg), best: ranker((t) => ctx[t.rosterId].best),
+      rec: ranker((t) => N - t.pos), pf: ranker((t) => t.pf), avg: ranker((t) => ctx[t.rosterId].avg),
       ap: ranker((t) => (t.allPlay ? t.allPlay.w - t.allPlay.l : null)), hl: ranker((t) => ctx[t.rosterId].hardLuck), lw: ranker((t) => ctx[t.rosterId].lucky), pa: ranker((t) => t.pa),
     };
     // the stretch since the last power rankings (the five gameweeks this vote is about)
@@ -4425,7 +4425,7 @@
     const hasSince = Object.keys(since).length > 0;
     const xRk = hasSince ? {
       rec: ranker((t) => S(t).w * 1e4 + S(t).d * 1e3 + S(t).pf / 100), pf: ranker((t) => S(t).pf), avg: ranker((t) => S(t).avg),
-      best: ranker((t) => S(t).best), ap: ranker((t) => S(t).ap.w - S(t).ap.l), hl: ranker((t) => S(t).hl), lw: ranker((t) => S(t).lw), pa: ranker((t) => S(t).pa),
+      ap: ranker((t) => S(t).ap.w - S(t).ap.l), hl: ranker((t) => S(t).hl), lw: ranker((t) => S(t).lw), pa: ranker((t) => S(t).pa),
     } : null;
     const lastLbl = hasSince ? (pr.prev && pr.prev.revealed ? `Since the GW${st.last} rankings` : `Gameweeks ${st.from}–${played}`) : "";
     // one switch for every card: the stretch since the last rankings (default) or the whole season
@@ -4452,7 +4452,6 @@
             ${stat(`${s.w}-${s.d}-${s.l}`, "Record", "", xRk.rec(t))}
             ${stat(num(s.pf), "Points for", "", xRk.pf(t))}
             ${stat(num(s.avg), "Avg / week", "", xRk.avg(t))}
-            ${stat(s.best != null ? num(s.best) : "–", "Best week", "", xRk.best(t))}
             ${stat(`${s.ap.w}-${s.ap.l}`, "All-Play", "", xRk.ap(t))}
             ${stat(s.hl, "Hard-luck losses", s.hl ? "is-flag" : "", xRk.hl(t), HL)}
             ${stat(s.lw, "Lucky wins", s.lw ? "is-lucky" : "", xRk.lw(t), LW)}
@@ -4471,7 +4470,6 @@
             ${stat(`${t.w}-${t.d}-${t.l}`, "Record", "", sRk.rec(t))}
             ${stat(num(t.pf), "Points for", "", sRk.pf(t))}
             ${stat(num(c.avg), "Avg / week", "", sRk.avg(t))}
-            ${stat(c.best != null ? num(c.best) : "–", "Best week", "", sRk.best(t))}
             ${stat(t.allPlay ? `${t.allPlay.w}-${t.allPlay.l}` : "–", "All-Play", "", sRk.ap(t))}
             ${stat(c.hardLuck, "Hard-luck losses", c.hardLuck ? "is-flag" : "", sRk.hl(t), HL)}
             ${stat(c.lucky, "Lucky wins", c.lucky ? "is-lucky" : "", sRk.lw(t), LW)}
