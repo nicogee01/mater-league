@@ -3209,11 +3209,18 @@
     for (const [pid, name] of mentions) html = html.split(esc(name)).join(plink(pid, name));
     return html;
   }
+  // the Gazette's (fictional) writers, from data/articles.js
+  function writerLine(art) {
+    const w = art && art.by && (window.MATER_WRITERS || {})[art.by];
+    if (!w) return "";
+    return `<p class="gz-story__writer" title="${esc(w.bio || "")}"><span class="gz-story__writer-mark" aria-hidden="true">${esc(initials(w.name))}</span><span>By <b>${esc(w.name)}</b> <small>(${esc(w.from)})</small><em>${esc(w.role)}</em></span></p>`;
+  }
   function storyCard(s, lead) {
     const id = `gw${s.week}-${s.match.home}-${s.match.away}`;
     return `<article class="gz-story${lead ? " gz-story--lead" : ""}${s.article ? " gz-story--report" : ""}${s.derby ? ` is-derby derby--${esc(s.derby.slug)}` : ""}" id="${id}">
       <p class="gz-story__tag"><span>${GZ_TAGS[s.type] || "Result"}</span>${s.derby ? `<em class="dt dt--${esc(s.derby.slug)}">${esc(s.derby.name)}</em>` : ""}</p>
       <h3 class="gz-story__head">${esc(s.headline)}</h3>
+      ${writerLine(s.article)}
       <p class="gz-story__score">${crest(s.W)}<b>${club(s.W)}</b><span class="gz-count" data-to="${s.ws}">${num(s.ws, 2)}</span><i>–</i><span class="gz-count" data-to="${s.ls}">${num(s.ls, 2)}</span><b>${club(s.L)}</b>${crest(s.L)}</p>
       ${s.article ? `<div class="gz-story__report">${s.article.body.map((para) => `<p>${linkNames(para, s.mentions)}</p>`).join("")}</div>
       <p class="gz-story__byline">Match report · Gameweek ${s.week}</p>` : `<p class="gz-story__body">${linkNames(s.report, s.mentions)}</p>`}

@@ -11,6 +11,7 @@ window.MATER_ARTICLES = [
   {
     "week": 1,
     "home": "nictrn",
+    "by": "okafor",
     "away": "BottomCap",
     "headline": "Palmer's 31 Not Enough as I like Semen yo Win the Opening-Day Shootout",
     "body": [
@@ -22,6 +23,7 @@ window.MATER_ARTICLES = [
   {
     "week": 2,
     "home": "BottomCap",
+    "by": "okafor",
     "away": "KingAbes",
     "headline": "157.5: Insigne Himself Set the Bar in a Record-Breaking Game",
     "body": [
@@ -33,6 +35,7 @@ window.MATER_ARTICLES = [
   {
     "week": 3,
     "home": "austinclifton",
+    "by": "pennock",
     "away": "treyclif3",
     "headline": "Pep's Retirement Fund Take the First Clifton Derby and Stay Perfect",
     "body": [
@@ -44,6 +47,7 @@ window.MATER_ARTICLES = [
   {
     "week": 4,
     "home": "BottomCap",
+    "by": "mcallister",
     "away": "austinclifton",
     "headline": "166.5: Wonkeeland's Finest Break Two Records in a 72-Point Demolition",
     "body": [
@@ -55,6 +59,7 @@ window.MATER_ARTICLES = [
   {
     "week": 5,
     "home": "KingAbes",
+    "by": "kowalczyk",
     "away": "nictrn",
     "headline": "Semenyo's 35 Settles the Snow Belt Derby by Three Points",
     "body": [
@@ -66,6 +71,7 @@ window.MATER_ARTICLES = [
   {
     "week": 5,
     "home": "GlenM22",
+    "by": "vera",
     "away": "officialmaje",
     "headline": "Barry and 'Em Run Riot in El Clásico de las Américas",
     "body": [
@@ -77,6 +83,7 @@ window.MATER_ARTICLES = [
   {
     "week": 6,
     "home": "nicog01",
+    "by": "mcallister",
     "away": "BottomCap",
     "headline": "Manzambi Unleashed: Magic Snap Their Skid and Take the First Sutphin Clásico",
     "body": [
@@ -90,6 +97,7 @@ window.MATER_ARTICLES = [
   {
     "week": 7,
     "home": "nicog01",
+    "by": "pennock",
     "away": "treyclif3",
     "headline": "The Perfect Start Is Over: Manzambi Magic Hand Pep's Their First Defeat",
     "body": [
@@ -102,6 +110,7 @@ window.MATER_ARTICLES = [
   {
     "week": 8,
     "home": "treyclif3",
+    "by": "mcallister",
     "away": "officialmaje",
     "headline": "Gunners Fire Up the Guppys: a Record 80.5-Point Rout of Pep's",
     "body": [
@@ -114,6 +123,7 @@ window.MATER_ARTICLES = [
   {
     "week": 9,
     "home": "KingAbes",
+    "by": "okafor",
     "away": "BottomCap",
     "headline": "59.25: Kingstown Hit a New Low as Insigne Himself Make It Three Straight",
     "body": [
@@ -150,12 +160,22 @@ window.MATER_ARTICLES = [
     "week": 10,
     "home": "treyclif3",
     "away": "austinclifton",
-    "headline": "Pep's Go Top as Wonkeeland's Finest Crash to 62",
+    "by": "pennock",
+    "headline": "Pep's Go Top as Wonkeeland's Finest Lose Their Way in the Clifton Derby Again",
     "body": [
-      "The Clifton Derby decided first place, and it wasn't close. Pep's Retirement Fund beat Wonkeeland's Finest 113.50–62.00 and go top of the Mater League at 8–2. Wonkeeland's Finest arrived on a six-game winning streak. Their 62 was the lowest score of the week and their lowest of the season by 18.50. That's two from two for Pep's in the family derby, after the 101.75–96 win in Gameweek 3.",
-      "Man of the match is Bruno Fernandes: a goal, an assist and four key passes for 26 points. Pascal Groß was a point behind on 25, with a goal, a clean sheet and five key passes. Lewis Hall (12.75), Rayan (12.5), Jan Paul van Hecke (12) and Jarrad Branthwaite (10.25) added 47.5 between them. Not everyone delivered. Kai Havertz scored 0.5 against a projection of 10.81, Omar Marmoush 2.5 against 10.77, and Gianluigi Donnarumma made two saves and still finished on −0.5. Liam Delap scored twice for 22 on the bench, and the best lineup available was 146.25.",
-      "Wonkeeland's Finest had one starter who turned up. Luka Vuskovic kept a clean sheet for 19.25, and Pedro Porro (9.5), Bart Verbruggen (9.25) and Declan Rice (8.5) chipped in, but the other seven starters made 15.5 between them. Josko Gvardiol (−0.5 in 45 minutes) and Micky van de Ven (−0.25) went negative, and Bryan Mbeumo managed 1.5 against a projection of 8.13. The bench was busier: Morgan Gibbs-White set one up for 18, and Robin Roefs kept a clean sheet with four saves for 16.25, seven more than the starting keeper. Even their best possible lineup, 100.25, would have lost by 13.25.",
-      "A fortnight ago Pep's had just lost 153.00–72.50 to Up the Guppys. Now they lead the table. Wonkeeland's Finest drop to second at 7–3, though they still lead the league in scoring with 1,057.25 points to Pep's 990.25."
+      "Wonkeeland's Finest have lost three times this season, and two of those defeats have come in the Clifton Derby. The other was to Kingstown on opening day. With first place on the line, Pep's Retirement Fund beat them 113.50–62.00 and went top of the Mater League at 8–2. It ended a six-game winning run for Wonkeeland's Finest, and their 62 was the lowest score of the week and their lowest of the season. Pep's have now won both derbies, after taking the first 101.75–96 in Gameweek 3.",
+      "Man of the match is Bruno Fernandes, with a goal, an assist and four key passes for 26 points. Pascal Groß was a point behind on 25 with a goal, a clean sheet and five key passes. The platform was laid at the back again. Lewis Hall (12.75), Jan Paul van Hecke (12) and Jarrad Branthwaite (10.25) made 35 between them, and Pep's defenders have now passed 30 in six of the last eight gameweeks.",
+      "The attack is another matter. Omar Marmoush (2.5), Alex Iwobi (8) and Emersonn (4.5) made 15 against a combined projection of 26.56, and Pep's forwards are averaging 8.72 a start this season against a league average of 9.45. Kai Havertz added 0.5 from midfield, and Liam Delap scored twice for 22 on the bench. On another weekend that gap could cost them.",
+      "Not on this one. Luka Vuskovic kept a clean sheet for 19.25, but Wonkeeland's Finest never got going. Morgan Gibbs-White is their fourth-highest scorer this season, with 109.5 points, and he started on the bench for the second time in three weeks. He set one up for 18, after scoring 12 on the bench in Gameweek 8. For the first time this season they also started three Tottenham players, and Micky van de Ven (−0.25), Pedro Porro (9.5) and Mateus Fernandes (3) returned 12.25. Josko Gvardiol played 45 minutes for −0.5 and Bryan Mbeumo managed 1.5 against a projection of 8.13. Even their best possible lineup, 100.25, would have lost by 13.25. They still lead the league in scoring, with 1,057.25 points to Pep's 990.25, but they are second, and the derby has a clear owner."
     ]
   }
 ];
+
+/* The Gazette's writers (fictional). Each report's "by" is one of these ids. */
+window.MATER_WRITERS = {
+  "pennock":    { "name": "Gareth Pennock",  "from": "Stoke-on-Trent, England", "role": "Chief football writer", "bio": "Thirty years on the terraces and in press boxes. Covers the big games and the title race." },
+  "okafor":     { "name": "Dami Okafor",     "from": "Peckham, London",         "role": "Data correspondent",    "bio": "Reads the numbers before the match report. Records, projections and points left on benches." },
+  "mcallister": { "name": "Rory McAllister", "from": "Paisley, Scotland",       "role": "Senior writer",         "bio": "Drawn to a rout and a broken record. Has seen enough to be hard to impress." },
+  "kowalczyk":  { "name": "Pete Kowalczyk",  "from": "Buffalo, New York",       "role": "Upstate bureau",        "bio": "Covers the Snow Belt Derby from the lake-effect side of the state." },
+  "vera":       { "name": "Lucía Vera",      "from": "Guayaquil, Ecuador",      "role": "Americas correspondent", "bio": "On the I-95 beat for El Clásico de las Américas, La Tri against La H." }
+};
