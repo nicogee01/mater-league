@@ -4508,7 +4508,8 @@
     key.innerHTML = `<p><b class="pr-key__flag">Hard-luck losses</b> Defeats where the club still scored more than that gameweek's median (the middle of all eight scores). They'd have beaten most of the league that week.</p>
       <p><b class="pr-key__lucky">Lucky wins</b> The opposite: wins where the club scored below the median. Most of the league would have beaten them that week.</p>
       <p><b>Rank badges</b> Where the club sits out of ${N} for that stat. Gold is 1st, red is last, and "=" means tied. For hard-luck losses, lucky wins and points against, 1st means the most.</p>
-      <p><b>All-Play</b> The record if the club had played every other club every week.</p>`;
+      <p><b>All-Play</b> The record if the club had played every other club every week.</p>
+      <p><b>${EMBLEM.top[0]} and ${EMBLEM.bottom[0]}</b> The crown is worn by the club voted No. 1 in the last revealed power rankings, the poo by the club voted last. They stay until the next rankings are revealed.</p>`;
     $("#prList").innerHTML = pr.order.map((id) => {
       const { t, head, sinceRow, seasonRow } = bits(id);
       return `<li class="pr-card" data-id="${id}">
@@ -4655,6 +4656,8 @@
     $("#prBack").addEventListener("click", () => prStep(1));
     $("#prSubmit").addEventListener("click", submitBallot);
     $("#prEdit").addEventListener("click", () => startBallot());
+    // from the ballot to the form tab (the ballot itself only lives on the rankings tab)
+    $("#prJumpForm").addEventListener("click", () => { prSetView("since"); const v = $("#prView"); window.scrollTo(0, v.getBoundingClientRect().top + scrollY - 96); });
     $("#prArchive").addEventListener("change", async (e) => {
       pr.viewing = +e.target.value;
       if (pr.viewing !== pr.week) {
