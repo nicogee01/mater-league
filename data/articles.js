@@ -145,5 +145,17 @@ window.MATER_ARTICLES = [
       "1779",
       "1948"
     ]
+  },
+  {
+    "week": 10,
+    "home": "treyclif3",
+    "away": "austinclifton",
+    "headline": "Pep's Go Top as Wonkeeland's Finest Crash to 62",
+    "body": [
+      "The Clifton Derby decided first place, and it wasn't close. Pep's Retirement Fund beat Wonkeeland's Finest 113.50–62.00 and go top of the Mater League at 8–2. Wonkeeland's Finest arrived on a six-game winning streak. Their 62 was the lowest score of the week and their lowest of the season by 18.50. That's two from two for Pep's in the family derby, after the 101.75–96 win in Gameweek 3.",
+      "Man of the match is Bruno Fernandes: a goal, an assist and four key passes for 26 points. Pascal Groß was a point behind on 25, with a goal, a clean sheet and five key passes. Lewis Hall (12.75), Rayan (12.5), Jan Paul van Hecke (12) and Jarrad Branthwaite (10.25) added 47.5 between them. Not everyone delivered. Kai Havertz scored 0.5 against a projection of 10.81, Omar Marmoush 2.5 against 10.77, and Gianluigi Donnarumma made two saves and still finished on −0.5. Liam Delap scored twice for 22 on the bench, and the best lineup available was 146.25.",
+      "Wonkeeland's Finest had one starter who turned up. Luka Vuskovic kept a clean sheet for 19.25, and Pedro Porro (9.5), Bart Verbruggen (9.25) and Declan Rice (8.5) chipped in, but the other seven starters made 15.5 between them. Josko Gvardiol (−0.5 in 45 minutes) and Micky van de Ven (−0.25) went negative, and Bryan Mbeumo managed 1.5 against a projection of 8.13. The bench was busier: Morgan Gibbs-White set one up for 18, and Robin Roefs kept a clean sheet with four saves for 16.25, seven more than the starting keeper. Even their best possible lineup, 100.25, would have lost by 13.25.",
+      "A fortnight ago Pep's had just lost 153.00–72.50 to Up the Guppys. Now they lead the table. Wonkeeland's Finest drop to second at 7–3, though they still lead the league in scoring with 1,057.25 points to Pep's 990.25."
+    ]
   }
 ];

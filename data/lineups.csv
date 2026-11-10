@@ -1538,6 +1538,7 @@ week,manager,slot,player_id,player,pts,proj,min
 9,KingAbes,BN,2165,Eberechi Eze,0,,0
 9,KingAbes,BN,10957,Jordan Henderson,0,,0
 9,KingAbes,BN,14896,Bobby Thomas,0,,0
+10,nicog01,GK,7993,Zion Suzuki,4.75,3.1,90
 10,nicog01,DEF,10755,Tarik Muharemovic,14.25,5.08,90
 10,nicog01,DEF,4270,Maxim De Cuyper,13.75,8.42,82
 10,nicog01,DEF,8738,Adrien Truffert,4,4.95,90
@@ -1545,7 +1546,9 @@ week,manager,slot,player_id,player,pts,proj,min
 10,nicog01,MID,1716,Jérémy Doku,1.5,10.15,90
 10,nicog01,MID,1806,Elliot Anderson,6.5,8.77,90
 10,nicog01,MID,3778,Iliman Ndiaye,9.5,8.15,90
+10,nicog01,MID,7590,Johan Manzambi,10,7.31,78
 10,nicog01,FWD,3667,Igor Thiago,-4.5,7.89,23
+10,nicog01,FWD,1909,Nicolas Jackson,21,7.21,86
 10,nicog01,BN,1008,Neco Williams,4.25,4.64,90
 10,nicog01,BN,1781,Bruno Guimarães,7,9.72,89
 10,nicog01,BN,2770,Gonzalo García,3,7.16,65
@@ -1554,11 +1557,8 @@ week,manager,slot,player_id,player,pts,proj,min
 10,nicog01,BN,5448,Matias Fernandez-Pardo,2.5,,16
 10,nicog01,BN,2075,Jack Hinshelwood,0,,12
 10,nicog01,BN,3649,Yankuba Minteh,1,,8
-10,nicog01,BN,1909,Nicolas Jackson,21,7.21,86
 10,nicog01,BN,2410,Bukayo Saka,0,,0
-10,nicog01,BN,7590,Johan Manzambi,10,7.31,78
 10,nicog01,BN,7733,Hugo Ekitiké,0,,0
-10,nicog01,BN,7993,Zion Suzuki,4.75,3.1,90
 10,treyclif3,GK,4374,Gianluigi Donnarumma,-0.5,4.37,90
 10,treyclif3,DEF,1991,Jarrad Branthwaite,10.25,5.46,89
 10,treyclif3,DEF,1789,Lewis Hall,12.75,4.94,90
@@ -1566,6 +1566,7 @@ week,manager,slot,player_id,player,pts,proj,min
 10,treyclif3,MID,2421,Kai Havertz,0.5,10.81,63
 10,treyclif3,MID,13386,Rayan,12.5,8.22,85
 10,treyclif3,MID,2051,Pascal Groß,25,9.09,90
+10,treyclif3,MID,1213,Bruno Fernandes,26,11.17,90
 10,treyclif3,FWD,6940,Omar Marmoush,2.5,10.77,65
 10,treyclif3,FWD,1654,Alex Iwobi,8,8.29,90
 10,treyclif3,FWD,11573,Emersonn,4.5,7.5,54
@@ -1579,7 +1580,6 @@ week,manager,slot,player_id,player,pts,proj,min
 10,treyclif3,BN,5354,Mathys Tel,2.5,9.65,43
 10,treyclif3,BN,9438,Estêvão,6.5,,45
 10,treyclif3,BN,1206,Harry Maguire,-3.75,4.63,45
-10,treyclif3,BN,1213,Bruno Fernandes,26,11.17,90
 10,treyclif3,BN,1838,Alex Scott,0,,0
 10,treyclif3,BN,7571,Anton Stach,0,,0
 10,GlenM22,GK,1850,Alisson Becker,12,4.48,90
@@ -1613,6 +1613,7 @@ week,manager,slot,player_id,player,pts,proj,min
 10,nictrn,MID,1649,Josh King,2.5,6.08,72
 10,nictrn,MID,3672,Yasin Ayari,7,7.06,78
 10,nictrn,MID,2046,Julio Enciso,2,6.58,90
+10,nictrn,MID,1118,Youri Tielemans,20,8.02,66
 10,nictrn,FWD,1010,Taiwo Awoniyi,4,6.42,87
 10,nictrn,BN,1274,Oliver McBurnie,5,6.31,90
 10,nictrn,BN,3041,Yéremy Pino,10,7.67,87
@@ -1620,7 +1621,6 @@ week,manager,slot,player_id,player,pts,proj,min
 10,nictrn,BN,1707,Matheus Nunes,6.25,,45
 10,nictrn,BN,3885,Nico O'Reilly,0.75,,45
 10,nictrn,BN,3790,Mats Wieffer,-2,,45
-10,nictrn,BN,1118,Youri Tielemans,20,8.02,66
 10,nictrn,BN,1500,James Maddison,0,,0
 10,nictrn,BN,1823,Antoine Semenyo,0,,0
 10,nictrn,BN,1919,Reece James,0,,0
@@ -1660,6 +1660,7 @@ week,manager,slot,player_id,player,pts,proj,min
 10,austinclifton,MID,2403,Declan Rice,8.5,10.03,63
 10,austinclifton,MID,1830,Marcus Tavernier,6,8.49,90
 10,austinclifton,FWD,1816,Justin Kluivert,3.5,6.89,68
+10,austinclifton,FWD,1963,Bryan Mbeumo,1.5,8.13,83
 10,austinclifton,BN,1011,Morgan Gibbs-White,18,7.14,90
 10,austinclifton,BN,1911,Djordje Petrovic,2,4.19,90
 10,austinclifton,BN,12050,Costinha,12,5.18,90
@@ -1669,7 +1670,6 @@ week,manager,slot,player_id,player,pts,proj,min
 10,austinclifton,BN,10118,Junior Kroupi,1,,22
 10,austinclifton,BN,4870,Granit Xhaka,0,,4
 10,austinclifton,BN,1854,Ryan Gravenberch,0,,0
-10,austinclifton,BN,1963,Bryan Mbeumo,1.5,8.13,83
 10,austinclifton,BN,3022,Sávio,0,,0
 10,austinclifton,BN,5240,Xavi Simons,0,,0
 10,officialmaje,GK,2399,David Raya,13.5,6.26,90
@@ -1702,6 +1702,7 @@ week,manager,slot,player_id,player,pts,proj,min
 10,KingAbes,MID,1862,Cody Gakpo,4,8.12,76
 10,KingAbes,FWD,11576,Brian Brobbey,0.5,6.07,67
 10,KingAbes,FWD,1920,Roméo Lavia,0.5,4.82,90
+10,KingAbes,FWD,2526,Matheus Cunha,17.5,8.38,90
 10,KingAbes,BN,1009,Murillo,11.25,2.39,90
 10,KingAbes,BN,2959,Nobel Mendy,0.5,-0.21,90
 10,KingAbes,BN,1275,Jayden Bogle,14.5,3.66,89
@@ -1712,6 +1713,5 @@ week,manager,slot,player_id,player,pts,proj,min
 10,KingAbes,BN,1834,Dango Ouattara,1.5,8.61,45
 10,KingAbes,BN,2165,Eberechi Eze,-0.5,,21
 10,KingAbes,BN,1714,Jack Grealish,0,,0
-10,KingAbes,BN,2526,Matheus Cunha,17.5,8.38,90
 10,KingAbes,BN,7093,Patrick Dorgu,29.25,,24
 10,KingAbes,BN,14896,Bobby Thomas,0,,0
