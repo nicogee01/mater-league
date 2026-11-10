@@ -29,7 +29,7 @@
       </div>
     </header>
 
-    <section class="section section--page" aria-label="Power rankings">
+    <section class="section section--page" id="prMainSection" aria-label="Power rankings">
       <div class="prs-toggle" id="prView" role="tablist" aria-label="What to show" hidden></div>
       <div class="prs" id="prSince" hidden></div>
       <div class="pr-bar reveal">
@@ -63,7 +63,7 @@
             </div>
             <p class="pr-me" id="prMe"></p>
           </div>
-          <p class="section__lede">1 is the best. Drag a card by its handle or use the arrows. Look past the table: hard-luck losses are defeats where the club still outscored that week's median.</p>
+          <p class="section__lede">1 is the best. Drag a card by its handle or use the arrows. Your own club is at the top for comparison.</p>
           <aside class="pr-consider" aria-label="Things to weigh">
             <h3>Look beyond the scores</h3>
             <ul>
@@ -73,7 +73,6 @@
               <li><b>Anything else that matters.</b> Tough fixtures ahead, rotation risk, form that looks too good to last.</li>
             </ul>
           </aside>
-          <div class="prs prs--ballot" id="prBallotSince"></div>
           <p class="pr-saved" id="prSavedNote"></p>
           <ol class="pr-list" id="prList"></ol>
           <p class="visually-hidden" id="prStatus" aria-live="polite"></p>

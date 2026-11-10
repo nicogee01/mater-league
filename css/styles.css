@@ -2883,3 +2883,8 @@ a.fx:hover, a.fx:focus-visible { outline: 2px solid var(--ink); outline-offset: 
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pd__table td[data-heat] { color: #fbf7ee; } }
 .stat-tile__sub { display: block; margin-top: 4px; font-size: 13px; color: var(--faint); }
 .stat-tile__sub b { color: var(--ink); font-family: var(--f-display); font-size: 16px; font-weight: 400; }
+
+/* the ballot lives on the rankings tab only */
+.is-form-view > #ballot, .is-form-view > #ballotClosed, .pr-bar[hidden] { display: none !important; }
+.pr-jump { margin: 0 0 var(--s3); padding: 8px 14px; border-radius: 999px; border: 1px solid #8a6a24; background: transparent; color: #8a6a24; font-weight: 700; font-size: 13px; cursor: pointer; }
+.pr-jump:hover { background: rgba(138, 106, 36, 0.08); }

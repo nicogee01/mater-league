@@ -4293,7 +4293,7 @@
     }).join("");
     return compact
       ? `${head}${table}<details class="prs-more"><summary>Results in Gameweeks ${st.from}–${st.to}</summary><div class="prs-weeks">${weeks}</div></details>`
-      : `${head}${callouts}${table}<div class="prs-weeks">${weeks}</div>`;
+      : `${head}${callouts}${table}`;
   }
   // the switch between the last vote's rankings and the stretch since
   function prSetView(v) {
@@ -4302,6 +4302,7 @@
     $("#prSince").hidden = !since;
     $("#prResults").hidden = since;
     $(".pr-bar").hidden = since;
+    const sec = $("#prMainSection"); if (sec) sec.classList.toggle("is-form-view", since);
     $$("#prView [data-view]").forEach((b) => { const on = b.dataset.view === v; b.classList.toggle("is-on", on); b.setAttribute("aria-selected", String(on)); });
     if (since) $("#prSince").innerHTML = prSinceHTML(false);
   }
@@ -4313,7 +4314,7 @@
     el.onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) prSetView(b.dataset.view); };
     // between rounds (or while a vote is still open) the stretch comes first; once a vote is revealed, the rankings
     const revealed = pr.results && pr.results.revealed;
-    prSetView(pr.view || (revealed && pr.scored === pr.week ? "rank" : "since"));
+    prSetView(pr.view || (pr.scored === pr.week ? "rank" : "since"));
   }
 
   async function loadPRResults() {
@@ -4402,7 +4403,6 @@
   function renderBallot(saved) {
     const me = teamByManager(pr.voter);
     $("#prMe").innerHTML = `${crest(me)}<span>Voting as <b>${club(me)}</b></span>`;
-    if ($("#prBallotSince")) $("#prBallotSince").innerHTML = prSinceHTML(true);
     const prevWk = pr.prev && pr.prev.revealed ? prRoundAtOrBefore(pr.week - 1) : null;
     $("#prSavedNote").textContent = saved ? `You already voted this round (${new Date(saved.submitted_at).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}). Submitting again replaces it.`
       : prevWk ? `Starting order: the Gameweek ${prevWk} power rankings. Move clubs up or down from there.` : "Starting order: the league table.";
