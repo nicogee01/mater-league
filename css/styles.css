@@ -1697,6 +1697,19 @@ section.wk { margin-top: var(--s8); }
 .pr-statview button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 .pr-statview button[data-v="since"][aria-pressed="true"] { background: #8a6a24; border-color: #8a6a24; }
 .pr-statview + .pr-list { margin-top: var(--s3); }
+/* key to the less obvious stats */
+.pr-key { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 6px; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.pr-key p { margin: 0; }
+.pr-key b { color: var(--ink); margin-right: 4px; }
+.pr-key b.pr-key__flag { color: var(--accent); }
+.pr-key b.pr-key__lucky { color: var(--pos); }
+/* the voter's own club, above the ballot: reference only */
+.pr-mine { margin-top: var(--s3); }
+.pr-mine[hidden] { display: none; }
+.pr-mine + .pr-list { margin-top: 10px; }
+.pr-card--me { grid-template-columns: 44px minmax(0, 1fr); border: 2px dashed rgba(138, 106, 36, 0.55); background: var(--surface); }
+.pr-card__rank--me { font-family: var(--f-cond); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8a6a24; padding-top: 10px; }
+.pr-mine__note { margin: 0; font-size: 12px; font-weight: 600; color: #8a6a24; }
 .pr-list[data-view="since"] .pr-card__block--season, .pr-list[data-view="season"] .pr-card__block--since { display: none; }
 .pr-stat b { font-family: var(--f-display); font-weight: 400; font-size: 18px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .pr-stat small { font-size: 11px; color: var(--faint); font-weight: 600; }
@@ -2627,6 +2640,11 @@ html.has-install-bar body { padding-bottom: 92px; }
   .pr-statview { display: grid; grid-template-columns: 1fr 1fr; }
   .pr-statview__lbl { grid-column: 1 / -1; }
   .pr-statview button { padding: 9px 10px; }
+  .pr-card--me { grid-template-columns: 30px minmax(0, 1fr); }
+  .pr-card--me .pr-card__id { grid-column: 2; }
+  .pr-card--me .pr-mine__note { grid-column: 1 / -1; grid-row: 2; }
+  .pr-card__rank--me { font-size: 11px; padding-top: 10px; }
+  .pr-key { padding: var(--s3); }
   .pr-login, .pr-login input[type="text"] { width: 100%; }
   .cal__row { grid-template-columns: 56px minmax(0, 1fr); gap: 6px var(--s3); padding: 10px var(--s3); }
   .cal__gw b { font-size: 24px; }

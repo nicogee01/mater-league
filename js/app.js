@@ -4451,7 +4451,8 @@
     sw.hidden = !hasSince;
     sw.innerHTML = `<span class="pr-statview__lbl">Card stats</span><button type="button" data-v="since"><span class="pr-stat__long">${lastLbl}</span><span class="pr-stat__short">${pr.prev && pr.prev.revealed ? `Since GW${st.last}` : `GW${st.from}–${played}`}</span></button><button type="button" data-v="season">Season</button>`;
     if (!hasSince) pr.statView = "season"; else if (!pr.statView) pr.statView = "since";
-    $("#prList").innerHTML = pr.order.map((id) => {
+    // one club's header and stat rows, shared by the ballot cards and the voter's own card
+    const bits = (id) => {
       const t = state.byRoster[id], c = ctx[id];
       const form = t.record.slice(-5).split("").map((r) => `<i class="${r}">${r === "T" ? "D" : r}</i>`).join("");
       const SHORT = { "Points for": "Pts for", "Hard-luck losses": "Hard-luck Ls", "Lucky wins": "Lucky Ws", "Points against": "Pts against" };
@@ -4460,6 +4461,8 @@
       const PA = "Points scored against them. 1st = the most, i.e. the toughest opponents";
       const LW = "Wins where the club scored below that gameweek's median: they'd have lost to most of the league";
       const s = since[id];
+      const head = `<div class="pr-card__id">${crest(t)}<span><b>${club(t)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)} in the table${t.streak ? ` · ${esc(t.streak)} streak` : ""}</small></span>
+            <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></div>`;
       const sinceRow = s ? `<div class="pr-card__block pr-card__block--since"><p class="pr-card__lbl">${lastLbl} <small>GW${st.from}–${played}</small></p>
           <div class="pr-card__stats">
             ${stat(`${s.w}-${s.d}-${s.l}`, "Record", "", xRk.rec(t))}
@@ -4471,14 +4474,7 @@
             ${stat(num(s.pa), "Points against", "", xRk.pa(t), PA)}
             ${miniSpark(s.g)}
           </div></div>` : "";
-      return `<li class="pr-card" data-id="${id}">
-        <span class="pr-card__rank" aria-hidden="true"></span>
-        <span class="pr-card__handle" aria-hidden="true" title="Drag to reorder"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.3"/><circle cx="11" cy="4" r="1.3"/><circle cx="5" cy="8" r="1.3"/><circle cx="11" cy="8" r="1.3"/><circle cx="5" cy="12" r="1.3"/><circle cx="11" cy="12" r="1.3"/></svg></span>
-        <div class="pr-card__main">
-          <div class="pr-card__id">${crest(t)}<span><b>${club(t)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)} in the table${t.streak ? ` · ${esc(t.streak)} streak` : ""}</small></span>
-            <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></div>
-          ${sinceRow}
-          <div class="pr-card__block pr-card__block--season"><p class="pr-card__lbl">Season</p>
+      const seasonRow = `<div class="pr-card__block pr-card__block--season"><p class="pr-card__lbl">Season</p>
           <div class="pr-card__stats">
             ${stat(`${t.w}-${t.d}-${t.l}`, "Record", "", sRk.rec(t))}
             ${stat(num(t.pf), "Points for", "", sRk.pf(t))}
@@ -4488,7 +4484,40 @@
             ${stat(c.lucky, "Lucky wins", c.lucky ? "is-lucky" : "", sRk.lw(t), LW)}
             ${stat(num(t.pa), "Points against", "", sRk.pa(t), PA)}
             ${miniSpark(t.games)}
-          </div></div>
+          </div></div>`;
+      return { t, head, sinceRow, seasonRow };
+    };
+    // the voter's own club, for reference: same stats and ranks, not on the ballot
+    let mine = $("#prMine");
+    if (!mine) { mine = document.createElement("ul"); mine.id = "prMine"; mine.className = "pr-list pr-mine"; $("#prList").before(mine); }
+    const meId = me ? me.rosterId : null;
+    if (meId != null && state.byRoster[meId]) {
+      const m = bits(meId);
+      mine.innerHTML = `<li class="pr-card pr-card--me">
+        <span class="pr-card__rank pr-card__rank--me">You</span>
+        <div class="pr-card__main">
+          <p class="pr-mine__note">Your club, for comparison. You don't rank yourself.</p>
+          ${m.head}${m.sinceRow}${m.seasonRow}
+        </div>
+      </li>`;
+      mine.hidden = false;
+    } else mine.hidden = true;
+    // what the less obvious numbers mean
+    let key = $("#prKey");
+    if (!key) { key = document.createElement("div"); key.id = "prKey"; key.className = "pr-key"; sw.after(key); }
+    key.innerHTML = `<p><b class="pr-key__flag">Hard-luck losses</b> Defeats where the club still scored more than that gameweek's median (the middle of all eight scores). They'd have beaten most of the league that week.</p>
+      <p><b class="pr-key__lucky">Lucky wins</b> The opposite: wins where the club scored below the median. Most of the league would have beaten them that week.</p>
+      <p><b>Rank badges</b> Where the club sits out of ${N} for that stat. Gold is 1st, red is last, and "=" means tied. For hard-luck losses, lucky wins and points against, 1st means the most.</p>
+      <p><b>All-Play</b> The record if the club had played every other club every week.</p>`;
+    $("#prList").innerHTML = pr.order.map((id) => {
+      const { t, head, sinceRow, seasonRow } = bits(id);
+      return `<li class="pr-card" data-id="${id}">
+        <span class="pr-card__rank" aria-hidden="true"></span>
+        <span class="pr-card__handle" aria-hidden="true" title="Drag to reorder"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.3"/><circle cx="11" cy="4" r="1.3"/><circle cx="5" cy="8" r="1.3"/><circle cx="11" cy="8" r="1.3"/><circle cx="5" cy="12" r="1.3"/><circle cx="11" cy="12" r="1.3"/></svg></span>
+        <div class="pr-card__main">
+          ${head}
+          ${sinceRow}
+          ${seasonRow}
           <label class="pr-card__note"><span class="visually-hidden">Note on ${esc(t.name)} (optional)</span>
             <textarea rows="2" maxlength="280" placeholder="Hot take on ${esc(t.name)} (optional)" data-id="${id}">${esc(pr.notes[id] || "")}</textarea></label>
         </div>
@@ -4504,6 +4533,7 @@
   function prApplyStatView() {
     const v = pr.statView || "since";
     $("#prList").dataset.view = v;
+    if ($("#prMine")) $("#prMine").dataset.view = v;
     $$("#prStatView [data-v]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v)));
   }
   function numberCards() {
