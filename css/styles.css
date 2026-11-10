@@ -2605,8 +2605,9 @@ html.has-install-bar body { padding-bottom: 92px; }
   .pr-card { column-gap: 10px; }
   .pr-card__rank { grid-column: 1; grid-row: 1; align-self: start; padding-top: 2px; }
   /* club header: small crest beside the name, form chips under it */
-  .pr-card__id { grid-column: 2; grid-row: 1; display: grid; gap: 4px; }
-  .pr-card__id .crest { display: none; }
+  .pr-card__id { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 8px; align-items: start; }
+  .pr-card__id .crest { width: 34px; height: 34px; margin-top: 2px; }
+  .pr-card__id .form { grid-column: 1 / -1; }
   .pr-card__id b { font-size: 16px; }
   .pr-card__id small { font-size: 12px; line-height: 1.35; }
   .pr-card__id .form i { width: 18px; height: 18px; font-size: 9px; }
