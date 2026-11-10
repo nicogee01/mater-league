@@ -4150,9 +4150,14 @@
   }
   function miniSpark(games) {
     if (games.length < 2) return "";
-    const W = 120, H = 30, vals = games.map((g) => g.score), lo = Math.min(...vals), hi = Math.max(...vals);
+    // dashed line: the league's average score in each of those gameweeks
+    const wk = {};
+    state.results.forEach((m) => { const a = (wk[m.week] ||= []); a.push(m.homePts, m.awayPts); });
+    const avg = games.map((g) => (wk[g.week] ? wk[g.week].reduce((s, v) => s + v, 0) / wk[g.week].length : null));
+    const W = 120, H = 30, vals = [...games.map((g) => g.score), ...avg.filter((v) => v != null)], lo = Math.min(...vals), hi = Math.max(...vals);
     const x = (i) => 3 + (i * (W - 6)) / (games.length - 1), y = (v) => H - 4 - ((v - lo) / (hi - lo || 1)) * (H - 8);
-    return `<svg class="pr-spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${games.map((g, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(g.score).toFixed(1)}`).join("")}"/>
+    const avgPath = avg.every((v) => v != null) ? `<path class="pr-spark__avg" d="${avg.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join("")}"/>` : "";
+    return `<svg class="pr-spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weekly scores; dashed line is the league average"><title>Weekly scores · dashed line = league average that week</title>${avgPath}<path d="${games.map((g, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(g.score).toFixed(1)}`).join("")}"/>
       ${games.map((g, i) => `<circle cx="${x(i)}" cy="${y(g.score)}" r="2.6" class="${g.res}"/>`).join("")}</svg>`;
   }
 

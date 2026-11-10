@@ -1704,6 +1704,7 @@ section.wk { margin-top: var(--s8); }
 .pr-stat.is-flag b { color: var(--accent); }
 .pr-spark { width: 120px; height: 30px; margin-left: 4px; }
 .pr-spark path { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round; }
+.pr-spark path.pr-spark__avg { stroke: var(--faint); stroke-width: 1.2; stroke-dasharray: 3 3; }
 .pr-spark circle.W { fill: var(--pos); }
 .pr-spark circle.L { fill: var(--accent); }
 .pr-spark circle.D { fill: var(--faint); }
