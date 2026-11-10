@@ -4437,12 +4437,13 @@
       sw.addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (!b) return; pr.statView = b.dataset.v; prApplyStatView(); });
     }
     sw.hidden = !hasSince;
-    sw.innerHTML = `<span class="pr-statview__lbl">Card stats</span><button type="button" data-v="since">${lastLbl}</button><button type="button" data-v="season">Season</button>`;
+    sw.innerHTML = `<span class="pr-statview__lbl">Card stats</span><button type="button" data-v="since"><span class="pr-stat__long">${lastLbl}</span><span class="pr-stat__short">${pr.prev && pr.prev.revealed ? `Since GW${st.last}` : `GW${st.from}–${played}`}</span></button><button type="button" data-v="season">Season</button>`;
     if (!hasSince) pr.statView = "season"; else if (!pr.statView) pr.statView = "since";
     $("#prList").innerHTML = pr.order.map((id) => {
       const t = state.byRoster[id], c = ctx[id];
       const form = t.record.slice(-5).split("").map((r) => `<i class="${r}">${r === "T" ? "D" : r}</i>`).join("");
-      const stat = (v, l, cls = "", rk = "", tip = "") => `<span class="pr-stat ${cls}"${tip ? ` title="${tip}"` : ""}><b>${v}</b>${rk}<small>${l}</small></span>`;
+      const SHORT = { "Points for": "Pts for", "Hard-luck losses": "Hard-luck Ls", "Lucky wins": "Lucky Ws", "Points against": "Pts against" };
+      const stat = (v, l, cls = "", rk = "", tip = "") => `<span class="pr-stat ${cls}"${tip ? ` title="${tip}"` : ""}><b>${v}</b>${rk}<small>${SHORT[l] ? `<span class="pr-stat__long">${l}</span><span class="pr-stat__short">${SHORT[l]}</span>` : l}</small></span>`;
       const HL = "Losses where the club still outscored that gameweek's median (the middle of all eight scores)";
       const PA = "Points scored against them. 1st = the most, i.e. the toughest opponents";
       const LW = "Wins where the club scored below that gameweek's median: they'd have lost to most of the league";
