@@ -1684,6 +1684,19 @@ section.wk { margin-top: var(--s8); }
 .pr-card__lbl small { font-weight: 600; letter-spacing: 0.04em; color: var(--faint); margin-left: 4px; }
 .pr-card__block--since .pr-stat { background: rgba(138, 106, 36, 0.07); border-color: rgba(138, 106, 36, 0.35); }
 .pr-card__block--since .pr-card__lbl { color: #8a6a24; }
+.pr-card__block--since .pr-stat.is-flag { background: rgba(200, 16, 46, 0.06); border-color: rgba(200, 16, 46, 0.5); }
+.pr-stat.is-lucky, .pr-card__block--since .pr-stat.is-lucky { border-color: rgba(31, 122, 77, 0.5); background: rgba(31, 122, 77, 0.07); }
+.pr-stat.is-lucky b { color: var(--pos); }
+/* one switch above the cards: stretch since the last rankings (default) or season */
+.pr-statview { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: var(--s4) 0 0; }
+.pr-statview[hidden] { display: none; }
+.pr-statview__lbl { font-family: var(--f-cond); font-weight: 700; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+.pr-statview button { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); font-weight: 700; font-size: 13px; color: var(--ink); cursor: pointer; }
+.pr-statview button:hover { border-color: var(--ink); }
+.pr-statview button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.pr-statview button[data-v="since"][aria-pressed="true"] { background: #8a6a24; border-color: #8a6a24; }
+.pr-statview + .pr-list { margin-top: var(--s3); }
+.pr-list[data-view="since"] .pr-card__block--season, .pr-list[data-view="season"] .pr-card__block--since { display: none; }
 .pr-stat b { font-family: var(--f-display); font-weight: 400; font-size: 18px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .pr-stat small { font-size: 11px; color: var(--faint); font-weight: 600; }
 .pr-stat.is-flag { border-color: rgba(200, 16, 46, 0.5); background: rgba(200, 16, 46, 0.06); }

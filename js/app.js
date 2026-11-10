@@ -4145,7 +4145,8 @@
     const played = t.w + t.l + t.d;
     const best = t.games.length ? Math.max(...t.games.map((g) => g.score)) : null;
     const hardLuck = t.games.filter((g) => g.res === "L" && g.score > med[g.week]).length;
-    return { played, avg: played ? t.pf / played : 0, best, hardLuck };
+    const lucky = t.games.filter((g) => g.res === "W" && g.score < med[g.week]).length;
+    return { played, avg: played ? t.pf / played : 0, best, hardLuck, lucky };
   }
   function miniSpark(games) {
     if (games.length < 2) return "";
@@ -4402,7 +4403,7 @@
     const ctx = Object.fromEntries(state.teams.map((t) => [t.rosterId, prContext(t, med)]));
     const sRk = {
       rec: ranker((t) => N - t.pos), pf: ranker((t) => t.pf), avg: ranker((t) => ctx[t.rosterId].avg), best: ranker((t) => ctx[t.rosterId].best),
-      ap: ranker((t) => (t.allPlay ? t.allPlay.w - t.allPlay.l : null)), hl: ranker((t) => ctx[t.rosterId].hardLuck), pa: ranker((t) => t.pa),
+      ap: ranker((t) => (t.allPlay ? t.allPlay.w - t.allPlay.l : null)), hl: ranker((t) => ctx[t.rosterId].hardLuck), lw: ranker((t) => ctx[t.rosterId].lucky), pa: ranker((t) => t.pa),
     };
     // the stretch since the last power rankings (the five gameweeks this vote is about)
     const st = prStretch(), played = Math.min(pr.scored, st.to);
@@ -4416,7 +4417,7 @@
         g.forEach((x) => byWk[x.week].forEach((o) => { if (o.id !== t.rosterId) { if (o.s < x.score) ap.w++; else if (o.s > x.score) ap.l++; } }));
         since[t.rosterId] = { g, w: g.filter((x) => x.res === "W").length, l: g.filter((x) => x.res === "L").length, d: g.filter((x) => x.res === "D").length,
           pf: g.reduce((a, x) => a + x.score, 0), pa: g.reduce((a, x) => a + x.oppScore, 0), best: g.length ? Math.max(...g.map((x) => x.score)) : null, ap,
-          hl: g.filter((x) => x.res === "L" && x.score > med[x.week]).length };
+          hl: g.filter((x) => x.res === "L" && x.score > med[x.week]).length, lw: g.filter((x) => x.res === "W" && x.score < med[x.week]).length };
         since[t.rosterId].avg = g.length ? since[t.rosterId].pf / g.length : null;
       });
     }
@@ -4424,15 +4425,27 @@
     const hasSince = Object.keys(since).length > 0;
     const xRk = hasSince ? {
       rec: ranker((t) => S(t).w * 1e4 + S(t).d * 1e3 + S(t).pf / 100), pf: ranker((t) => S(t).pf), avg: ranker((t) => S(t).avg),
-      best: ranker((t) => S(t).best), ap: ranker((t) => S(t).ap.w - S(t).ap.l), hl: ranker((t) => S(t).hl), pa: ranker((t) => S(t).pa),
+      best: ranker((t) => S(t).best), ap: ranker((t) => S(t).ap.w - S(t).ap.l), hl: ranker((t) => S(t).hl), lw: ranker((t) => S(t).lw), pa: ranker((t) => S(t).pa),
     } : null;
     const lastLbl = hasSince ? (pr.prev && pr.prev.revealed ? `Since the GW${st.last} rankings` : `Gameweeks ${st.from}–${played}`) : "";
+    // one switch for every card: the stretch since the last rankings (default) or the whole season
+    let sw = $("#prStatView");
+    if (!sw) {
+      sw = document.createElement("div"); sw.id = "prStatView"; sw.className = "pr-statview";
+      sw.setAttribute("role", "group"); sw.setAttribute("aria-label", "Stats shown on each card");
+      $("#prList").before(sw);
+      sw.addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (!b) return; pr.statView = b.dataset.v; prApplyStatView(); });
+    }
+    sw.hidden = !hasSince;
+    sw.innerHTML = `<span class="pr-statview__lbl">Card stats</span><button type="button" data-v="since">${lastLbl}</button><button type="button" data-v="season">Season</button>`;
+    if (!hasSince) pr.statView = "season"; else if (!pr.statView) pr.statView = "since";
     $("#prList").innerHTML = pr.order.map((id) => {
       const t = state.byRoster[id], c = ctx[id];
       const form = t.record.slice(-5).split("").map((r) => `<i class="${r}">${r === "T" ? "D" : r}</i>`).join("");
       const stat = (v, l, cls = "", rk = "", tip = "") => `<span class="pr-stat ${cls}"${tip ? ` title="${tip}"` : ""}><b>${v}</b>${rk}<small>${l}</small></span>`;
       const HL = "Losses where the club still outscored that gameweek's median (the middle of all eight scores)";
       const PA = "Points scored against them. 1st = the most, i.e. the toughest opponents";
+      const LW = "Wins where the club scored below that gameweek's median: they'd have lost to most of the league";
       const s = since[id];
       const sinceRow = s ? `<div class="pr-card__block pr-card__block--since"><p class="pr-card__lbl">${lastLbl} <small>GW${st.from}–${played}</small></p>
           <div class="pr-card__stats">
@@ -4442,6 +4455,7 @@
             ${stat(s.best != null ? num(s.best) : "–", "Best week", "", xRk.best(t))}
             ${stat(`${s.ap.w}-${s.ap.l}`, "All-Play", "", xRk.ap(t))}
             ${stat(s.hl, "Hard-luck losses", s.hl ? "is-flag" : "", xRk.hl(t), HL)}
+            ${stat(s.lw, "Lucky wins", s.lw ? "is-lucky" : "", xRk.lw(t), LW)}
             ${stat(num(s.pa), "Points against", "", xRk.pa(t), PA)}
             ${miniSpark(s.g)}
           </div></div>` : "";
@@ -4452,7 +4466,7 @@
           <div class="pr-card__id">${crest(t)}<span><b>${club(t)}</b><small>${esc(t.manager)} · ${ordinal(t.pos)} in the table${t.streak ? ` · ${esc(t.streak)} streak` : ""}</small></span>
             <span class="form" aria-label="Last five: ${esc(t.record.slice(-5))}">${form}</span></div>
           ${sinceRow}
-          <div class="pr-card__block"><p class="pr-card__lbl">Season</p>
+          <div class="pr-card__block pr-card__block--season"><p class="pr-card__lbl">Season</p>
           <div class="pr-card__stats">
             ${stat(`${t.w}-${t.d}-${t.l}`, "Record", "", sRk.rec(t))}
             ${stat(num(t.pf), "Points for", "", sRk.pf(t))}
@@ -4460,6 +4474,7 @@
             ${stat(c.best != null ? num(c.best) : "–", "Best week", "", sRk.best(t))}
             ${stat(t.allPlay ? `${t.allPlay.w}-${t.allPlay.l}` : "–", "All-Play", "", sRk.ap(t))}
             ${stat(c.hardLuck, "Hard-luck losses", c.hardLuck ? "is-flag" : "", sRk.hl(t), HL)}
+            ${stat(c.lucky, "Lucky wins", c.lucky ? "is-lucky" : "", sRk.lw(t), LW)}
             ${stat(num(t.pa), "Points against", "", sRk.pa(t), PA)}
             ${miniSpark(t.games)}
           </div></div>
@@ -4473,6 +4488,12 @@
       </li>`;
     }).join("");
     numberCards();
+    prApplyStatView();
+  }
+  function prApplyStatView() {
+    const v = pr.statView || "since";
+    $("#prList").dataset.view = v;
+    $$("#prStatView [data-v]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v)));
   }
   function numberCards() {
     const cards = $$("#prList .pr-card");
