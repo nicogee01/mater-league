@@ -4126,7 +4126,7 @@
   const prNextRound = (wk) => PR_ROUNDS.find((r) => r > wk) || null;
   // rounds held back by Nico: the site shows "deadline passed, published soon" and none of the results
   // (table, crown, poo, archive) until the week is taken off this list
-  const PR_HELD = [10];
+  const PR_HELD = [];
   async function rpc(fn, args = {}) {
     const out = await rpcRaw(fn, args);
     if (fn === "get_results" && out && PR_HELD.includes(+args.p_week)) return { ...out, revealed: false, closed: true, held: true, teams: [] };
