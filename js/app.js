@@ -4124,7 +4124,15 @@
   const PR_ROUNDS = [5, 10, 15, 20, 25, 30, 35];
   const prRoundAtOrBefore = (wk) => [...PR_ROUNDS].reverse().find((r) => r <= wk) || null;
   const prNextRound = (wk) => PR_ROUNDS.find((r) => r > wk) || null;
+  // rounds held back by Nico: the site shows "deadline passed, published soon" and none of the results
+  // (table, crown, poo, archive) until the week is taken off this list
+  const PR_HELD = [10];
   async function rpc(fn, args = {}) {
+    const out = await rpcRaw(fn, args);
+    if (fn === "get_results" && out && PR_HELD.includes(+args.p_week)) return { ...out, revealed: false, closed: true, held: true, teams: [] };
+    return out;
+  }
+  async function rpcRaw(fn, args = {}) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
       method: "POST",
       headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
@@ -4182,6 +4190,14 @@
     const voters = data.voters || state.teams.length;
     const revealAt = data.reveal_at ? new Date(data.reveal_at) : null;
     const when = (d) => d.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    if (data.held) {
+      $("#prRound").innerHTML = `<b>Gameweek ${wk} rankings</b> · Deadline passed`;
+      el.innerHTML = `<div class="pr-empty">
+        <p class="pr-empty__big">Coming soon</p>
+        <p>The voting deadline has passed. The Gameweek ${wk} power rankings will be published soon.</p>
+      </div>`;
+      return;
+    }
     $("#prRound").innerHTML = `<b>Gameweek ${wk} rankings</b> · ${data.revealed ? "Revealed" : data.closed ? "Voting closed" : `<span class="pr-open">Voting open</span>`} · ${data.ballots} of ${voters} ballots in`;
     if (!data.revealed) {
       el.innerHTML = `<div class="pr-empty">
