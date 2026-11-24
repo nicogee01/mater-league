@@ -1755,7 +1755,7 @@ week,manager,slot,player_id,player,pts,proj,min
 11,nicog01,BN,2075,Jack Hinshelwood,0.5,,23
 11,nicog01,BN,3649,Yankuba Minteh,0,,23
 11,nicog01,BN,2770,Gonzalo García,0,,13
-11,nicog01,BN,11474,Mamadou Sangaré,0,,3
+11,nicog01,BN,11474,Mamadou Sangaré,0,,8
 11,nicog01,BN,2410,Bukayo Saka,0,,0
 11,nicog01,BN,3667,Igor Thiago,0,,0
 11,nicog01,BN,5448,Matias Fernandez-Pardo,0,,0
@@ -1763,7 +1763,7 @@ week,manager,slot,player_id,player,pts,proj,min
 11,treyclif3,GK,4374,Gianluigi Donnarumma,3.25,5.37,90
 11,treyclif3,DEF,2164,Daniel Muñoz,3.25,6.03,82
 11,treyclif3,DEF,2047,Jan Paul van Hecke,15.25,7.03,90
-11,treyclif3,DEF,1991,Jarrad Branthwaite,2.75,3.39,85
+11,treyclif3,DEF,1991,Jarrad Branthwaite,2,3.39,90
 11,treyclif3,MID,13386,Rayan,11,9.22,89
 11,treyclif3,MID,2186,Adam Wharton,1.5,6.38,90
 11,treyclif3,MID,2421,Kai Havertz,9,10.84,89
@@ -1774,8 +1774,8 @@ week,manager,slot,player_id,player,pts,proj,min
 11,treyclif3,BN,4884,Nordi Mukiele,15.5,4.87,90
 11,treyclif3,BN,3644,Liam Delap,0,4.79,90
 11,treyclif3,BN,1789,Lewis Hall,0.5,4.22,89
-11,treyclif3,BN,1873,Caoimhín Kelleher,12,6.09,85
-11,treyclif3,BN,6960,Michael Kayode,8.25,5.58,85
+11,treyclif3,BN,1873,Caoimhín Kelleher,12,6.09,90
+11,treyclif3,BN,6960,Michael Kayode,7.75,5.58,90
 11,treyclif3,BN,1654,Alex Iwobi,2,8.14,70
 11,treyclif3,BN,6940,Omar Marmoush,-0.5,,26
 11,treyclif3,BN,1838,Alex Scott,-1,,21
@@ -1786,10 +1786,10 @@ week,manager,slot,player_id,player,pts,proj,min
 11,GlenM22,DEF,2183,Marc Guéhi,2,6.1,90
 11,GlenM22,DEF,1107,Ezri Konsa,4.75,3.83,90
 11,GlenM22,DEF,1874,Virgil van Dijk,18,6.25,90
-11,GlenM22,DEF,2008,Vitalii Mykolenko,-5.25,2.5,85
+11,GlenM22,DEF,2008,Vitalii Mykolenko,-5.5,2.5,90
 11,GlenM22,MID,14891,Victor Torp,5.5,8.91,71
 11,GlenM22,MID,2160,Mohammed Kudus,7.5,10.06,90
-11,GlenM22,MID,3213,Kiernan Dewsbury-Hall,1,8.58,69
+11,GlenM22,MID,3213,Kiernan Dewsbury-Hall,2,8.58,69
 11,GlenM22,FWD,4049,Evanilson,18,6.1,90
 11,GlenM22,FWD,4382,Bradley Barcola,11,10.54,72
 11,GlenM22,FWD,4077,Thierno Barry,6.5,6.74,69
@@ -1850,7 +1850,7 @@ week,manager,slot,player_id,player,pts,proj,min
 11,BottomCap,DEF,1705,Rúben Dias,4.5,5.22,90
 11,BottomCap,DEF,1827,James Hill,25.75,7.5,90
 11,BottomCap,DEF,2413,Jurriën Timber,2,6.14,90
-11,BottomCap,DEF,1993,James Tarkowski,-5.5,4.84,40
+11,BottomCap,DEF,1993,James Tarkowski,-4.5,4.84,40
 11,BottomCap,MID,1712,Phil Foden,6.5,9.26,70
 11,BottomCap,MID,1091,Morgan Rogers,13,8.47,90
 11,BottomCap,MID,1922,Cole Palmer,3,8.76,90
@@ -1861,7 +1861,7 @@ week,manager,slot,player_id,player,pts,proj,min
 11,BottomCap,BN,3224,James Justin,12.5,4.89,90
 11,BottomCap,BN,1097,Emiliano Martínez,1.25,5.02,90
 11,BottomCap,BN,3392,Leif Davis,5,4.31,83
-11,BottomCap,BN,1940,Keane Lewis-Potter,28,5.87,74
+11,BottomCap,BN,1940,Keane Lewis-Potter,27.5,5.87,74
 11,BottomCap,BN,5207,Noah Okafor,29.5,8.56,73
 11,BottomCap,BN,10130,Charalampos Kostoulas,2.5,,23
 11,BottomCap,BN,1957,Yoane Wissa,0.5,,7
@@ -1879,14 +1879,14 @@ week,manager,slot,player_id,player,pts,proj,min
 11,KingAbes,MID,4864,Florian Wirtz,41,10.54,90
 11,KingAbes,MID,7093,Patrick Dorgu,2.25,5.28,65
 11,KingAbes,FWD,2526,Matheus Cunha,1,8.16,45
-11,KingAbes,FWD,1928,Tyrique George,3,5.44,46
+11,KingAbes,FWD,1928,Tyrique George,3,5.44,45
 11,KingAbes,BN,2959,Nobel Mendy,12.25,1.72,90
 11,KingAbes,BN,14938,Semi Ajayi,12.25,1.6,90
 11,KingAbes,BN,14896,Bobby Thomas,8.5,5.97,90
 11,KingAbes,BN,1009,Murillo,-2.75,3.78,90
 11,KingAbes,BN,1275,Jayden Bogle,4,3.21,86
-11,KingAbes,BN,1933,Kristoffer Ajer,7.25,4.83,85
-11,KingAbes,BN,1714,Jack Grealish,2.5,,39
-11,KingAbes,BN,1930,Kevin Schade,1,,19
+11,KingAbes,BN,1933,Kristoffer Ajer,8.25,4.83,90
+11,KingAbes,BN,1714,Jack Grealish,3.5,,45
+11,KingAbes,BN,1930,Kevin Schade,1,,24
 11,KingAbes,BN,1862,Cody Gakpo,0,,0
 11,KingAbes,BN,11576,Brian Brobbey,0,,0
