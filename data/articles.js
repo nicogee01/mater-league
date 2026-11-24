@@ -168,6 +168,19 @@ window.MATER_ARTICLES = [
       "The attack is another matter. Omar Marmoush (2.5), Alex Iwobi (8) and Emersonn (4.5) made 15 against a combined projection of 26.56, and Pep's forwards are averaging 8.72 a start this season against a league average of 9.45. Kai Havertz added 0.5 from midfield, and Liam Delap scored twice for 22 on the bench. On another weekend that gap could cost them.",
       "Not on this one. Luka Vuskovic kept a clean sheet for 19.25, but Wonkeeland's Finest never got going. Morgan Gibbs-White is their fourth-highest scorer this season, with 109.5 points, and he started on the bench for the second time in three weeks. He set one up for 18, after scoring 12 on the bench in Gameweek 8. For the first time this season they also started three Tottenham players, and Micky van de Ven (−0.25), Pedro Porro (9.5) and Mateus Fernandes (3) returned 12.25. Josko Gvardiol played 45 minutes for −0.5 and Bryan Mbeumo managed 1.5 against a projection of 8.13. Even their best possible lineup, 100.25, would have lost by 13.25. They still lead the league in scoring, with 1,057.25 points to Pep's 990.25, but they are second, and the derby has a clear owner."
     ]
+  },
+  {
+    "week": 11,
+    "home": "BottomCap",
+    "away": "austinclifton",
+    "by": "mcallister",
+    "headline": "Insigne Himself Leave 76 on the Bench as Wonkeeland's Finest Complete the Double",
+    "body": [
+      "Insigne Himself scored 113 this week, the third-highest total in the Mater League, and lost. Wonkeeland's Finest beat them 124.50–113.00, and the margin of 11.50 was a fraction of what Insigne Himself left sitting on their own bench. Their best possible lineup was worth 189. The one they picked fell 76 short of it, the most points left on a bench by any side this season. Wonkeeland's Finest have now done the double over them, after winning the first meeting 166.5–94 in Gameweek 4, and they recovered from last week's 62, their lowest score of the season, to go 8–3.",
+      "Man of the match is Marcus Tavernier, with an assist, a clean sheet and five key passes for 24 points. Pedro Porro was close behind on 22 with an assist and a clean sheet, Justin Kluivert scored and kept a clean sheet for 20 in 69 minutes, and Luca Williams-Barnett did the same for 18.5 in 64. Morgan Gibbs-White, back in the XI, made four key passes for 12.5 and Milos Kerkez kept a clean sheet for 11. Not everyone pulled his weight. Luka Vuskovic, projected for 8.4, finished on −0.75, Declan Rice managed 3.5 against a projection of 9.91, and Bryan Mbeumo played 22 minutes for zero.",
+      "None of that should have mattered. Noah Okafor scored twice for 29.5 and Keane Lewis-Potter scored twice and kept a clean sheet for 27.5, and both of them did it on the Insigne Himself bench. In the XI, James Tarkowski was sent off after 40 minutes and finished on −4.5, Cole Palmer managed 3 against a projection of 8.76 and Jurriën Timber made 2. Put Okafor in for Tarkowski and Insigne Himself win 147–124.50. Even James Justin's 12.5 in Tarkowski's place would have been enough, at 130.",
+      "The starters who did play their part deserved better. James Hill set one up and kept a clean sheet for 25.75, Dominic Solanke scored and kept a clean sheet for 21.5 in 64 minutes, Mohamed Belloumi added 18.5 and Antonín Kinsky made three saves in a clean sheet for 15.25. Insigne Himself are 4–7 after a second straight defeat. Wonkeeland's Finest stay one win behind Pep's Retirement Fund, and they will not need reminding that the side they beat this week picked the wrong eleven."
+    ]
   }
 ];
 
