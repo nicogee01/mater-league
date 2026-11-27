@@ -1772,10 +1772,9 @@ week,manager,slot,player_id,player,pts,proj,min
 11,treyclif3,FWD,9438,Estêvão,8.5,10.69,64
 11,treyclif3,FWD,13004,Alysson,7,8.31,90
 11,treyclif3,BN,4884,Nordi Mukiele,15.5,4.87,90
-11,treyclif3,BN,3644,Liam Delap,0,4.79,90
-11,treyclif3,BN,1789,Lewis Hall,0.5,4.22,89
 11,treyclif3,BN,1873,Caoimhín Kelleher,12,6.09,90
 11,treyclif3,BN,6960,Michael Kayode,7.75,5.58,90
+11,treyclif3,BN,1789,Lewis Hall,0.5,4.22,89
 11,treyclif3,BN,1654,Alex Iwobi,2,8.14,70
 11,treyclif3,BN,6940,Omar Marmoush,-0.5,,26
 11,treyclif3,BN,1838,Alex Scott,-1,,21
@@ -1885,8 +1884,116 @@ week,manager,slot,player_id,player,pts,proj,min
 11,KingAbes,BN,14896,Bobby Thomas,8.5,5.97,90
 11,KingAbes,BN,1009,Murillo,-2.75,3.78,90
 11,KingAbes,BN,1275,Jayden Bogle,4,3.21,86
-11,KingAbes,BN,1933,Kristoffer Ajer,8.25,4.83,90
 11,KingAbes,BN,1714,Jack Grealish,3.5,,45
 11,KingAbes,BN,1930,Kevin Schade,1,,24
 11,KingAbes,BN,1862,Cody Gakpo,0,,0
 11,KingAbes,BN,11576,Brian Brobbey,0,,0
+12,austinclifton,MID,1011,Morgan Gibbs-White,-0.5,7.37,20
+12,austinclifton,BN,1494,Pedro Porro,0,8.13,0
+12,austinclifton,BN,1511,Dejan Kulusevski,0,,0
+12,austinclifton,BN,1512,Micky van de Ven,0,,0
+12,austinclifton,BN,1719,Josko Gvardiol,0,4.27,0
+12,austinclifton,BN,1816,Justin Kluivert,0,6.95,0
+12,austinclifton,BN,1829,Milos Kerkez,0,4.72,0
+12,austinclifton,BN,1830,Marcus Tavernier,0,8.65,0
+12,austinclifton,BN,1854,Ryan Gravenberch,0,,0
+12,austinclifton,BN,1911,Djordje Petrovic,0,3.93,0
+12,austinclifton,BN,1963,Bryan Mbeumo,0,7.82,0
+12,austinclifton,BN,2053,Bart Verbruggen,0,4.89,0
+12,austinclifton,BN,2403,Declan Rice,0,9.85,0
+12,austinclifton,BN,3022,Sávio,0,,0
+12,austinclifton,BN,3512,Ian Maatsen,0,6.17,0
+12,austinclifton,BN,4055,Mateus Fernandes,0,7.6,0
+12,austinclifton,BN,4870,Granit Xhaka,0,,0
+12,austinclifton,BN,5240,Xavi Simons,0,,0
+12,austinclifton,BN,6485,Luca Williams-Barnett,0,8.13,0
+12,austinclifton,BN,9599,Luka Vuskovic,0,7.89,0
+12,austinclifton,BN,9697,Mike Penders,0,,0
+12,austinclifton,BN,10118,Junior Kroupi,0,,0
+12,austinclifton,BN,12050,Costinha,0,,0
+12,treyclif3,DEF,2164,Daniel Muñoz,10,6.58,20
+12,treyclif3,BN,1213,Bruno Fernandes,0,11.2,0
+12,treyclif3,BN,1505,Destiny Udogie,0,3.52,0
+12,treyclif3,BN,1654,Alex Iwobi,0,8.33,0
+12,treyclif3,BN,1657,Rodrigo Muniz,0,7.8,0
+12,treyclif3,BN,1789,Lewis Hall,0,4.06,0
+12,treyclif3,BN,1838,Alex Scott,0,,0
+12,treyclif3,BN,1873,Caoimhín Kelleher,0,4.06,0
+12,treyclif3,BN,1882,Enzo Fernández,0,,0
+12,treyclif3,BN,1991,Jarrad Branthwaite,0,2.61,0
+12,treyclif3,BN,2047,Jan Paul van Hecke,0,6.88,0
+12,treyclif3,BN,2051,Pascal Groß,0,9.04,0
+12,treyclif3,BN,2421,Kai Havertz,0,10.83,0
+12,treyclif3,BN,4374,Gianluigi Donnarumma,0,4.93,0
+12,treyclif3,BN,4884,Nordi Mukiele,0,6,0
+12,treyclif3,BN,5354,Mathys Tel,0,,0
+12,treyclif3,BN,6940,Omar Marmoush,0,,0
+12,treyclif3,BN,7571,Anton Stach,0,,0
+12,treyclif3,BN,9438,Estêvão,0,,0
+12,treyclif3,BN,13004,Alysson,0,,0
+12,treyclif3,BN,13386,Rayan,0,8.64,0
+12,officialmaje,MID,2520,Pedro Neto,1,9.89,20
+12,officialmaje,BN,1114,John McGinn,0,8.16,0
+12,officialmaje,BN,1663,Antonee Robinson,0,5.82,0
+12,officialmaje,BN,1673,Timothy Castagne,0,4.47,0
+12,officialmaje,BN,1710,Oscar Bobb,0,6.99,0
+12,officialmaje,BN,1721,Erling Haaland,0,9.34,0
+12,officialmaje,BN,1795,Sandro Tonali,0,,0
+12,officialmaje,BN,1826,Marcos Senesi,0,6.55,0
+12,officialmaje,BN,1863,Alexis Mac Allister,0,6.56,0
+12,officialmaje,BN,1923,Noni Madueke,0,9.7,0
+12,officialmaje,BN,1994,Dominic Calvert-Lewin,0,7.4,0
+12,officialmaje,BN,2165,Eberechi Eze,0,10.14,0
+12,officialmaje,BN,2399,David Raya,0,,0
+12,officialmaje,BN,2408,Gabriel Magalhães,0,5.4,0
+12,officialmaje,BN,2417,Ben White,0,,0
+12,officialmaje,BN,2674,Ronald Araujo,0,7.51,0
+12,officialmaje,BN,4130,Ferdi Kadıoğlu,0,5.21,0
+12,officialmaje,BN,4901,Viktor Gyökeres,0,,0
+12,officialmaje,BN,8744,Jérémy Jacquet,0,5.37,0
+12,officialmaje,BN,10495,Enzo Le Fée,0,9.02,0
+12,officialmaje,BN,11182,Robin Roefs,0,3.8,0
+12,BottomCap,MID,1091,Morgan Rogers,-1,8.3,20
+12,BottomCap,MID,1922,Cole Palmer,0,8.67,20
+12,BottomCap,BN,1097,Emiliano Martínez,1,3.44,20
+12,BottomCap,BN,1217,Marcus Rashford,0,,0
+12,BottomCap,BN,1269,William Osula,0,8.38,0
+12,BottomCap,BN,1705,Rúben Dias,0,2.74,0
+12,BottomCap,BN,1712,Phil Foden,0,9.1,0
+12,BottomCap,BN,1786,Alexander Isak,0,8.12,0
+12,BottomCap,BN,1827,James Hill,0,6.4,0
+12,BottomCap,BN,1836,Dominic Solanke,0,7.49,0
+12,BottomCap,BN,1940,Keane Lewis-Potter,0,5.8,0
+12,BottomCap,BN,1957,Yoane Wissa,0,,0
+12,BottomCap,BN,1993,James Tarkowski,0,,0
+12,BottomCap,BN,2067,Kaoru Mitoma,0,,0
+12,BottomCap,BN,2413,Jurriën Timber,0,5.16,0
+12,BottomCap,BN,3222,Abdul Fatawu Issahaku,0,7.88,0
+12,BottomCap,BN,3224,James Justin,0,7.89,0
+12,BottomCap,BN,3981,Ismaïla Sarr,0,,0
+12,BottomCap,BN,5108,Antonín Kinsky,0,5.71,0
+12,BottomCap,BN,5207,Noah Okafor,0,8.65,0
+12,BottomCap,BN,10130,Charalampos Kostoulas,0,,0
+12,BottomCap,BN,10511,Dan Ballard,0,,0
+12,BottomCap,BN,14935,Mohamed Belloumi,0,9.92,0
+12,KingAbes,DEF,1901,Wesley Fofana,-1.5,4.66,20
+12,KingAbes,BN,1009,Murillo,1.75,4.36,20
+12,KingAbes,BN,1060,Dara O'Shea,0,4.21,0
+12,KingAbes,BN,1236,Aaron Wan-Bissaka,0,,0
+12,KingAbes,BN,1571,Diego Gómez,0,7.83,0
+12,KingAbes,BN,1714,Jack Grealish,0,7.73,0
+12,KingAbes,BN,1862,Cody Gakpo,0,,0
+12,KingAbes,BN,1865,Dominik Szoboszlai,0,11.11,0
+12,KingAbes,BN,1928,Tyrique George,0,,0
+12,KingAbes,BN,1930,Kevin Schade,0,,0
+12,KingAbes,BN,1948,Vitaly Janelt,0,6.71,0
+12,KingAbes,BN,2526,Matheus Cunha,0,8.14,0
+12,KingAbes,BN,2959,Nobel Mendy,0,2.91,0
+12,KingAbes,BN,4057,Georginio Rutter,0,7.27,0
+12,KingAbes,BN,4864,Florian Wirtz,0,10.49,0
+12,KingAbes,BN,5242,António Silva,0,4.83,0
+12,KingAbes,BN,7093,Patrick Dorgu,0,6.82,0
+12,KingAbes,BN,11576,Brian Brobbey,0,,0
+12,KingAbes,BN,12055,Konstantinos Tzolakis,0,3.98,0
+12,KingAbes,BN,14896,Bobby Thomas,0,4.19,0
+12,KingAbes,BN,14938,Semi Ajayi,0,2.8,0
